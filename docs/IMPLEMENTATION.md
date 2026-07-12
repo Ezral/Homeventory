@@ -2,6 +2,8 @@
 
 Derived from [`Homeventory_Full_Planning.md`](Homeventory_Full_Planning.md) §41–46.
 
+Architecture decisions that are already implemented are recorded in [`docs/adr/`](adr/). Update or add an ADR in the same PR when architecture changes.
+
 Do not build predictions, packing, or push notifications before Home authorization and the inventory hierarchy are reliable.
 
 ## Recommended build order
