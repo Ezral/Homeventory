@@ -2589,16 +2589,7 @@ Export security:
 - Transaction history.
 - Atomic functions.
 
-## Phase 7 — Predictions
-
-- Consumption calculation.
-- Active-container forecast.
-- Total-stock forecast.
-- Confidence scoring.
-- Refill reminders.
-- Purchase-date suggestions.
-
-## Phase 8 — Packing and Unpacking
+## Phase 7 — Packing and Unpacking
 
 - Mobile-container flag.
 - Trip creation.
@@ -2609,6 +2600,17 @@ Export security:
 - Return to original location.
 - Packing templates.
 - Missing-item check.
+
+## Phase 8 — Predictions
+
+- Consumption calculation.
+- Active-container forecast.
+- Total-stock forecast.
+- Confidence scoring.
+- Refill reminders.
+- Purchase-date suggestions.
+
+> **Delivery note (2026-07-12):** Working backlog reorders packing before predictions. Prefer implementing Phase 6 and Phase 7 in the same program; start Phase 8 only after UAT for Phases 6 and 7. See `docs/PHASE_6_8_IMPLEMENTATION_PLAN.md`.
 
 ## Phase 9 — Notifications
 

@@ -25,13 +25,13 @@ The source code remains the source of truth for **how**.
 
 ## Not yet documented (not implemented)
 
-Prep notes for the next slices: [`../PHASE_6_8_IMPLEMENTATION_PLAN.md`](../PHASE_6_8_IMPLEMENTATION_PLAN.md).
+Prep notes for the next slices: [`../PHASE_6_8_IMPLEMENTATION_PLAN.md`](../PHASE_6_8_IMPLEMENTATION_PLAN.md) (Phase 6 transactions + Phase 7 trips in parallel; Phase 8 predictions after UAT).
 
 These planned areas from `Homeventory_Full_Planning.md` do **not** have ADRs yet because they are not in the codebase:
 
 - Product / container stock model
 - Inventory transactions
-- Consumption predictions
 - Packing / trips
+- Consumption predictions
 - Notifications / FCM
 - Audit log subsystem
