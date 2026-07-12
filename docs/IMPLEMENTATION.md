@@ -29,7 +29,7 @@ Do not build predictions, packing, or push notifications before Home authorizati
 **Goal:** Signed-in users with profiles; project, environments, and RLS patterns established.
 
 - [x] Create Flutter app under `mobile/`
-- [x] Connect Supabase project (dev + prod) — schema + link/push scripts ready; paste hosted credentials to go live
+- [x] Connect Supabase project (dev + prod) — GitHub integration linked to `eynsgdzsunlhzrxznriz`; merge migrations to `main` to deploy
 - [ ] Configure Firebase (FCM later; project bootstrap now)
 - [x] Google SSO via Supabase Auth (client wired; needs live OAuth credentials)
 - [x] Profile creation on first sign-in (`profiles` row matching `auth.users.id`)
