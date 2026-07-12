@@ -8,6 +8,7 @@ import '../features/homes/presentation/create_home_screen.dart';
 import '../features/homes/presentation/home_detail_screen.dart';
 import '../features/homes/presentation/homes_screen.dart';
 import '../features/homes/presentation/join_home_screen.dart';
+import '../features/inventory/presentation/barcode_scan_screen.dart';
 import '../features/inventory/presentation/create_node_screen.dart';
 import '../features/inventory/presentation/node_detail_screen.dart';
 import '../features/rooms/presentation/create_room_screen.dart';
@@ -83,6 +84,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/homes/:homeId/rooms/:roomId/edit',
+        builder: (context, state) => CreateRoomScreen(
+          homeId: state.pathParameters['homeId']!,
+          existingRoomId: state.pathParameters['roomId'],
+        ),
+      ),
+      GoRoute(
         path: '/homes/:homeId/rooms/:roomId',
         builder: (context, state) => RoomDetailScreen(
           homeId: state.pathParameters['homeId']!,
@@ -95,6 +103,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           homeId: state.pathParameters['homeId']!,
           roomId: state.pathParameters['roomId']!,
           parentNodeId: state.uri.queryParameters['parent'],
+        ),
+      ),
+      GoRoute(
+        path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/edit',
+        builder: (context, state) => CreateNodeScreen(
+          homeId: state.pathParameters['homeId']!,
+          roomId: state.pathParameters['roomId']!,
+          existingNodeId: state.pathParameters['nodeId'],
         ),
       ),
       GoRoute(
@@ -112,6 +128,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           roomId: state.pathParameters['roomId']!,
           nodeId: state.pathParameters['nodeId']!,
         ),
+      ),
+      GoRoute(
+        path: '/homes/:homeId/scan-barcode',
+        builder: (context, state) => const BarcodeScanScreen(),
       ),
     ],
   );

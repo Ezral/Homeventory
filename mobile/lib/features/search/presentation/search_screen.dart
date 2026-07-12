@@ -25,6 +25,45 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.dispose();
   }
 
+  Future<void> _scanBarcode() async {
+    final value = await context.push<String>(
+      '/homes/${widget.homeId}/scan-barcode',
+    );
+    if (value == null || value.trim().isEmpty || !mounted) return;
+    setState(() {
+      _query = value.trim();
+      _controller.text = _query;
+    });
+    try {
+      final node = await ref.read(inventoryRepositoryProvider).findByBarcode(
+            homeId: widget.homeId,
+            barcodeValue: value,
+          );
+      if (!mounted) return;
+      if (node == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No item found for barcode $value')),
+        );
+        return;
+      }
+      if (node.isContainer) {
+        context.push(
+          '/homes/${widget.homeId}/rooms/${node.roomId}/nodes/${node.id}',
+        );
+      } else {
+        context.push(
+          '/homes/${widget.homeId}/rooms/${node.roomId}/nodes/${node.id}/details',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final results = _query.trim().isEmpty
@@ -36,7 +75,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Search')),
+      appBar: AppBar(
+        title: const Text('Search'),
+        actions: [
+          IconButton(
+            tooltip: 'Scan barcode',
+            onPressed: _scanBarcode,
+            icon: const Icon(Icons.qr_code_scanner),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -46,7 +94,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               autofocus: true,
               textInputAction: TextInputAction.search,
               decoration: const InputDecoration(
-                hintText: 'Find items, furniture, bags…',
+                hintText: 'Name or barcode…',
                 prefixIcon: Icon(Icons.search),
               ),
               onChanged: (v) => setState(() => _query = v),
@@ -58,7 +106,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     icon: Icons.search,
                     title: 'Search this home',
                     message:
-                        'Look up anything by name across rooms and nested containers.',
+                        'Look up anything by name or barcode across rooms and nested containers.',
                   )
                 : results.when(
                     loading: () =>
@@ -68,7 +116,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       if (nodes.isEmpty) {
                         return const EmptyState(
                           title: 'No matches',
-                          message: 'Try a different name or spelling.',
+                          message: 'Try a different name, spelling, or barcode.',
                         );
                       }
                       return ListView.separated(

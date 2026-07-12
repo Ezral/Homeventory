@@ -50,25 +50,61 @@ class RoomDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(title ?? 'Room'),
         actions: [
+          if (canEdit && parentNodeId == null)
+            IconButton(
+              tooltip: 'Edit room',
+              onPressed: () async {
+                await context.push('/homes/$homeId/rooms/$roomId/edit');
+                ref.invalidate(roomProvider(roomId));
+                ref.invalidate(roomsListProvider(homeId));
+              },
+              icon: const Icon(Icons.edit_outlined),
+            ),
+          if (canEdit && parentNodeId != null)
+            IconButton(
+              tooltip: 'Edit',
+              onPressed: () async {
+                await context.push(
+                  '/homes/$homeId/rooms/$roomId/nodes/$parentNodeId/edit',
+                );
+                ref.invalidate(inventoryNodeProvider(parentNodeId!));
+                ref.invalidate(inventoryChildrenProvider(scope));
+              },
+              icon: const Icon(Icons.edit_outlined),
+            ),
+          if (parentNodeId != null)
+            IconButton(
+              tooltip: 'Details',
+              onPressed: () => context.push(
+                '/homes/$homeId/rooms/$roomId/nodes/$parentNodeId/details',
+              ),
+              icon: const Icon(Icons.info_outline),
+            ),
           if (canEdit)
             IconButton(
               tooltip: 'Add item',
-              onPressed: () => context.push(
-                parentNodeId == null
-                    ? '/homes/$homeId/rooms/$roomId/nodes/new'
-                    : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
-              ),
+              onPressed: () async {
+                await context.push(
+                  parentNodeId == null
+                      ? '/homes/$homeId/rooms/$roomId/nodes/new'
+                      : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
+                );
+                ref.invalidate(inventoryChildrenProvider(scope));
+              },
               icon: const Icon(Icons.add_box_outlined),
             ),
         ],
       ),
       floatingActionButton: canEdit
           ? FloatingActionButton.extended(
-              onPressed: () => context.push(
-                parentNodeId == null
-                    ? '/homes/$homeId/rooms/$roomId/nodes/new'
-                    : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
-              ),
+              onPressed: () async {
+                await context.push(
+                  parentNodeId == null
+                      ? '/homes/$homeId/rooms/$roomId/nodes/new'
+                      : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
+                );
+                ref.invalidate(inventoryChildrenProvider(scope));
+              },
               backgroundColor: AppColors.moss,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
@@ -104,6 +140,16 @@ class RoomDetailScreen extends ConsumerWidget {
                   leading: _NodeIcon(node: node),
                   title: node.name,
                   subtitle: _subtitle(node),
+                  trailing: node.isContainer
+                      ? IconButton(
+                          tooltip: 'Details',
+                          icon: const Icon(Icons.info_outline),
+                          color: AppColors.inkMuted,
+                          onPressed: () => context.push(
+                            '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
+                          ),
+                        )
+                      : null,
                   onTap: () {
                     if (node.isContainer) {
                       context.push(
@@ -133,6 +179,11 @@ class RoomDetailScreen extends ConsumerWidget {
           _formatQty(node.quantity!),
           if (node.quantityUnit != null) node.quantityUnit!,
         ].join(' '),
+      );
+    }
+    if (node.purchasePrice != null) {
+      parts.add(
+        '${node.currency ?? ''} ${_formatQty(node.purchasePrice!)}'.trim(),
       );
     }
     return parts.join(' · ');
