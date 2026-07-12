@@ -92,9 +92,11 @@ class HomeMember {
           : (email ?? userId);
 
   factory HomeMember.fromJson(Map<String, dynamic> json) {
-    final profile = json['profiles'] is Map
-        ? Map<String, dynamic>.from(json['profiles'] as Map)
-        : null;
+    Map<String, dynamic>? profile;
+    final embedded = json['profiles'];
+    if (embedded is Map) {
+      profile = Map<String, dynamic>.from(embedded);
+    }
     return HomeMember(
       id: json['id'] as String,
       homeId: json['home_id'] as String,

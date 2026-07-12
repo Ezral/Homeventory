@@ -2,6 +2,10 @@
 
 Derived from [`Homeventory_Full_Planning.md`](Homeventory_Full_Planning.md) §41–46.
 
+Architecture decisions that are already implemented are recorded in [`docs/adr/`](adr/). Update or add an ADR in the same PR when architecture changes.
+
+Prep plan for stock / predictions / packing: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+
 Do not build predictions, packing, or push notifications before Home authorization and the inventory hierarchy are reliable.
 
 ## Recommended build order
@@ -118,6 +122,8 @@ Do not build predictions, packing, or push notifications before Home authorizati
 
 ## Phase 6 — Inventory Transactions
 
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+
 - [ ] Schema: `inventory_transactions`, `products`, `product_containers`
 - [ ] INITIAL_STOCK, USE, RESTOCK, ADJUSTMENT, DISPOSE
 - [ ] TRANSFER_REFILL (total stock unchanged)
@@ -128,6 +134,8 @@ Do not build predictions, packing, or push notifications before Home authorizati
 
 ## Phase 7 — Predictions
 
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+
 - [ ] Schema: `consumption_predictions`
 - [ ] Active-container refill forecast
 - [ ] Total-stock depletion forecast
@@ -137,6 +145,8 @@ Do not build predictions, packing, or push notifications before Home authorizati
 ---
 
 ## Phase 8 — Packing and Unpacking
+
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
 
 - [ ] Schema: `trips`, `trip_containers`, `trip_items`, packing templates
 - [ ] Assign mobile containers to Trips

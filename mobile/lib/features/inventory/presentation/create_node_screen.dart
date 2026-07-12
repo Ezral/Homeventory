@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
+import '../../../shared/utils/image_pick.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
@@ -48,6 +49,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   bool _busy = false;
   bool _loadingExisting = false;
   InventoryNode? _existing;
+  PickedImageBytes? _pendingImage;
 
   @override
   void initState() {
@@ -137,6 +139,12 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     });
   }
 
+  Future<void> _pickImage() async {
+    final picked = await pickEntityImage(context);
+    if (picked == null || !mounted) return;
+    setState(() => _pendingImage = picked);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
@@ -195,6 +203,16 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
         );
       }
 
+      if (_pendingImage != null) {
+        await repo.uploadNodeImage(
+          homeId: widget.homeId,
+          nodeId: node.id,
+          bytes: _pendingImage!.bytes,
+          mimeType: _pendingImage!.mimeType,
+          extension: _pendingImage!.extension,
+        );
+      }
+
       ref.invalidate(
         inventoryChildrenProvider(
           InventoryScope(
@@ -206,6 +224,11 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       );
       if (widget.isEditing) {
         ref.invalidate(inventoryNodeProvider(widget.existingNodeId!));
+        ref.invalidate(
+          nodeImagesProvider(
+            (homeId: widget.homeId, nodeId: widget.existingNodeId!),
+          ),
+        );
       }
 
       if (!mounted) return;
@@ -454,6 +477,34 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                         ],
                       ),
                     ),
+                  const SizedBox(height: 20),
+                  Text('Photo', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  if (_pendingImage != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.memory(
+                        _pendingImage!.bytes,
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  else
+                    Text(
+                      widget.isEditing
+                          ? 'Add another photo from details, or replace here.'
+                          : 'Optional photo for this object.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _pickImage,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: Text(
+                      _pendingImage == null ? 'Add photo' : 'Replace photo',
+                    ),
+                  ),
                   const SizedBox(height: 28),
                   FilledButton(
                     onPressed: _busy ? null : _submit,

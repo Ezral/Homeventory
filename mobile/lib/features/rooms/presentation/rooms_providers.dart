@@ -74,6 +74,29 @@ final nodeBarcodesProvider =
   return ref.watch(inventoryRepositoryProvider).listBarcodes(nodeId);
 });
 
+final roomImagesProvider = FutureProvider.autoDispose
+    .family<List<EntityImage>, ({String homeId, String roomId})>((ref, args) {
+  return ref.watch(inventoryRepositoryProvider).listImages(
+        homeId: args.homeId,
+        entityType: 'ROOM',
+        entityId: args.roomId,
+      );
+});
+
+/// Thumbnail signed URLs keyed by entity id.
+final entityThumbnailsProvider = FutureProvider.autoDispose.family<
+    Map<String, String>,
+    ({String homeId, String entityType, String idsKey})>((ref, args) {
+  final ids = args.idsKey.isEmpty
+      ? <String>[]
+      : args.idsKey.split(',').where((e) => e.isNotEmpty).toList();
+  return ref.watch(inventoryRepositoryProvider).latestImageUrls(
+        homeId: args.homeId,
+        entityType: args.entityType,
+        entityIds: ids,
+      );
+});
+
 final inventorySearchProvider = FutureProvider.autoDispose
     .family<List<InventoryNode>, ({String homeId, String query})>((ref, args) {
   return ref.watch(inventoryRepositoryProvider).search(

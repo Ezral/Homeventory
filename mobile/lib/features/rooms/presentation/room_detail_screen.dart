@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../homes/presentation/homes_providers.dart';
 import 'rooms_providers.dart';
 
@@ -34,6 +35,9 @@ class RoomDetailScreen extends ConsumerWidget {
     final parentAsync = parentNodeId == null
         ? null
         : ref.watch(inventoryNodeProvider(parentNodeId!));
+    final roomImagesAsync = parentNodeId == null
+        ? ref.watch(roomImagesProvider((homeId: homeId, roomId: roomId)))
+        : null;
 
     final canEdit = homeAsync.maybeWhen(
       data: (h) => h.myRole?.canEditInventory ?? false,
@@ -57,6 +61,9 @@ class RoomDetailScreen extends ConsumerWidget {
                 await context.push('/homes/$homeId/rooms/$roomId/edit');
                 ref.invalidate(roomProvider(roomId));
                 ref.invalidate(roomsListProvider(homeId));
+                ref.invalidate(
+                  roomImagesProvider((homeId: homeId, roomId: roomId)),
+                );
               },
               icon: const Icon(Icons.edit_outlined),
             ),
@@ -118,51 +125,109 @@ class RoomDetailScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(inventoryChildrenProvider(scope)),
         ),
         data: (nodes) {
-          if (nodes.isEmpty) {
-            return EmptyState(
-              icon: Icons.inventory_2_outlined,
-              title: parentNodeId == null ? 'Empty room' : 'Empty container',
-              message: canEdit
-                  ? 'Add furniture, storage locations, or items. Items can also be containers.'
-                  : 'Nothing stored here yet.',
-            );
-          }
+          final idsKey = nodes.map((n) => n.id).join(',');
+          final thumbsAsync = ref.watch(
+            entityThumbnailsProvider(
+              (
+                homeId: homeId,
+                entityType: 'INVENTORY_NODE',
+                idsKey: idsKey,
+              ),
+            ),
+          );
+          final thumbs = thumbsAsync.maybeWhen(
+            data: (m) => m,
+            orElse: () => const <String, String>{},
+          );
+
           return RefreshIndicator(
-            onRefresh: () async =>
-                ref.invalidate(inventoryChildrenProvider(scope)),
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-              itemCount: nodes.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final node = nodes[index];
-                return SoftTile(
-                  leading: _NodeIcon(node: node),
-                  title: node.name,
-                  subtitle: _subtitle(node),
-                  trailing: node.isContainer
-                      ? IconButton(
-                          tooltip: 'Details',
-                          icon: const Icon(Icons.info_outline),
-                          color: AppColors.inkMuted,
-                          onPressed: () => context.push(
-                            '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
-                          ),
-                        )
-                      : null,
-                  onTap: () {
-                    if (node.isContainer) {
-                      context.push(
-                        '/homes/$homeId/rooms/$roomId/nodes/${node.id}',
-                      );
-                    } else {
-                      context.push(
-                        '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
-                      );
-                    }
-                  },
+            onRefresh: () async {
+              ref.invalidate(inventoryChildrenProvider(scope));
+              if (parentNodeId == null) {
+                ref.invalidate(
+                  roomImagesProvider((homeId: homeId, roomId: roomId)),
                 );
-              },
+              }
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+              children: [
+                if (parentNodeId == null && roomImagesAsync != null)
+                  roomImagesAsync.when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                    data: (images) {
+                      if (images.isEmpty) return const SizedBox.shrink();
+                      final cover = images.first;
+                      if (cover.signedUrl == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: Image.network(
+                              cover.signedUrl!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                if (nodes.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 48),
+                    child: EmptyState(
+                      icon: Icons.inventory_2_outlined,
+                      title:
+                          parentNodeId == null ? 'Empty room' : 'Empty container',
+                      message: canEdit
+                          ? 'Add furniture, storage locations, or items. Items can also be containers.'
+                          : 'Nothing stored here yet.',
+                    ),
+                  )
+                else
+                  ...[
+                    for (var i = 0; i < nodes.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 10),
+                      Builder(
+                        builder: (context) {
+                          final node = nodes[i];
+                          return SoftTile(
+                            leading: EntityThumbnail(
+                              imageUrl: thumbs[node.id],
+                              fallback: _nodeIcon(node),
+                            ),
+                            title: node.name,
+                            subtitle: _subtitle(node),
+                            trailing: node.isContainer
+                                ? IconButton(
+                                    tooltip: 'Details',
+                                    icon: const Icon(Icons.info_outline),
+                                    color: AppColors.inkMuted,
+                                    onPressed: () => context.push(
+                                      '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
+                                    ),
+                                  )
+                                : null,
+                            onTap: () {
+                              if (node.isContainer) {
+                                context.push(
+                                  '/homes/$homeId/rooms/$roomId/nodes/${node.id}',
+                                );
+                              } else {
+                                context.push(
+                                  '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+              ],
             ),
           );
         },
@@ -194,29 +259,13 @@ class RoomDetailScreen extends ConsumerWidget {
         ? value.toInt().toString()
         : value.toString();
   }
-}
 
-class _NodeIcon extends StatelessWidget {
-  const _NodeIcon({required this.node});
-
-  final InventoryNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (node.nodeKind) {
+  IconData _nodeIcon(InventoryNode node) {
+    return switch (node.nodeKind) {
       InventoryNodeKind.furniture => Icons.weekend_outlined,
       InventoryNodeKind.storageLocation => Icons.grid_view_outlined,
       InventoryNodeKind.item =>
         node.isContainer ? Icons.work_outline : Icons.inventory_2_outlined,
     };
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.mossSoft,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(icon, color: AppColors.mossDeep),
-    );
   }
 }

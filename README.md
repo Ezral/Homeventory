@@ -22,6 +22,10 @@ Full product and technical specification: [`docs/Homeventory_Full_Planning.md`](
 
 Implementation backlog: [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md)
 
+Architecture Decision Records (why the system is built this way): [`docs/adr/`](docs/adr/)
+
+Phase 6–8 prep plan (transactions → predictions → packing): [`docs/PHASE_6_8_IMPLEMENTATION_PLAN.md`](docs/PHASE_6_8_IMPLEMENTATION_PLAN.md)
+
 ## Stack
 
 | Layer | Choice |
@@ -35,12 +39,13 @@ Implementation backlog: [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md)
 ## Repository layout
 
 ```text
-docs/                 Product planning and implementation backlog
+docs/                 Product planning, implementation backlog, ADRs
+docs/adr/             Architecture Decision Records (accepted decisions only)
 supabase/
   migrations/         Schema, RLS helpers, trusted functions
   tests/              Cross-Home authorization SQL tests
 scripts/              Migration validation + hosted project link/push
-mobile/               Flutter app (Phase 1–3 client)
+mobile/               Flutter app (Android client)
 ```
 
 ## Current status
