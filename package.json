@@ -1,0 +1,16 @@
+{
+  "name": "homeventory",
+  "private": true,
+  "description": "Homeventory monorepo tooling (Supabase CLI)",
+  "scripts": {
+    "supabase": "supabase",
+    "db:validate": "bash ./scripts/validate-migrations.sh",
+    "db:link-push": "bash ./scripts/link-and-push.sh",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db"
+  },
+  "devDependencies": {
+    "supabase": "^2.109.1"
+  }
+}

@@ -1,0 +1,44 @@
+# Ignore files for Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+mobile/build/
+**/doc/api/
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/
+*.iml
+
+# Keep Flutter lockfile
+!mobile/pubspec.lock
+
+# Mobile secrets / local env
+mobile/.env
+mobile/.env.*
+!mobile/.env.example
+mobile/**/google-services.json
+mobile/**/GoogleService-Info.plist
+**/secrets.dart
+**/firebase_options.dart
+
+# Supabase local
+supabase/.branches
+supabase/.temp
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+
+# OS / editor
+.DS_Store
+.vscode/
+*.swp
+*.swo
+
+# Coverage / test
+coverage/
+*.lcov
+
+# Node / Supabase CLI
+node_modules/
