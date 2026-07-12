@@ -153,7 +153,10 @@ class HomesRepository {
   Future<List<HomeMember>> listMembers(String homeId) async {
     final rows = await client
         .from('home_members')
-        .select('id, home_id, user_id, role, status, joined_at, profiles(display_name, email)')
+        .select(
+          'id, home_id, user_id, role, status, joined_at, '
+          'profiles!home_members_user_id_fkey(display_name, email)',
+        )
         .eq('home_id', homeId)
         .eq('status', MembershipStatus.active.dbValue)
         .order('created_at');

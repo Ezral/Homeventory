@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/utils/image_pick.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
@@ -260,49 +260,15 @@ class NodeDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _addPhoto(BuildContext context, WidgetRef ref) async {
-    final picker = ImagePicker();
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Take photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
-    final file = await picker.pickImage(
-      source: source,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      imageQuality: 85,
-    );
-    if (file == null) return;
+    final picked = await pickEntityImage(context);
+    if (picked == null) return;
     try {
-      final bytes = await file.readAsBytes();
-      final mime = file.mimeType ?? 'image/jpeg';
-      final ext = mime.contains('png')
-          ? 'png'
-          : mime.contains('webp')
-              ? 'webp'
-              : 'jpg';
       await ref.read(inventoryRepositoryProvider).uploadNodeImage(
             homeId: homeId,
             nodeId: nodeId,
-            bytes: bytes,
-            mimeType: mime,
-            extension: ext,
+            bytes: picked.bytes,
+            mimeType: picked.mimeType,
+            extension: picked.extension,
           );
       ref.invalidate(nodeImagesProvider((homeId: homeId, nodeId: nodeId)));
     } catch (e) {

@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/home.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/entity_thumbnail.dart';
 import 'homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
@@ -141,6 +142,20 @@ class HomeDetailScreen extends ConsumerWidget {
                         ),
                       );
                     }
+                    final idsKey = rooms.map((r) => r.id).join(',');
+                    final thumbsAsync = ref.watch(
+                      entityThumbnailsProvider(
+                        (
+                          homeId: homeId,
+                          entityType: 'ROOM',
+                          idsKey: idsKey,
+                        ),
+                      ),
+                    );
+                    final thumbs = thumbsAsync.maybeWhen(
+                      data: (m) => m,
+                      orElse: () => const <String, String>{},
+                    );
                     return SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                       sliver: SliverList.separated(
@@ -150,20 +165,34 @@ class HomeDetailScreen extends ConsumerWidget {
                         itemBuilder: (context, index) {
                           final room = rooms[index];
                           return SoftTile(
-                            leading: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.mossSoft,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.meeting_room_outlined,
-                                color: AppColors.mossDeep,
-                              ),
+                            leading: EntityThumbnail(
+                              imageUrl: thumbs[room.id],
+                              fallback: Icons.meeting_room_outlined,
                             ),
                             title: room.name,
                             subtitle: room.description,
+                            trailing: canEdit
+                                ? IconButton(
+                                    tooltip: 'Edit room',
+                                    icon: const Icon(Icons.edit_outlined),
+                                    color: AppColors.inkMuted,
+                                    onPressed: () async {
+                                      await context.push(
+                                        '/homes/$homeId/rooms/${room.id}/edit',
+                                      );
+                                      ref.invalidate(roomsListProvider(homeId));
+                                      ref.invalidate(
+                                        entityThumbnailsProvider(
+                                          (
+                                            homeId: homeId,
+                                            entityType: 'ROOM',
+                                            idsKey: idsKey,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : null,
                             onTap: () => context.push(
                               '/homes/$homeId/rooms/${room.id}',
                             ),

@@ -356,15 +356,50 @@ class InventoryRepository {
     return images;
   }
 
-  Future<EntityImage> uploadNodeImage({
+  /// Latest signed image URL per entity id (for list thumbnails).
+  Future<Map<String, String>> latestImageUrls({
     required String homeId,
-    required String nodeId,
+    required String entityType,
+    required List<String> entityIds,
+  }) async {
+    if (entityIds.isEmpty) return const {};
+    final rows = await _client
+        .from('images')
+        .select('entity_id, storage_path, created_at')
+        .eq('home_id', homeId)
+        .eq('entity_type', entityType)
+        .inFilter('entity_id', entityIds)
+        .order('created_at', ascending: false);
+
+    final paths = <String, String>{};
+    for (final r in rows as List) {
+      final map = Map<String, dynamic>.from(r as Map);
+      final id = map['entity_id'] as String;
+      if (paths.containsKey(id)) continue;
+      paths[id] = map['storage_path'] as String;
+    }
+
+    final urls = <String, String>{};
+    for (final entry in paths.entries) {
+      try {
+        urls[entry.key] = await _client.storage
+            .from('home-images')
+            .createSignedUrl(entry.value, 3600);
+      } catch (_) {}
+    }
+    return urls;
+  }
+
+  Future<EntityImage> uploadEntityImage({
+    required String homeId,
+    required String entityType,
+    required String entityId,
     required Uint8List bytes,
     required String mimeType,
     String extension = 'jpg',
   }) async {
     final filename = '${_uuid.v4()}.$extension';
-    final path = '$homeId/INVENTORY_NODE/$nodeId/$filename';
+    final path = '$homeId/$entityType/$entityId/$filename';
     await _client.storage.from('home-images').uploadBinary(
           path,
           bytes,
@@ -374,8 +409,8 @@ class InventoryRepository {
         .from('images')
         .insert({
           'home_id': homeId,
-          'entity_type': 'INVENTORY_NODE',
-          'entity_id': nodeId,
+          'entity_type': entityType,
+          'entity_id': entityId,
           'storage_path': path,
           'mime_type': mimeType,
           'file_size': bytes.length,
@@ -389,6 +424,42 @@ class InventoryRepository {
       Map<String, dynamic>.from(inserted),
       signedUrl: url,
     );
+  }
+
+  Future<EntityImage> uploadNodeImage({
+    required String homeId,
+    required String nodeId,
+    required Uint8List bytes,
+    required String mimeType,
+    String extension = 'jpg',
+  }) {
+    return uploadEntityImage(
+      homeId: homeId,
+      entityType: 'INVENTORY_NODE',
+      entityId: nodeId,
+      bytes: bytes,
+      mimeType: mimeType,
+      extension: extension,
+    );
+  }
+
+  Future<EntityImage> uploadRoomImage({
+    required String homeId,
+    required String roomId,
+    required Uint8List bytes,
+    required String mimeType,
+    String extension = 'jpg',
+  }) async {
+    final image = await uploadEntityImage(
+      homeId: homeId,
+      entityType: 'ROOM',
+      entityId: roomId,
+      bytes: bytes,
+      mimeType: mimeType,
+      extension: extension,
+    );
+    await _client.from('rooms').update({'image_id': image.id}).eq('id', roomId);
+    return image;
   }
 
   Future<void> deleteImage(EntityImage image) async {

@@ -118,6 +118,8 @@ Do not build predictions, packing, or push notifications before Home authorizati
 
 ## Phase 6 — Inventory Transactions
 
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+
 - [ ] Schema: `inventory_transactions`, `products`, `product_containers`
 - [ ] INITIAL_STOCK, USE, RESTOCK, ADJUSTMENT, DISPOSE
 - [ ] TRANSFER_REFILL (total stock unchanged)
@@ -128,6 +130,8 @@ Do not build predictions, packing, or push notifications before Home authorizati
 
 ## Phase 7 — Predictions
 
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+
 - [ ] Schema: `consumption_predictions`
 - [ ] Active-container refill forecast
 - [ ] Total-stock depletion forecast
@@ -137,6 +141,8 @@ Do not build predictions, packing, or push notifications before Home authorizati
 ---
 
 ## Phase 8 — Packing and Unpacking
+
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
 
 - [ ] Schema: `trips`, `trip_containers`, `trip_items`, packing templates
 - [ ] Assign mobile containers to Trips
