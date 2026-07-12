@@ -11,6 +11,10 @@ class InventoryNode {
     this.description,
     this.isContainer = false,
     this.isMobileContainer = false,
+    this.isDisposed = false,
+    this.disposedAt,
+    this.isDispenser = false,
+    this.capacity,
     this.itemCategory,
     this.quantity,
     this.quantityUnit,
@@ -35,6 +39,10 @@ class InventoryNode {
   final String? description;
   final bool isContainer;
   final bool isMobileContainer;
+  final bool isDisposed;
+  final DateTime? disposedAt;
+  final bool isDispenser;
+  final double? capacity;
   final ItemCategory? itemCategory;
   final double? quantity;
   final String? quantityUnit;
@@ -70,6 +78,12 @@ class InventoryNode {
       description: json['description'] as String?,
       isContainer: json['is_container'] as bool? ?? false,
       isMobileContainer: json['is_mobile_container'] as bool? ?? false,
+      isDisposed: json['is_disposed'] as bool? ?? false,
+      disposedAt: json['disposed_at'] != null
+          ? DateTime.tryParse(json['disposed_at'] as String)
+          : null,
+      isDispenser: json['is_dispenser'] as bool? ?? false,
+      capacity: (json['capacity'] as num?)?.toDouble(),
       itemCategory: ItemCategory.fromDb(json['item_category'] as String?),
       quantity: (json['quantity'] as num?)?.toDouble(),
       quantityUnit: json['quantity_unit'] as String?,
@@ -93,25 +107,29 @@ class InventoryNode {
   }
 
   Map<String, dynamic> toInsertJson({required String createdByUserId}) => {
-        'home_id': homeId,
-        'room_id': roomId,
-        'parent_node_id': parentNodeId,
-        'node_kind': nodeKind.dbValue,
-        'name': name,
-        'description': description,
-        'is_container': isContainer,
-        'is_mobile_container': isMobileContainer,
-        'item_category': itemCategory?.dbValue,
-        'quantity': quantity,
-        'quantity_unit': quantityUnit,
-        'minimum_quantity': minimumQuantity,
-        'purchase_price': purchasePrice,
-        'currency': currency,
-        'purchase_date': purchaseDate?.toIso8601String().split('T').first,
-        'expiration_date': expirationDate?.toIso8601String().split('T').first,
-        'brand': brand,
-        'weight': weight,
-        'weight_unit': weightUnit,
-        'created_by_user_id': createdByUserId,
-      };
+    'home_id': homeId,
+    'room_id': roomId,
+    'parent_node_id': parentNodeId,
+    'node_kind': nodeKind.dbValue,
+    'name': name,
+    'description': description,
+    'is_container': isContainer,
+    'is_mobile_container': isMobileContainer,
+    'is_disposed': isDisposed,
+    'disposed_at': disposedAt?.toIso8601String(),
+    'is_dispenser': isDispenser,
+    'capacity': capacity,
+    'item_category': itemCategory?.dbValue,
+    'quantity': quantity,
+    'quantity_unit': quantityUnit,
+    'minimum_quantity': minimumQuantity,
+    'purchase_price': purchasePrice,
+    'currency': currency,
+    'purchase_date': purchaseDate?.toIso8601String().split('T').first,
+    'expiration_date': expirationDate?.toIso8601String().split('T').first,
+    'brand': brand,
+    'weight': weight,
+    'weight_unit': weightUnit,
+    'created_by_user_id': createdByUserId,
+  };
 }

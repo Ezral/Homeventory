@@ -36,6 +36,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   final _quantity = TextEditingController();
   final _unit = TextEditingController();
   final _minQuantity = TextEditingController();
+  final _capacity = TextEditingController();
   final _price = TextEditingController();
   final _currency = TextEditingController(text: 'USD');
   final _brand = TextEditingController();
@@ -46,6 +47,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   ItemCategory _category = ItemCategory.misc;
   bool _isContainer = false;
   bool _isMobileContainer = false;
+  bool _isDispenser = false;
   DateTime? _purchaseDate;
   DateTime? _expirationDate;
   bool _busy = false;
@@ -86,11 +88,13 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
         _category = node.itemCategory ?? ItemCategory.misc;
         _isContainer = node.isContainer;
         _isMobileContainer = node.isMobileContainer;
+        _isDispenser = node.isDispenser;
         _name.text = node.name;
         _description.text = node.description ?? '';
         _quantity.text = node.quantity?.toString() ?? '';
         _unit.text = node.quantityUnit ?? '';
         _minQuantity.text = node.minimumQuantity?.toString() ?? '';
+        _capacity.text = node.capacity?.toString() ?? '';
         _price.text = node.purchasePrice?.toString() ?? '';
         _currency.text = node.currency ?? 'USD';
         _brand.text = node.brand ?? '';
@@ -103,9 +107,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loadingExisting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -117,6 +121,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     _quantity.dispose();
     _unit.dispose();
     _minQuantity.dispose();
+    _capacity.dispose();
     _price.dispose();
     _currency.dispose();
     _brand.dispose();
@@ -161,15 +166,17 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       final minQty = _minQuantity.text.trim().isEmpty
           ? null
           : double.tryParse(_minQuantity.text.trim());
+      final capacity = _capacity.text.trim().isEmpty || !_isDispenser
+          ? null
+          : double.tryParse(_capacity.text.trim());
       final price = _price.text.trim().isEmpty
           ? null
           : double.tryParse(_price.text.trim());
       final weight = _weight.text.trim().isEmpty
           ? null
           : double.tryParse(_weight.text.trim());
-      final treatAsContainer = _kind != InventoryNodeKind.item ||
-          _isContainer ||
-          _isMobileContainer;
+      final treatAsContainer =
+          _kind != InventoryNodeKind.item || _isContainer || _isMobileContainer;
 
       final repo = ref.read(inventoryRepositoryProvider);
       late InventoryNode node;
@@ -180,6 +187,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           description: _description.text,
           isContainer: treatAsContainer,
           isMobileContainer: _isMobileContainer,
+          isDispenser: _isDispenser,
+          capacity: capacity,
           itemCategory: _kind == InventoryNodeKind.item ? _category : null,
           quantity: qty,
           quantityUnit: _unit.text,
@@ -202,6 +211,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           description: _description.text,
           isContainer: treatAsContainer,
           isMobileContainer: _isMobileContainer,
+          isDispenser: _isDispenser,
+          capacity: capacity,
           itemCategory: _kind == InventoryNodeKind.item ? _category : null,
           quantity: qty,
           quantityUnit: _unit.text,
@@ -238,9 +249,10 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       if (widget.isEditing) {
         ref.invalidate(inventoryNodeProvider(widget.existingNodeId!));
         ref.invalidate(
-          nodeImagesProvider(
-            (homeId: widget.homeId, nodeId: widget.existingNodeId!),
-          ),
+          nodeImagesProvider((
+            homeId: widget.homeId,
+            nodeId: widget.existingNodeId!,
+          )),
         );
       }
 
@@ -249,9 +261,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       context.pop(node);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -363,6 +375,15 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                         if (v) _isContainer = true;
                       }),
                     ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Is dispenser'),
+                      subtitle: const Text(
+                        'Tracks a refillable capacity, such as soap or oil.',
+                      ),
+                      value: _isDispenser,
+                      onChanged: (v) => setState(() => _isDispenser = v),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -372,8 +393,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                             keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
-                            decoration:
-                                const InputDecoration(labelText: 'Quantity'),
+                            decoration: const InputDecoration(
+                              labelText: 'Quantity',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -382,12 +404,24 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                             controller: _unit,
                             decoration: const InputDecoration(
                               labelText: 'Unit',
-                              hintText: 'pcs',
+                              hintText: 'pcs, ml, g, CC',
                             ),
                           ),
                         ),
                       ],
                     ),
+                    if (_isDispenser) ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _capacity,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Capacity (optional)',
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _minQuantity,

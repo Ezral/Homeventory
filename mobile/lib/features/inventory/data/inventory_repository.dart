@@ -67,6 +67,55 @@ class EntityImage {
   }
 }
 
+class InventoryTransaction {
+  const InventoryTransaction({
+    required this.id,
+    required this.homeId,
+    required this.inventoryNodeId,
+    this.relatedNodeId,
+    required this.transactionType,
+    this.quantityDelta,
+    this.quantityBefore,
+    this.quantityAfter,
+    this.quantityUnit,
+    this.reason,
+    required this.createdByUserId,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String homeId;
+  final String inventoryNodeId;
+  final String? relatedNodeId;
+  final InventoryTransactionType transactionType;
+  final double? quantityDelta;
+  final double? quantityBefore;
+  final double? quantityAfter;
+  final String? quantityUnit;
+  final String? reason;
+  final String createdByUserId;
+  final DateTime createdAt;
+
+  factory InventoryTransaction.fromJson(Map<String, dynamic> json) {
+    return InventoryTransaction(
+      id: json['id'] as String,
+      homeId: json['home_id'] as String,
+      inventoryNodeId: json['inventory_node_id'] as String,
+      relatedNodeId: json['related_node_id'] as String?,
+      transactionType: InventoryTransactionType.fromDb(
+        json['transaction_type'] as String,
+      ),
+      quantityDelta: (json['quantity_delta'] as num?)?.toDouble(),
+      quantityBefore: (json['quantity_before'] as num?)?.toDouble(),
+      quantityAfter: (json['quantity_after'] as num?)?.toDouble(),
+      quantityUnit: json['quantity_unit'] as String?,
+      reason: json['reason'] as String?,
+      createdByUserId: json['created_by_user_id'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
 class InventoryRepository {
   InventoryRepository(this._client);
 
@@ -89,6 +138,7 @@ class InventoryRepository {
         .select()
         .eq('home_id', homeId)
         .eq('room_id', roomId)
+        .eq('is_disposed', false)
         .isFilter('archived_at', null);
 
     query = parentNodeId == null
@@ -97,9 +147,7 @@ class InventoryRepository {
 
     final rows = await query.order('name');
     return (rows as List)
-        .map(
-          (r) => InventoryNode.fromJson(Map<String, dynamic>.from(r as Map)),
-        )
+        .map((r) => InventoryNode.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
   }
 
@@ -124,6 +172,7 @@ class InventoryRepository {
         .from('inventory_nodes')
         .select()
         .eq('home_id', homeId)
+        .eq('is_disposed', false)
         .isFilter('archived_at', null)
         .ilike('name', '%$trimmed%')
         .order('name')
@@ -148,7 +197,8 @@ class InventoryRepository {
     for (final id in barcodeIds) {
       if (nodes.containsKey(id)) continue;
       try {
-        nodes[id] = await getNode(id);
+        final node = await getNode(id);
+        if (!node.isDisposed && !node.isArchived) nodes[id] = node;
       } catch (_) {}
     }
     return nodes.values.toList()
@@ -164,6 +214,8 @@ class InventoryRepository {
     String? description,
     bool isContainer = false,
     bool isMobileContainer = false,
+    bool isDispenser = false,
+    double? capacity,
     ItemCategory? itemCategory,
     double? quantity,
     String? quantityUnit,
@@ -187,6 +239,8 @@ class InventoryRepository {
           'description': _nullIfBlank(description),
           'is_container': isContainer || isMobileContainer,
           'is_mobile_container': isMobileContainer,
+          'is_dispenser': isDispenser,
+          'capacity': capacity,
           'item_category': itemCategory?.dbValue,
           'quantity': quantity,
           'quantity_unit': _nullIfBlank(quantityUnit),
@@ -212,6 +266,8 @@ class InventoryRepository {
     String? description,
     bool? isContainer,
     bool? isMobileContainer,
+    bool? isDispenser,
+    double? capacity,
     ItemCategory? itemCategory,
     double? quantity,
     String? quantityUnit,
@@ -227,6 +283,8 @@ class InventoryRepository {
     final payload = <String, dynamic>{
       'name': name.trim(),
       'description': _nullIfBlank(description),
+      'is_dispenser': isDispenser ?? false,
+      'capacity': capacity,
       'item_category': itemCategory?.dbValue,
       'quantity': quantity,
       'quantity_unit': _nullIfBlank(quantityUnit),
@@ -269,10 +327,49 @@ class InventoryRepository {
     );
   }
 
+  Future<List<InventoryTransaction>> listTransactions(String nodeId) async {
+    final rows = await _client
+        .from('inventory_transactions')
+        .select()
+        .eq('inventory_node_id', nodeId)
+        .order('created_at', ascending: false);
+
+    return (rows as List)
+        .map(
+          (r) => InventoryTransaction.fromJson(
+            Map<String, dynamic>.from(r as Map),
+          ),
+        )
+        .toList();
+  }
+
+  Future<InventoryTransaction> applyTransaction({
+    required String nodeId,
+    required InventoryTransactionType transactionType,
+    double? quantityDelta,
+    String? quantityUnit,
+    String? reason,
+    String? relatedNodeId,
+  }) async {
+    final row = await _client.rpc(
+      'apply_inventory_transaction',
+      params: {
+        'p_node_id': nodeId,
+        'p_transaction_type': transactionType.dbValue,
+        'p_quantity_delta': quantityDelta,
+        'p_quantity_unit': _nullIfBlank(quantityUnit),
+        'p_reason': _nullIfBlank(reason),
+        'p_related_node_id': relatedNodeId,
+      },
+    );
+    return InventoryTransaction.fromJson(Map<String, dynamic>.from(row as Map));
+  }
+
   Future<void> archiveNode(String nodeId) async {
-    await _client.from('inventory_nodes').update({
-      'archived_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', nodeId);
+    await _client
+        .from('inventory_nodes')
+        .update({'archived_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', nodeId);
   }
 
   Future<List<InventoryNode>> breadcrumbPath(InventoryNode node) async {
@@ -408,7 +505,9 @@ class InventoryRepository {
   }) async {
     final filename = '${_uuid.v4()}.$extension';
     final path = '$homeId/$entityType/$entityId/$filename';
-    await _client.storage.from('home-images').uploadBinary(
+    await _client.storage
+        .from('home-images')
+        .uploadBinary(
           path,
           bytes,
           fileOptions: FileOptions(contentType: mimeType, upsert: false),
@@ -426,8 +525,9 @@ class InventoryRepository {
         })
         .select()
         .single();
-    final url =
-        await _client.storage.from('home-images').createSignedUrl(path, 3600);
+    final url = await _client.storage
+        .from('home-images')
+        .createSignedUrl(path, 3600);
     return EntityImage.fromJson(
       Map<String, dynamic>.from(inserted),
       signedUrl: url,

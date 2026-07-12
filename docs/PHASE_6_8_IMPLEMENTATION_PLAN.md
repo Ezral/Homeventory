@@ -54,20 +54,20 @@ Ship when **all Must** items below are done. Should / Could can slip to a follow
 
 ### Foundation
 
-- [ ] **Move UI** — pick destination room + optional parent container; calls `move_inventory_node`
-- [ ] Migration(s) with RLS + grants + SQL auth smoke tests
-- [ ] ADRs for transactions and trips (same PR as schema)
-- [ ] APK version bump
+- [x] **Move UI** — pick destination room + optional parent container; calls `move_inventory_node`
+- [x] Migration(s) with RLS + grants + SQL auth smoke tests
+- [x] ADRs for transactions and trips (same PR as schema)
+- [x] APK version bump
 
 ### Stock (Phase 6 slice)
 
-- [ ] Table `inventory_transactions` + enum types at least: `USE`, `RESTOCK`, `ADJUSTMENT`, `DISPOSE` (and `INITIAL_STOCK` if easy)
-- [ ] RPC `apply_inventory_transaction` — atomic qty change + history; reject negative stock; editor-only
-- [ ] Item detail actions: **Use / Restock / Adjust / Dispose**
-- [ ] Transaction **history** list on item detail (and still readable after dispose)
-- [ ] Quantity unit includes **`CC`** (and existing free-text units)
-- [ ] **Dispenser MVP:** mark node as dispenser + optional `capacity`; remaining = node `quantity` in CC (full `products` / multi-reserve graph can be thin)
-- [ ] **Dispose MVP:** `DISPOSE` sets `is_disposed = true` (and optional `disposed_at`); node **disappears from normal room/search lists**; not hard-deleted
+- [x] Table `inventory_transactions` + enum types at least: `USE`, `RESTOCK`, `ADJUSTMENT`, `DISPOSE` (and `INITIAL_STOCK` if easy)
+- [x] RPC `apply_inventory_transaction` — atomic qty change + history; reject negative stock; editor-only
+- [x] Item detail actions: **Use / Restock / Adjust / Dispose**
+- [x] Transaction **history** list on item detail (and still readable after dispose)
+- [x] Quantity unit includes **`CC`** (and existing free-text units)
+- [x] **Dispenser MVP:** mark node as dispenser + optional `capacity`; remaining = node `quantity` in CC (full `products` / multi-reserve graph can be thin)
+- [x] **Dispose MVP:** `DISPOSE` sets `is_disposed = true` (and optional `disposed_at`); node **disappears from normal room/search lists**; not hard-deleted
 
 ### Dispose behavior (Must)
 
@@ -130,11 +130,11 @@ So after topping up 150 CC into a half-empty 300 CC dispenser, “days until emp
 
 ### Trips (Phase 7 slice)
 
-- [ ] Tables: `trips`, `trip_containers`, `trip_items` (status PACKED / UNPACKED)
-- [ ] RPC `pack_item_into_container` — snapshot `original_room_id` + `original_parent_node_id`, move into mobile container
-- [ ] RPC `unpack_item` — restore via move semantics
-- [ ] Flutter: create trip → assign mobile container → pack (browse/search) → unpack one / unpack all
-- [ ] Viewer cannot mutate stock or pack
+- [x] Tables: `trips`, `trip_containers`, `trip_items` (status PACKED / UNPACKED)
+- [x] RPC `pack_item_into_container` — snapshot `original_room_id` + `original_parent_node_id`, move into mobile container
+- [x] RPC `unpack_item` — restore via move semantics
+- [x] Flutter: create trip → assign mobile container → pack (browse/search) → unpack one / unpack all
+- [x] Viewer cannot mutate stock or pack
 
 ### UAT scenarios (must pass)
 
