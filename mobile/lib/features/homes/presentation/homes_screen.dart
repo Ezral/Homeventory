@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../auth/presentation/auth_providers.dart';
+import '../../rooms/presentation/rooms_providers.dart';
 import 'homes_providers.dart';
 
 class HomesScreen extends ConsumerWidget {
@@ -94,18 +96,23 @@ class HomesScreen extends ConsumerWidget {
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final home = list[index];
+                        final thumbsAsync = ref.watch(
+                          entityThumbnailsProvider(
+                            (
+                              homeId: home.id,
+                              entityType: 'HOME',
+                              idsKey: home.id,
+                            ),
+                          ),
+                        );
+                        final thumbUrl = thumbsAsync.maybeWhen(
+                          data: (m) => m[home.id],
+                          orElse: () => null,
+                        );
                         return SoftTile(
-                          leading: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.mossSoft,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.home_outlined,
-                              color: AppColors.mossDeep,
-                            ),
+                          leading: EntityThumbnail(
+                            imageUrl: thumbUrl,
+                            fallback: Icons.home_outlined,
                           ),
                           title: home.name,
                           subtitle: [
