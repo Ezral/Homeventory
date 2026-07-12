@@ -22,16 +22,16 @@ The source code remains the source of truth for **how**.
 | [0005](0005-recursive-inventory-nodes.md) | Unified recursive inventory nodes | Accepted |
 | [0006](0006-private-images-and-barcodes.md) | Private images Storage + item barcodes | Accepted |
 | [0007](0007-flutter-client-architecture.md) | Flutter client structure (Riverpod, go_router, repositories) | Accepted |
+| [0008](0008-inventory-transactions.md) | Inventory transactions and dispose | Accepted |
+| [0009](0009-trips-packing.md) | Trips packing and unpacking | Accepted |
 
 ## Not yet documented (not implemented)
 
-Prep notes for the next slices: [`../PHASE_6_8_IMPLEMENTATION_PLAN.md`](../PHASE_6_8_IMPLEMENTATION_PLAN.md) (**Phase 6-super** MVP = transactions + Trips; Phase 8 predictions after UAT).
+Prep notes: [`../PHASE_6_8_IMPLEMENTATION_PLAN.md`](../PHASE_6_8_IMPLEMENTATION_PLAN.md).
 
-These planned areas from `Homeventory_Full_Planning.md` do **not** have ADRs yet because they are not in the codebase:
+Still without ADRs (not implemented or not landed as architecture):
 
-- Product / container stock model
-- Inventory transactions
-- Packing / trips
+- Full product / multi-reserve catalog model
 - Consumption predictions
 - Notifications / FCM
-- Audit log subsystem
+- Global audit log subsystem

@@ -129,24 +129,25 @@ Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UA
 
 ### Stock (Must)
 
-- [ ] Move UI (`move_inventory_node`)
-- [ ] `inventory_transactions` + `apply_inventory_transaction`
-- [ ] USE / RESTOCK / ADJUSTMENT / **DISPOSE** + history UI
-- [ ] Dispose sets `is_disposed = true` and hides item from normal lists (no hard delete)
-- [ ] Unit `CC` + dispenser capacity MVP
-- [ ] Stock actions leave an append-only transaction trail (not full app-wide `audit_logs` yet)
+- [x] Move UI (`move_inventory_node`)
+- [x] `inventory_transactions` + `apply_inventory_transaction`
+- [x] USE / RESTOCK / ADJUSTMENT / **DISPOSE** + history UI
+- [x] Dispose sets `is_disposed = true` and hides item from normal lists (no hard delete)
+- [x] Unit `CC` + dispenser capacity MVP
+- [x] Stock actions leave an append-only transaction trail (not full app-wide `audit_logs` yet)
 
 ### Trips (Must)
 
-- [ ] `trips`, `trip_containers`, `trip_items`
-- [ ] Pack / unpack RPCs with original location snapshot
-- [ ] Create trip → assign mobile container → pack → unpack
+- [x] `trips`, `trip_containers`, `trip_items`
+- [x] Pack / unpack RPCs with original location snapshot
+- [x] Create trip → assign mobile container → pack → unpack
 
 ### Should (same ship if possible)
 
-- [ ] TRANSFER_REFILL + thin product/reserve link (**refill quantity** required; capacity-aware)
-- [ ] Pack via barcode; still-packed list
-- [ ] Move appears in item history; optional disposed-items view
+- [x] TRANSFER_REFILL RPC (server); thin refill UI still optional
+- [ ] Thin product/reserve link tables
+- [ ] Pack via barcode; still-packed list polish
+- [ ] Move appears in item history when using Move UI; optional disposed-items view
 
 ### Defer
 
