@@ -97,6 +97,37 @@ So: **every stock action has an audit trail** via `inventory_transactions`.
 
 **Should have for moves:** write a lightweight history event (either a transaction type `MOVE` or a small `inventory_events` / reuse transactions with zero qty delta) so location changes are also trailable.
 
+### Refill quantity semantics (ground truth for Phase 6 + Phase 8)
+
+Yes — a refill always has an explicit **quantity**, not an implicit “fill to full.”
+
+Example:
+
+```text
+Dispenser capacity:     300 CC
+Remaining before:       150 CC   (half empty)
+User refills:           150 CC
+Remaining after:        300 CC
+```
+
+Rules to implement:
+
+1. UI/RPC accepts `refill_quantity` (e.g. 150 CC).
+2. Cap: `remaining_after = min(capacity, remaining_before + refill_quantity)` when capacity is set; reject or clamp overflow.
+3. Ledger: write `TRANSFER_REFILL` (from reserve → dispenser) or `RESTOCK` (bought stock poured in) with that quantity on both sides as needed.
+4. **TRANSFER_REFILL does not change total product stock** across linked containers; it only moves volume.
+5. **TRANSFER_REFILL / RESTOCK are not consumption** — Phase 8 usage rate is computed from **USE** only.
+
+Phase 8 prediction ground truth (later stage, locked now):
+
+| Forecast | Formula |
+| --- | --- |
+| **When will this dispenser need refill again?** | `remaining_cc / cc_per_day` using **current remaining** after any refill |
+| **When will all stock run out?** | `sum(active + reserve remaining) / cc_per_day` |
+| Usage rate `cc_per_day` | Average of **USE** deltas over a window — **exclude** TRANSFER_REFILL and RESTOCK |
+
+So after topping up 150 CC into a half-empty 300 CC dispenser, “days until empty” is recalculated from **300 CC**, not from the pre-refill 150 CC. Refill events extend the horizon; they do not inflate the usage rate.
+
 ### Trips (Phase 7 slice)
 
 - [ ] Tables: `trips`, `trip_containers`, `trip_items` (status PACKED / UNPACKED)
