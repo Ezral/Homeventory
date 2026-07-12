@@ -60,6 +60,20 @@ final inventoryNodeProvider =
   return ref.watch(inventoryRepositoryProvider).getNode(nodeId);
 });
 
+final nodeImagesProvider = FutureProvider.autoDispose
+    .family<List<EntityImage>, ({String homeId, String nodeId})>((ref, args) {
+  return ref.watch(inventoryRepositoryProvider).listImages(
+        homeId: args.homeId,
+        entityType: 'INVENTORY_NODE',
+        entityId: args.nodeId,
+      );
+});
+
+final nodeBarcodesProvider =
+    FutureProvider.autoDispose.family<List<ItemBarcode>, String>((ref, nodeId) {
+  return ref.watch(inventoryRepositoryProvider).listBarcodes(nodeId);
+});
+
 final inventorySearchProvider = FutureProvider.autoDispose
     .family<List<InventoryNode>, ({String homeId, String query})>((ref, args) {
   return ref.watch(inventoryRepositoryProvider).search(

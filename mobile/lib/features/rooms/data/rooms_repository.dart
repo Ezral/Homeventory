@@ -49,6 +49,24 @@ class RoomsRepository {
     return Room.fromJson(Map<String, dynamic>.from(inserted));
   }
 
+  Future<Room> updateRoom({
+    required String roomId,
+    required String name,
+    String? description,
+  }) async {
+    final updated = await _client
+        .from('rooms')
+        .update({
+          'name': name.trim(),
+          'description':
+              description?.trim().isEmpty == true ? null : description?.trim(),
+        })
+        .eq('id', roomId)
+        .select()
+        .single();
+    return Room.fromJson(Map<String, dynamic>.from(updated));
+  }
+
   Future<Room> getRoom(String roomId) async {
     final row =
         await _client.from('rooms').select().eq('id', roomId).single();

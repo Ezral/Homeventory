@@ -96,22 +96,22 @@ Do not build predictions, packing, or push notifications before Home authorizati
 
 ## Phase 4 — Item Details
 
-- [ ] Categories: EDIBLE, CONSUMABLE, CLOTHING, BAG_LUGGAGE, ELECTRONICS, MISC
-- [ ] Quantity, units, min quantity
-- [ ] Price, currency, purchase date
+- [x] Categories: EDIBLE, CONSUMABLE, CLOTHING, BAG_LUGGAGE, ELECTRONICS, MISC
+- [x] Quantity, units, min quantity
+- [x] Price, currency, purchase date
 - [ ] Owner assignment
-- [ ] Expiration date
+- [x] Expiration date
 - [ ] Category-specific attributes (`item_category_attributes`)
 
 ---
 
 ## Phase 5 — Images and Barcode
 
-- [ ] Schema: `images`, `item_barcodes`
-- [ ] Camera primary; gallery secondary
-- [ ] Crop / resize; EXIF GPS strip
-- [ ] Private Storage bucket + signed URLs
-- [ ] Barcode scan → lookup / create / quick actions
+- [x] Schema: `images`, `item_barcodes`
+- [x] Camera primary; gallery secondary
+- [ ] Crop / resize; EXIF GPS strip (basic resize via image_picker quality/max dims)
+- [x] Private Storage bucket + signed URLs
+- [x] Barcode scan → lookup / attach to item
 - [ ] Internal QR labels
 
 ---
