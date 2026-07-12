@@ -1,0 +1,7 @@
+# Used by GitHub Actions / local release builds.
+# Copy to mobile/android/key.properties (never commit the real file).
+
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=upload
+storeFile=/absolute/path/to/upload-keystore.jks
