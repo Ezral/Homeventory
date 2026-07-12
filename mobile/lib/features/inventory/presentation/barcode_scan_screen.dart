@@ -124,6 +124,18 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
     super.dispose();
   }
 
+  Future<void> _enterManually() async {
+    final value = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const BarcodeManualEntrySheet(),
+    );
+    if (!mounted) return;
+    if (value != null && value.trim().isNotEmpty) {
+      context.pop(value.trim());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,16 +147,7 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () async {
-              final value = await showModalBottomSheet<String>(
-                context: context,
-                isScrollControlled: true,
-                builder: (_) => const BarcodeManualEntrySheet(),
-              );
-              if (value != null && value.trim().isNotEmpty && context.mounted) {
-                context.pop(value.trim());
-              }
-            },
+            onPressed: _enterManually,
             child: const Text('Type'),
           ),
         ],
@@ -165,16 +168,7 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
         actionLabel: 'Open settings',
         onAction: openAppSettings,
         secondaryLabel: 'Enter manually',
-        onSecondary: () async {
-          final value = await showModalBottomSheet<String>(
-            context: context,
-            isScrollControlled: true,
-            builder: (_) => const BarcodeManualEntrySheet(),
-          );
-          if (value != null && value.trim().isNotEmpty && mounted) {
-            context.pop(value.trim());
-          }
-        },
+        onSecondary: _enterManually,
       );
     }
     if (_error != null || _controller == null) {
@@ -190,16 +184,7 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
           unawaited(_bootstrap());
         },
         secondaryLabel: 'Enter manually',
-        onSecondary: () async {
-          final value = await showModalBottomSheet<String>(
-            context: context,
-            isScrollControlled: true,
-            builder: (_) => const BarcodeManualEntrySheet(),
-          );
-          if (value != null && value.trim().isNotEmpty && mounted) {
-            context.pop(value.trim());
-          }
-        },
+        onSecondary: _enterManually,
       );
     }
 
@@ -240,7 +225,7 @@ class _MessagePanel extends StatelessWidget {
   final String actionLabel;
   final VoidCallback onAction;
   final String secondaryLabel;
-  final VoidCallback onSecondary;
+  final Future<void> Function() onSecondary;
 
   @override
   Widget build(BuildContext context) {

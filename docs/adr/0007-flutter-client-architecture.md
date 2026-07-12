@@ -126,6 +126,7 @@ Current primary screens:
 - Provider organization drift: inventory providers colocated with rooms — workable but confusing for newcomers.
 - `CreateHomeScreen` still uses `context.go` after create (replaces stack); room/node flows use `pop`. Inconsistent navigation after create home vs create room.
 - No global error reporting layer; failures surface as SnackBars / `ErrorView`.
+- `home_members` embed of `profiles` must use an explicit FK hint (`profiles!home_members_user_id_fkey`) because both `user_id` and `invited_by_user_id` reference profiles (PostgREST PGRST201 otherwise).
 
 ---
 

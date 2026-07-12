@@ -111,15 +111,18 @@ Migration: `20260712000400_images_barcodes.sql`
 ## UI Impact
 
 - Node detail: Photos and Barcodes sections.
+- Room create/edit: optional photo; room detail shows cover when present.
+- Home room list and inventory lists: image thumbnails when available.
+- Create/edit inventory: optional photo at save time.
 - Search app bar: scan barcode action; query field accepts name or barcode text.
-- Route: `/homes/:homeId/scan-barcode`.
+- Route: `/homes/:homeId/scan-barcode` (runtime camera permission + manual entry fallback).
 
 ---
 
 ## Future Considerations
 
 - Crop / EXIF scrubbing service.
-- Cover image linkage for homes/rooms (`cover_image_id` / `image_id` columns already exist).
+- Home cover images (`cover_image_id`).
 - Unknown barcode → create item quick action.
 
 ---
@@ -129,6 +132,9 @@ Migration: `20260712000400_images_barcodes.sql`
 - Polymorphic images lack referential integrity — orphan metadata possible if entity deleted without cascading image cleanup (inventory delete/archive does not auto-remove storage objects today).
 - `storage_home_id` returns null for non-UUID paths; policies require non-null — good.
 - HEIC listed in bucket MIME allow-list; client upload path currently favors jpeg/png/webp extensions.
+- Thumbnail loading signs one URL per entity (latest by `created_at`); room-scale lists are fine, revisit if homes grow huge.
+- Room uploads set `rooms.image_id` to the new images row id.
+- Barcode scanner starts only after camera permission grant and uses lifecycle stop/start; manual entry remains available.
 
 ---
 
@@ -138,5 +144,7 @@ Migration: `20260712000400_images_barcodes.sql`
 - [`mobile/lib/features/inventory/data/inventory_repository.dart`](../../mobile/lib/features/inventory/data/inventory_repository.dart)
 - [`mobile/lib/features/inventory/presentation/node_detail_screen.dart`](../../mobile/lib/features/inventory/presentation/node_detail_screen.dart)
 - [`mobile/lib/features/inventory/presentation/barcode_scan_screen.dart`](../../mobile/lib/features/inventory/presentation/barcode_scan_screen.dart)
+- [`mobile/lib/features/rooms/presentation/create_room_screen.dart`](../../mobile/lib/features/rooms/presentation/create_room_screen.dart)
+- [`mobile/lib/shared/widgets/entity_thumbnail.dart`](../../mobile/lib/shared/widgets/entity_thumbnail.dart)
 - PR: [#12](https://github.com/Ezral/Homeventory/pull/12)
 - Related: [ADR-0005](0005-recursive-inventory-nodes.md)

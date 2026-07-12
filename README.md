@@ -24,6 +24,8 @@ Implementation backlog: [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md)
 
 Architecture Decision Records (why the system is built this way): [`docs/adr/`](docs/adr/)
 
+Phase 6–8 prep plan (transactions → predictions → packing): [`docs/PHASE_6_8_IMPLEMENTATION_PLAN.md`](docs/PHASE_6_8_IMPLEMENTATION_PLAN.md)
+
 ## Stack
 
 | Layer | Choice |
