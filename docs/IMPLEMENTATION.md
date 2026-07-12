@@ -131,8 +131,10 @@ Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UA
 
 - [ ] Move UI (`move_inventory_node`)
 - [ ] `inventory_transactions` + `apply_inventory_transaction`
-- [ ] USE / RESTOCK / ADJUSTMENT / DISPOSE + history UI
+- [ ] USE / RESTOCK / ADJUSTMENT / **DISPOSE** + history UI
+- [ ] Dispose sets `is_disposed = true` and hides item from normal lists (no hard delete)
 - [ ] Unit `CC` + dispenser capacity MVP
+- [ ] Stock actions leave an append-only transaction trail (not full app-wide `audit_logs` yet)
 
 ### Trips (Must)
 
@@ -144,10 +146,11 @@ Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UA
 
 - [ ] TRANSFER_REFILL + thin product/reserve link
 - [ ] Pack via barcode; still-packed list
+- [ ] Move appears in item history; optional disposed-items view
 
 ### Defer
 
-- [ ] Packing templates; full product catalog; Phase 8 predictions
+- [ ] Packing templates; full product catalog; Phase 8 predictions; global `audit_logs`
 
 ---
 

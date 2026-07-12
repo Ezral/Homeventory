@@ -64,9 +64,38 @@ Ship when **all Must** items below are done. Should / Could can slip to a follow
 - [ ] Table `inventory_transactions` + enum types at least: `USE`, `RESTOCK`, `ADJUSTMENT`, `DISPOSE` (and `INITIAL_STOCK` if easy)
 - [ ] RPC `apply_inventory_transaction` — atomic qty change + history; reject negative stock; editor-only
 - [ ] Item detail actions: **Use / Restock / Adjust / Dispose**
-- [ ] Transaction **history** list on item detail
+- [ ] Transaction **history** list on item detail (and still readable after dispose)
 - [ ] Quantity unit includes **`CC`** (and existing free-text units)
 - [ ] **Dispenser MVP:** mark node as dispenser + optional `capacity`; remaining = node `quantity` in CC (full `products` / multi-reserve graph can be thin)
+- [ ] **Dispose MVP:** `DISPOSE` sets `is_disposed = true` (and optional `disposed_at`); node **disappears from normal room/search lists**; not hard-deleted
+
+### Dispose behavior (Must)
+
+When the user no longer has / no longer tracks an object:
+
+1. Confirm Dispose on item detail (reason optional).
+2. Write `inventory_transactions` row with type `DISPOSE` (who, when, qty before, notes).
+3. Set `inventory_nodes.is_disposed = true` (prefer also `disposed_at timestamptz` for sorting/audit).
+4. Default queries filter `is_disposed = false` (same idea as today’s `archived_at is null` filters).
+5. Do **not** hard-delete the row or its transaction history.
+
+Optional later (not Must): “Show disposed” / restore from dispose.
+
+### Audit trail — what 6-super guarantees vs later
+
+**Not every app action has a global audit log today**, and full `audit_logs` remains **deferred**.
+
+| Action family | Trail in Phase 6-super |
+| --- | --- |
+| USE / RESTOCK / ADJUSTMENT / DISPOSE / (TRANSFER_REFILL if shipped) | **Yes** — `inventory_transactions` (append-only stock ledger) |
+| Pack / unpack | **Partial** — `trip_items` + original location snapshot + status; not a general audit table |
+| Move between rooms/containers | **RPC only** unless we also write a transaction or move event row (Should: log move as history) |
+| Create/edit name, photos, barcodes, invites, etc. | **No** dedicated audit trail in 6-super |
+
+So: **every stock action has an audit trail** via `inventory_transactions`.  
+**Not every UI action** (edit title, upload photo, invite member) gets an audit row until a later `audit_logs` phase.
+
+**Should have for moves:** write a lightweight history event (either a transaction type `MOVE` or a small `inventory_events` / reuse transactions with zero qty delta) so location changes are also trailable.
 
 ### Trips (Phase 7 slice)
 
@@ -80,9 +109,10 @@ Ship when **all Must** items below are done. Should / Could can slip to a follow
 
 1. Use 15 CC from a soap dispenser; history shows USE; qty drops  
 2. Restock / adjust works; viewer cannot  
-3. Move an item between rooms/containers  
-4. Create trip, assign suitcase, pack item, unpack → item back at original location  
-5. Cross-home IDs cannot mutate via RPC  
+3. **Dispose** an item; it vanishes from room list/search; history still shows DISPOSE; row not hard-deleted  
+4. Move an item between rooms/containers  
+5. Create trip, assign suitcase, pack item, unpack → item back at original location  
+6. Cross-home IDs cannot mutate via RPC  
 
 ---
 
@@ -93,6 +123,8 @@ Ship when **all Must** items below are done. Should / Could can slip to a follow
 - [ ] Pack via **barcode scan**
 - [ ] Trip “still packed” list (completion check without templates)
 - [ ] Stop raw qty edit on form (force ADJUSTMENT) once transactions exist
+- [ ] Move actions appear in item history (zero-qty `MOVE` or equivalent)
+- [ ] Optional “Disposed items” view / undo dispose (clears `is_disposed`, writes restore note)
 
 ## Could have / defer (not 6-super)
 
@@ -101,7 +133,7 @@ Ship when **all Must** items below are done. Should / Could can slip to a follow
 - [ ] Multi-reserve shopping UX polish
 - [ ] Trip weight estimates / airline limits
 - [ ] Predictions / CC/day (Phase 8)
-- [ ] Notifications, dashboard, audit_logs, offline
+- [ ] Notifications, dashboard, **global `audit_logs`**, offline
 
 ---
 
