@@ -125,8 +125,9 @@ Do not build predictions or push notifications before Home authorization, invent
 See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Prefer delivering **with Phase 7** in the same program.
 
 - [ ] Schema: `inventory_transactions`, `products`, `product_containers`
+- [ ] Object dispensers: `is_dispenser`, `capacity`, unit **`CC`** (liquids; equiv. mL)
 - [ ] INITIAL_STOCK, USE, RESTOCK, ADJUSTMENT, DISPOSE
-- [ ] TRANSFER_REFILL (total stock unchanged)
+- [ ] TRANSFER_REFILL (total stock unchanged; respect dispenser capacity)
 - [ ] Atomic trusted functions; no silent negative quantities
 - [ ] Transaction history UI
 
@@ -149,7 +150,7 @@ See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION
 See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). **Start only after UAT for Phases 6 and 7.**
 
 - [ ] Schema: `consumption_predictions`
-- [ ] Active-container refill forecast
+- [ ] Active dispenser / container refill forecast (**CC/day** for volume products)
 - [ ] Total-stock depletion forecast
 - [ ] Confidence labels and explanations
 - [ ] Exclude refill transfers from consumption

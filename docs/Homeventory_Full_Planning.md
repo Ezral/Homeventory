@@ -761,7 +761,10 @@ GRAM
 KILOGRAM
 MILLILITER
 LITER
+CC
 ```
+
+`CC` (cubic centimeter) is a first-class volume unit for liquid dispensers (soap, shampoo, lotion, etc.). For liquids, **1 CC = 1 mL**; the app should treat them as equivalent when converting, but UI may prefer `cc` for dispenser products.
 
 Quantity should use decimal storage.
 
@@ -775,6 +778,11 @@ unit = POD
 Dishwashing liquid:
 quantity = 650
 unit = MILLILITER
+
+Bathroom soap dispenser:
+quantity = 280
+unit = CC
+capacity = 500 CC
 
 Rice:
 quantity = 4.5
@@ -801,9 +809,9 @@ Example:
 
 ```text
 Liquid Hand Soap
-├── Bathroom Dispenser — ACTIVE — 300 mL
-├── Refill Pouch 1 — RESERVE — 700 mL
-└── Refill Pouch 2 — RESERVE — 500 mL
+├── Bathroom Dispenser — ACTIVE / DISPENSER — 280 CC of 500 CC capacity
+├── Refill Pouch 1 — RESERVE — 700 CC
+└── Refill Pouch 2 — RESERVE — 500 CC
 ```
 
 ## 16.1 Product Model
@@ -830,7 +838,8 @@ product_containers
 - product_id
 - inventory_node_id
 - container_role
-- capacity
+- is_dispenser boolean default false
+- capacity nullable
 - current_quantity
 - quantity_unit
 - opened_at
@@ -848,6 +857,26 @@ RESERVE
 An active container is currently being used.
 
 Reserve containers provide future refill stock.
+
+### 16.3 Object dispensers (volume)
+
+A **dispenser** is a physical inventory node (often also a container) that meters liquid or gel product by volume.
+
+Examples: wall soap dispenser, shampoo pump bottle in use, lotion dispenser.
+
+Dispenser rules for Phase 6+:
+
+- Marked via `is_dispenser = true` on `product_containers` (and/or a node flag if needed).
+- Preferred unit: **`CC`** (or `MILLILITER`; treat as equivalent).
+- `capacity` = full fill volume (e.g. 500 CC).
+- `current_quantity` = remaining volume (e.g. 280 CC).
+- USE transactions debit remaining volume (e.g. −15 CC).
+- RESTOCK / TRANSFER_REFILL credit from reserve pouches/bottles into the dispenser up to capacity.
+- Phase 8 predictions use **CC/day** (or mL/day) average USE rate to estimate:
+  - when the **active dispenser** needs refill
+  - when **all reserve stock** (same product, same unit family) is depleted
+
+Dispenser ≠ trip mobile container. A suitcase is mobile packing; a soap pump is a volume dispenser.
 
 ---
 
@@ -961,13 +990,14 @@ Example:
 
 ```text
 Bathroom soap dispenser:
-300 mL remaining
+280 CC remaining
+capacity 500 CC
 
 Average usage:
-25 mL/day
+25 CC/day
 
 Estimated refill:
-12 days
+11 days
 ```
 
 ## 18.2 Overall Stock Duration
@@ -980,19 +1010,19 @@ Example:
 
 ```text
 Active dispenser:
-300 mL
+280 CC
 
 Reserve stock:
-1,200 mL
+1,200 CC
 
 Total:
-1,500 mL
+1,480 CC
 
 Average usage:
-25 mL/day
+25 CC/day
 
 Estimated total duration:
-60 days
+59 days
 ```
 
 ## 18.3 Prediction Outputs
@@ -2588,6 +2618,8 @@ Export security:
 - Refill transfer.
 - Transaction history.
 - Atomic functions.
+- Product containers with **dispenser** support (`is_dispenser`, capacity).
+- Volume unit **CC** (and mL equivalence) for soap/shampoo-style liquids.
 
 ## Phase 7 — Packing and Unpacking
 
