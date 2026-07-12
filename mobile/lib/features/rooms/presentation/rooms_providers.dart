@@ -14,13 +14,16 @@ final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   return InventoryRepository(ref.watch(supabaseClientProvider));
 });
 
-final roomsListProvider =
-    FutureProvider.autoDispose.family<List<Room>, String>((ref, homeId) {
-  return ref.watch(roomsRepositoryProvider).listRooms(homeId);
-});
+final roomsListProvider = FutureProvider.autoDispose.family<List<Room>, String>(
+  (ref, homeId) {
+    return ref.watch(roomsRepositoryProvider).listRooms(homeId);
+  },
+);
 
-final roomProvider =
-    FutureProvider.autoDispose.family<Room, String>((ref, roomId) {
+final roomProvider = FutureProvider.autoDispose.family<Room, String>((
+  ref,
+  roomId,
+) {
   return ref.watch(roomsRepositoryProvider).getRoom(roomId);
 });
 
@@ -48,59 +51,73 @@ class InventoryScope {
 
 final inventoryChildrenProvider = FutureProvider.autoDispose
     .family<List<InventoryNode>, InventoryScope>((ref, scope) {
-  return ref.watch(inventoryRepositoryProvider).listChildren(
-        homeId: scope.homeId,
-        roomId: scope.roomId,
-        parentNodeId: scope.parentNodeId,
-      );
-});
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listChildren(
+            homeId: scope.homeId,
+            roomId: scope.roomId,
+            parentNodeId: scope.parentNodeId,
+          );
+    });
 
-final inventoryNodeProvider =
-    FutureProvider.autoDispose.family<InventoryNode, String>((ref, nodeId) {
-  return ref.watch(inventoryRepositoryProvider).getNode(nodeId);
-});
+final inventoryNodeProvider = FutureProvider.autoDispose
+    .family<InventoryNode, String>((ref, nodeId) {
+      return ref.watch(inventoryRepositoryProvider).getNode(nodeId);
+    });
 
 final nodeImagesProvider = FutureProvider.autoDispose
     .family<List<EntityImage>, ({String homeId, String nodeId})>((ref, args) {
-  return ref.watch(inventoryRepositoryProvider).listImages(
-        homeId: args.homeId,
-        entityType: 'INVENTORY_NODE',
-        entityId: args.nodeId,
-      );
-});
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listImages(
+            homeId: args.homeId,
+            entityType: 'INVENTORY_NODE',
+            entityId: args.nodeId,
+          );
+    });
 
-final nodeBarcodesProvider =
-    FutureProvider.autoDispose.family<List<ItemBarcode>, String>((ref, nodeId) {
-  return ref.watch(inventoryRepositoryProvider).listBarcodes(nodeId);
-});
+final nodeBarcodesProvider = FutureProvider.autoDispose
+    .family<List<ItemBarcode>, String>((ref, nodeId) {
+      return ref.watch(inventoryRepositoryProvider).listBarcodes(nodeId);
+    });
+
+final inventoryTransactionsProvider = FutureProvider.autoDispose
+    .family<List<InventoryTransaction>, String>((ref, nodeId) {
+      return ref.watch(inventoryRepositoryProvider).listTransactions(nodeId);
+    });
 
 final roomImagesProvider = FutureProvider.autoDispose
     .family<List<EntityImage>, ({String homeId, String roomId})>((ref, args) {
-  return ref.watch(inventoryRepositoryProvider).listImages(
-        homeId: args.homeId,
-        entityType: 'ROOM',
-        entityId: args.roomId,
-      );
-});
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listImages(
+            homeId: args.homeId,
+            entityType: 'ROOM',
+            entityId: args.roomId,
+          );
+    });
 
 /// Thumbnail signed URLs keyed by entity id.
-final entityThumbnailsProvider = FutureProvider.autoDispose.family<
-    Map<String, String>,
-    ({String homeId, String entityType, String idsKey})>((ref, args) {
-  final ids = args.idsKey.isEmpty
-      ? <String>[]
-      : args.idsKey.split(',').where((e) => e.isNotEmpty).toList();
-  return ref.watch(inventoryRepositoryProvider).latestImageUrls(
-        homeId: args.homeId,
-        entityType: args.entityType,
-        entityIds: ids,
-      );
-});
+final entityThumbnailsProvider = FutureProvider.autoDispose
+    .family<
+      Map<String, String>,
+      ({String homeId, String entityType, String idsKey})
+    >((ref, args) {
+      final ids = args.idsKey.isEmpty
+          ? <String>[]
+          : args.idsKey.split(',').where((e) => e.isNotEmpty).toList();
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .latestImageUrls(
+            homeId: args.homeId,
+            entityType: args.entityType,
+            entityIds: ids,
+          );
+    });
 
 final inventorySearchProvider = FutureProvider.autoDispose
     .family<List<InventoryNode>, ({String homeId, String query})>((ref, args) {
-  return ref.watch(inventoryRepositoryProvider).search(
-        homeId: args.homeId,
-        query: args.query,
-      );
-});
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .search(homeId: args.homeId, query: args.query);
+    });

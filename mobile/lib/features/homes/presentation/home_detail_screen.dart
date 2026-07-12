@@ -22,9 +22,8 @@ class HomeDetailScreen extends ConsumerWidget {
     final roomsAsync = ref.watch(roomsListProvider(homeId));
 
     return homeAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppBar(),
         body: ErrorView(
@@ -44,6 +43,11 @@ class HomeDetailScreen extends ConsumerWidget {
                 tooltip: 'Search',
                 onPressed: () => context.push('/homes/$homeId/search'),
                 icon: const Icon(Icons.search),
+              ),
+              IconButton(
+                tooltip: 'Trips',
+                onPressed: () => context.push('/homes/$homeId/trips'),
+                icon: const Icon(Icons.luggage_outlined),
               ),
               if (canInvite)
                 IconButton(
@@ -120,8 +124,7 @@ class HomeDetailScreen extends ConsumerWidget {
                   error: (e, _) => SliverToBoxAdapter(
                     child: ErrorView(
                       message: e.toString(),
-                      onRetry: () =>
-                          ref.invalidate(roomsListProvider(homeId)),
+                      onRetry: () => ref.invalidate(roomsListProvider(homeId)),
                     ),
                   ),
                   data: (rooms) {
@@ -136,21 +139,18 @@ class HomeDetailScreen extends ConsumerWidget {
                               : 'An editor needs to add rooms before you can browse inventory.',
                           actionLabel: canEdit ? 'Add room' : null,
                           onAction: canEdit
-                              ? () =>
-                                  context.push('/homes/$homeId/rooms/new')
+                              ? () => context.push('/homes/$homeId/rooms/new')
                               : null,
                         ),
                       );
                     }
                     final idsKey = rooms.map((r) => r.id).join(',');
                     final thumbsAsync = ref.watch(
-                      entityThumbnailsProvider(
-                        (
-                          homeId: homeId,
-                          entityType: 'ROOM',
-                          idsKey: idsKey,
-                        ),
-                      ),
+                      entityThumbnailsProvider((
+                        homeId: homeId,
+                        entityType: 'ROOM',
+                        idsKey: idsKey,
+                      )),
                     );
                     final thumbs = thumbsAsync.maybeWhen(
                       data: (m) => m,
@@ -160,8 +160,7 @@ class HomeDetailScreen extends ConsumerWidget {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                       sliver: SliverList.separated(
                         itemCount: rooms.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final room = rooms[index];
                           return SoftTile(
@@ -182,20 +181,17 @@ class HomeDetailScreen extends ConsumerWidget {
                                       );
                                       ref.invalidate(roomsListProvider(homeId));
                                       ref.invalidate(
-                                        entityThumbnailsProvider(
-                                          (
-                                            homeId: homeId,
-                                            entityType: 'ROOM',
-                                            idsKey: idsKey,
-                                          ),
-                                        ),
+                                        entityThumbnailsProvider((
+                                          homeId: homeId,
+                                          entityType: 'ROOM',
+                                          idsKey: idsKey,
+                                        )),
                                       );
                                     },
                                   )
                                 : null,
-                            onTap: () => context.push(
-                              '/homes/$homeId/rooms/${room.id}',
-                            ),
+                            onTap: () =>
+                                context.push('/homes/$homeId/rooms/${room.id}'),
                           );
                         },
                       ),
@@ -250,10 +246,8 @@ class HomeDetailScreen extends ConsumerWidget {
                     items: HomeRole.values
                         .where((r) => r != HomeRole.owner)
                         .map(
-                          (r) => DropdownMenuItem(
-                            value: r,
-                            child: Text(r.label),
-                          ),
+                          (r) =>
+                              DropdownMenuItem(value: r, child: Text(r.label)),
                         )
                         .toList(),
                     onChanged: token != null
@@ -442,16 +436,15 @@ class _MembersSection extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     try {
-      await ref.read(homesRepositoryProvider).removeMember(
-            homeId: homeId,
-            userId: member.userId,
-          );
+      await ref
+          .read(homesRepositoryProvider)
+          .removeMember(homeId: homeId, userId: member.userId);
       ref.invalidate(homeMembersProvider(homeId));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -481,9 +474,9 @@ class _MembersSection extends ConsumerWidget {
       if (context.mounted) context.go('/homes');
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }

@@ -10,10 +10,13 @@ import '../features/homes/presentation/homes_screen.dart';
 import '../features/homes/presentation/join_home_screen.dart';
 import '../features/inventory/presentation/barcode_scan_screen.dart';
 import '../features/inventory/presentation/create_node_screen.dart';
+import '../features/inventory/presentation/move_node_screen.dart';
 import '../features/inventory/presentation/node_detail_screen.dart';
 import '../features/rooms/presentation/create_room_screen.dart';
 import '../features/rooms/presentation/room_detail_screen.dart';
 import '../features/search/presentation/search_screen.dart';
+import '../features/trips/presentation/trip_detail_screen.dart';
+import '../features/trips/presentation/trips_list_screen.dart';
 import '../shared/providers/supabase_provider.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -53,10 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/sign-in',
         builder: (context, state) => const SignInScreen(),
       ),
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const HomesScreen(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const HomesScreen()),
       GoRoute(
         path: '/homes/new',
         builder: (context, state) => const CreateHomeScreen(),
@@ -67,21 +67,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/homes/:homeId',
-        builder: (context, state) => HomeDetailScreen(
-          homeId: state.pathParameters['homeId']!,
-        ),
+        builder: (context, state) =>
+            HomeDetailScreen(homeId: state.pathParameters['homeId']!),
       ),
       GoRoute(
         path: '/homes/:homeId/search',
-        builder: (context, state) => SearchScreen(
+        builder: (context, state) =>
+            SearchScreen(homeId: state.pathParameters['homeId']!),
+      ),
+      GoRoute(
+        path: '/homes/:homeId/trips',
+        builder: (context, state) =>
+            TripsListScreen(homeId: state.pathParameters['homeId']!),
+      ),
+      GoRoute(
+        path: '/homes/:homeId/trips/:tripId',
+        builder: (context, state) => TripDetailScreen(
           homeId: state.pathParameters['homeId']!,
+          tripId: state.pathParameters['tripId']!,
         ),
       ),
       GoRoute(
         path: '/homes/:homeId/rooms/new',
-        builder: (context, state) => CreateRoomScreen(
-          homeId: state.pathParameters['homeId']!,
-        ),
+        builder: (context, state) =>
+            CreateRoomScreen(homeId: state.pathParameters['homeId']!),
       ),
       GoRoute(
         path: '/homes/:homeId/rooms/:roomId/edit',
@@ -111,6 +120,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           homeId: state.pathParameters['homeId']!,
           roomId: state.pathParameters['roomId']!,
           existingNodeId: state.pathParameters['nodeId'],
+        ),
+      ),
+      GoRoute(
+        path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/move',
+        builder: (context, state) => MoveNodeScreen(
+          homeId: state.pathParameters['homeId']!,
+          roomId: state.pathParameters['roomId']!,
+          nodeId: state.pathParameters['nodeId']!,
         ),
       ),
       GoRoute(
@@ -172,9 +189,9 @@ class SetupRequiredScreen extends ConsumerWidget {
                 '  --dart-define=SUPABASE_ANON_KEY=eyJ... \\\n'
                 '  --dart-define=GOOGLE_WEB_CLIENT_ID=....apps.googleusercontent.com',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontFamily: 'monospace',
-                      height: 1.5,
-                    ),
+                  fontFamily: 'monospace',
+                  height: 1.5,
+                ),
               ),
               const Spacer(),
             ],

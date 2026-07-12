@@ -61,6 +61,12 @@ void main() {
       expect(HomeRole.editor.canManageMembers, isFalse);
       expect(HomeRole.fromDb('EDITOR'), HomeRole.editor);
     });
+
+    test('Phase 6 enums parse database values', () {
+      expect(InventoryTransactionType.fromDb('RESTOCK').label, 'Restock');
+      expect(TripStatus.fromDb('ACTIVE'), TripStatus.active);
+      expect(TripItemStatus.fromDb('UNPACKED'), TripItemStatus.unpacked);
+    });
   });
 
   group('models', () {
@@ -115,6 +121,10 @@ void main() {
         'description': null,
         'is_container': true,
         'is_mobile_container': true,
+        'is_disposed': false,
+        'disposed_at': null,
+        'is_dispenser': true,
+        'capacity': 10,
         'item_category': 'BAG_LUGGAGE',
         'quantity': 1,
         'quantity_unit': 'pcs',
@@ -127,6 +137,9 @@ void main() {
       expect(node.isMobileContainer, isTrue);
       expect(node.itemCategory, ItemCategory.bagLuggage);
       expect(node.kindLabel, 'Mobile container');
+      expect(node.isDisposed, isFalse);
+      expect(node.isDispenser, isTrue);
+      expect(node.capacity, 10);
       expect(node.weight, 3.5);
       expect(node.weightUnit, 'kg');
     });
