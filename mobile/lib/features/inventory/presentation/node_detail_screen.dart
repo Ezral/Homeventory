@@ -180,6 +180,17 @@ class NodeDetailScreen extends ConsumerWidget {
               ),
               _DetailRow(label: 'Brand', value: node.brand ?? '—'),
               _DetailRow(
+                label: 'Weight',
+                value: node.weight == null
+                    ? '—'
+                    : [
+                        node.weight == node.weight!.roundToDouble()
+                            ? node.weight!.toInt().toString()
+                            : node.weight.toString(),
+                        if (node.weightUnit != null) node.weightUnit!,
+                      ].join(' '),
+              ),
+              _DetailRow(
                 label: 'Purchase price',
                 value: node.purchasePrice == null
                     ? '—'

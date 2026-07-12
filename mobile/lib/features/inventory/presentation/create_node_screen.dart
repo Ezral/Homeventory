@@ -39,6 +39,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   final _price = TextEditingController();
   final _currency = TextEditingController(text: 'USD');
   final _brand = TextEditingController();
+  final _weight = TextEditingController();
+  final _weightUnit = TextEditingController(text: 'g');
 
   InventoryNodeKind _kind = InventoryNodeKind.item;
   ItemCategory _category = ItemCategory.misc;
@@ -92,6 +94,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
         _price.text = node.purchasePrice?.toString() ?? '';
         _currency.text = node.currency ?? 'USD';
         _brand.text = node.brand ?? '';
+        _weight.text = node.weight?.toString() ?? '';
+        _weightUnit.text = node.weightUnit ?? 'g';
         _purchaseDate = node.purchaseDate;
         _expirationDate = node.expirationDate;
         _loadingExisting = false;
@@ -116,6 +120,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     _price.dispose();
     _currency.dispose();
     _brand.dispose();
+    _weight.dispose();
+    _weightUnit.dispose();
     super.dispose();
   }
 
@@ -158,6 +164,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       final price = _price.text.trim().isEmpty
           ? null
           : double.tryParse(_price.text.trim());
+      final weight = _weight.text.trim().isEmpty
+          ? null
+          : double.tryParse(_weight.text.trim());
       final treatAsContainer = _kind != InventoryNodeKind.item ||
           _isContainer ||
           _isMobileContainer;
@@ -180,6 +189,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           purchaseDate: _purchaseDate,
           expirationDate: _expirationDate,
           brand: _brand.text,
+          weight: weight,
+          weightUnit: _weightUnit.text,
         );
       } else {
         node = await repo.createNode(
@@ -200,6 +211,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           purchaseDate: _purchaseDate,
           expirationDate: _expirationDate,
           brand: _brand.text,
+          weight: weight,
+          weightUnit: _weightUnit.text,
         );
       }
 
@@ -398,6 +411,33 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Brand (optional)',
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _weight,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Weight (optional)',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 100,
+                        child: TextFormField(
+                          controller: _weightUnit,
+                          decoration: const InputDecoration(
+                            labelText: 'Unit',
+                            hintText: 'g',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 14),
                   Row(

@@ -112,7 +112,7 @@ Rooms remain a separate table (`rooms`) as the top spatial partition under a Hom
 **RPC:** `move_inventory_node`  
 **Related:** `rooms`
 
-Item detail columns present today include quantity fields, purchase price/currency/dates, brand, optional owner_user_id (column exists; assignment UI not built), weight fields (unused in UI).
+Item detail columns present today include quantity fields, purchase price/currency/dates, brand, optional **weight / weight_unit**, optional owner_user_id (column exists; assignment UI not built).
 
 ---
 

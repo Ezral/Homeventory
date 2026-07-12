@@ -118,6 +118,8 @@ void main() {
         'item_category': 'BAG_LUGGAGE',
         'quantity': 1,
         'quantity_unit': 'pcs',
+        'weight': 3.5,
+        'weight_unit': 'kg',
         'created_by_user_id': 'u1',
         'archived_at': null,
       });
@@ -125,6 +127,8 @@ void main() {
       expect(node.isMobileContainer, isTrue);
       expect(node.itemCategory, ItemCategory.bagLuggage);
       expect(node.kindLabel, 'Mobile container');
+      expect(node.weight, 3.5);
+      expect(node.weightUnit, 'kg');
     });
   });
 }
