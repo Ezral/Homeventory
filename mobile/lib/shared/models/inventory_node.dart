@@ -20,6 +20,8 @@ class InventoryNode {
     this.purchaseDate,
     this.expirationDate,
     this.brand,
+    this.weight,
+    this.weightUnit,
     required this.createdByUserId,
     this.archivedAt,
   });
@@ -42,6 +44,8 @@ class InventoryNode {
   final DateTime? purchaseDate;
   final DateTime? expirationDate;
   final String? brand;
+  final double? weight;
+  final String? weightUnit;
   final String createdByUserId;
   final DateTime? archivedAt;
 
@@ -79,6 +83,8 @@ class InventoryNode {
           ? DateTime.tryParse(json['expiration_date'] as String)
           : null,
       brand: json['brand'] as String?,
+      weight: (json['weight'] as num?)?.toDouble(),
+      weightUnit: json['weight_unit'] as String?,
       createdByUserId: json['created_by_user_id'] as String,
       archivedAt: json['archived_at'] != null
           ? DateTime.tryParse(json['archived_at'] as String)
@@ -104,6 +110,8 @@ class InventoryNode {
         'purchase_date': purchaseDate?.toIso8601String().split('T').first,
         'expiration_date': expirationDate?.toIso8601String().split('T').first,
         'brand': brand,
+        'weight': weight,
+        'weight_unit': weightUnit,
         'created_by_user_id': createdByUserId,
       };
 }

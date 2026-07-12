@@ -103,6 +103,7 @@ Do not build predictions or push notifications before Home authorization, invent
 - [x] Categories: EDIBLE, CONSUMABLE, CLOTHING, BAG_LUGGAGE, ELECTRONICS, MISC
 - [x] Quantity, units, min quantity
 - [x] Price, currency, purchase date
+- [x] Optional weight + weight unit (all node kinds)
 - [ ] Owner assignment
 - [x] Expiration date
 - [ ] Category-specific attributes (`item_category_attributes`)

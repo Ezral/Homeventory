@@ -173,6 +173,8 @@ class InventoryRepository {
     DateTime? purchaseDate,
     DateTime? expirationDate,
     String? brand,
+    double? weight,
+    String? weightUnit,
   }) async {
     final inserted = await _client
         .from('inventory_nodes')
@@ -194,6 +196,8 @@ class InventoryRepository {
           'purchase_date': purchaseDate?.toIso8601String().split('T').first,
           'expiration_date': expirationDate?.toIso8601String().split('T').first,
           'brand': _nullIfBlank(brand),
+          'weight': weight,
+          'weight_unit': _nullIfBlank(weightUnit),
           'created_by_user_id': _userId,
         })
         .select()
@@ -217,6 +221,8 @@ class InventoryRepository {
     DateTime? purchaseDate,
     DateTime? expirationDate,
     String? brand,
+    double? weight,
+    String? weightUnit,
   }) async {
     final payload = <String, dynamic>{
       'name': name.trim(),
@@ -230,6 +236,8 @@ class InventoryRepository {
       'purchase_date': purchaseDate?.toIso8601String().split('T').first,
       'expiration_date': expirationDate?.toIso8601String().split('T').first,
       'brand': _nullIfBlank(brand),
+      'weight': weight,
+      'weight_unit': _nullIfBlank(weightUnit),
     };
     if (isContainer != null) payload['is_container'] = isContainer;
     if (isMobileContainer != null) {
