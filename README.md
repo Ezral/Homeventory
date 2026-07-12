@@ -29,8 +29,8 @@ Implementation backlog: [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md)
 | Client | Flutter (Android-first) |
 | Auth | Google SSO via Supabase Auth |
 | Backend | Supabase (Postgres, RLS, Storage, Edge Functions) |
-| Push | Firebase Cloud Messaging |
-| State | Riverpod (planned) |
+| Push | Firebase Cloud Messaging (later) |
+| State | Riverpod |
 
 ## Repository layout
 
@@ -39,14 +39,15 @@ docs/                 Product planning and implementation backlog
 supabase/
   migrations/         Schema, RLS helpers, trusted functions
   tests/              Cross-Home authorization SQL tests
-mobile/               Flutter app (to be scaffolded in Phase 1)
+mobile/               Flutter app (Phase 1–3 client)
 ```
 
 ## Current status
 
-Foundation scaffolding for **Phase 1–3** (auth/profile model, Homes, membership, rooms, recursive inventory nodes, RLS helpers).
+- **Backend foundation:** profiles, Homes, membership, invitations, rooms, recursive inventory nodes, RLS helpers, invite/move RPCs
+- **Flutter client:** Google sign-in, homes, invites, rooms, nested inventory browse/create, search
 
-Not yet wired: live Supabase project, Flutter client, Google OAuth credentials, or FCM.
+Still needed for a live build: Supabase project credentials, Google OAuth client IDs, and (later) FCM.
 
 ## Local setup (backend)
 
@@ -66,13 +67,16 @@ supabase test db
 
 ## Local setup (mobile)
 
-Flutter is not scaffolded yet. When Phase 1 client work begins:
-
 ```bash
-flutter create --org com.homeventory --project-name homeventory mobile
+cd mobile
+flutter pub get
+flutter run \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY \
+  --dart-define=GOOGLE_WEB_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com
 ```
 
-Then configure Supabase URL + anon key via secure environment injection — never embed the service-role key in the APK.
+Use only the Supabase **anon** key in the client — never the service-role key.
 
 ## Security rule
 

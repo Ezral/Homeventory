@@ -28,12 +28,12 @@ Do not build predictions, packing, or push notifications before Home authorizati
 
 **Goal:** Signed-in users with profiles; project, environments, and RLS patterns established.
 
-- [ ] Create Flutter app under `mobile/`
+- [x] Create Flutter app under `mobile/`
 - [ ] Connect Supabase project (dev + prod)
 - [ ] Configure Firebase (FCM later; project bootstrap now)
-- [ ] Google SSO via Supabase Auth
-- [ ] Profile creation on first sign-in (`profiles` row matching `auth.users.id`)
-- [ ] Secure session storage; clear private local state on logout
+- [x] Google SSO via Supabase Auth (client wired; needs live OAuth credentials)
+- [x] Profile creation on first sign-in (`profiles` row matching `auth.users.id`)
+- [x] Secure session storage; clear private local state on logout
 - [ ] Logging and error handling
 - [x] RLS helper functions and deny-by-default policy pattern (SQL)
 
@@ -51,11 +51,11 @@ Do not build predictions, packing, or push notifications before Home authorizati
 **Goal:** Multi-Home collaboration with roles and invite codes.
 
 - [x] Schema: `homes`, `home_members`, `invitations`
-- [ ] Create / edit / archive Home
-- [ ] Home selector UI
-- [ ] Invite via link, QR, or short code (hashed, single-use, expiring)
-- [ ] Accept invitation → ACTIVE membership
-- [ ] Role assignment: OWNER, ADMIN, EDITOR, VIEWER
+- [x] Create / edit / archive Home (create + archive API; edit UI later)
+- [x] Home selector UI
+- [x] Invite via token + short code (hashed, single-use, expiring; QR later)
+- [x] Accept invitation → ACTIVE membership
+- [x] Role assignment: OWNER, ADMIN, EDITOR, VIEWER
 - [ ] Remove member; immediate access loss
 - [x] Membership RLS policies
 - [ ] Membership RLS integration tests
@@ -75,11 +75,11 @@ Do not build predictions, packing, or push notifications before Home authorizati
 **Goal:** Physical containment model with cycle-safe moves.
 
 - [x] Schema: `rooms`, `inventory_nodes`
-- [ ] Room CRUD and ordering
-- [ ] Inventory node CRUD (furniture, storage locations, items)
-- [ ] Nested containers; items that are also containers
-- [ ] Breadcrumb / location path
-- [ ] Move validation + cycle prevention (trusted SQL function)
+- [x] Room CRUD and ordering (create + list; reorder UI later)
+- [x] Inventory node CRUD (furniture, storage locations, items — create/list)
+- [x] Nested containers; items that are also containers
+- [ ] Breadcrumb / location path (repository helper present; UI later)
+- [x] Move validation + cycle prevention (trusted SQL function + client RPC)
 - [ ] Archive and restore
 - [x] Hierarchy RLS + parent/Home consistency helpers
 

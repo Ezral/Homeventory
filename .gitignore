@@ -4,12 +4,15 @@
 .pub-cache/
 .pub/
 build/
+mobile/build/
 **/doc/api/
 .flutter-plugins
 .flutter-plugins-dependencies
 .idea/
 *.iml
-*.lock
+
+# Keep Flutter lockfile
+!mobile/pubspec.lock
 
 # Mobile secrets / local env
 mobile/.env
