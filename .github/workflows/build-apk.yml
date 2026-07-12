@@ -50,7 +50,6 @@ jobs:
         run: flutter test
 
       - name: Decode release keystore (optional)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         working-directory: ${{ github.workspace }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -59,6 +58,10 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "No release keystore secret; release build will use debug signing."
+            exit 0
+          fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > mobile/android/upload-keystore.jks
           {
             echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
@@ -73,17 +76,18 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
-          DEFINES=()
+          set -euo pipefail
+          args=(build apk --release)
           if [ -n "${SUPABASE_URL:-}" ]; then
-            DEFINES+=(--dart-define=SUPABASE_URL="$SUPABASE_URL")
+            args+=(--dart-define=SUPABASE_URL="$SUPABASE_URL")
           fi
           if [ -n "${SUPABASE_ANON_KEY:-}" ]; then
-            DEFINES+=(--dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
+            args+=(--dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
           fi
           if [ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]; then
-            DEFINES+=(--dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID")
+            args+=(--dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID")
           fi
-          flutter build apk --release "${DEFINES[@]}"
+          flutter "${args[@]}"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
