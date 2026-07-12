@@ -48,6 +48,20 @@ class AuthRepository {
     return Profile.fromJson(Map<String, dynamic>.from(row));
   }
 
+  /// Browser OAuth via Supabase (recommended on Android; uses Web client ID/secret).
+  Future<bool> signInWithGoogleOAuth() {
+    const redirectTo = kIsWeb
+        ? null
+        : 'com.homeventory.homeventory://login-callback/';
+    return client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: redirectTo,
+      authScreenLaunchMode: kIsWeb
+          ? LaunchMode.platformDefault
+          : LaunchMode.externalApplication,
+    );
+  }
+
   Future<AuthResponse> signInWithGoogle() async {
     if (!_googleSignIn.supportsAuthenticate()) {
       throw UnsupportedError(
@@ -86,14 +100,6 @@ class AuthRepository {
       provider: OAuthProvider.google,
       idToken: idToken,
       accessToken: accessToken,
-    );
-  }
-
-  /// Web-friendly OAuth redirect flow (also works when native Google is unset).
-  Future<bool> signInWithGoogleOAuth() {
-    return client.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: kIsWeb ? Uri.base.origin : null,
     );
   }
 

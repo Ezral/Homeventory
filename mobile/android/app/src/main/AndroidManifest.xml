@@ -4,6 +4,13 @@
         android:label="Homeventory"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- google_sign_in 7.x / Credential Manager can throw [16] Account reauth failed -->
+        <meta-data
+            android:name="com.google.android.gms.credentials.API_ENABLED"
+            android:value="false" />
+        <meta-data
+            android:name="androidx.credentials.CREDENTIAL_SERVICE_ENABLED"
+            android:value="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -24,6 +31,15 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Supabase Auth OAuth return (Google browser SSO) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="com.homeventory.homeventory"
+                    android:host="login-callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

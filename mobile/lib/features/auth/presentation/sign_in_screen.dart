@@ -24,11 +24,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
     try {
       final repo = ref.read(authRepositoryProvider);
-      final config = ref.read(appConfigProvider);
-      if (kIsWeb || !config.hasGoogleClient) {
+      // Prefer browser OAuth on mobile: avoids Google Credential Manager
+      // "[16] Account reauth failed" when Android SHA clients are misconfigured.
+      // Native ID-token flow remains available as a secondary path on Android.
+      if (kIsWeb) {
         await repo.signInWithGoogleOAuth();
       } else {
-        await repo.signInWithGoogle();
+        try {
+          await repo.signInWithGoogleOAuth();
+        } catch (oauthError) {
+          try {
+            await repo.signInWithGoogle();
+          } catch (_) {
+            throw oauthError;
+          }
+        }
       }
     } catch (e) {
       setState(() => _error = e.toString());
