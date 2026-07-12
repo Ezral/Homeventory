@@ -144,7 +144,7 @@ Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UA
 
 ### Should (same ship if possible)
 
-- [ ] TRANSFER_REFILL + thin product/reserve link
+- [ ] TRANSFER_REFILL + thin product/reserve link (**refill quantity** required; capacity-aware)
 - [ ] Pack via barcode; still-packed list
 - [ ] Move appears in item history; optional disposed-items view
 
