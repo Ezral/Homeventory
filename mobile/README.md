@@ -80,20 +80,21 @@ Workflow: [`.github/workflows/build-apk.yml`](../.github/workflows/build-apk.yml
 2. Run **Actions → Build Android APK → Run workflow**, or push to `main`.
 3. Download the **homeventory-apk** artifact (`app-release.apk`).
 
-Without keystore secrets, CI signs with the **debug** keystore (fine for internal testing).  
-For Google Sign-In on that APK, register the signing key’s **SHA-1** on your Google **Android** OAuth client.
+Without a custom upload keystore secret, CI signs with the committed
+`mobile/android/ci-upload.jks` so the Google **SHA-1 stays stable**:
 
-Encode a keystore for GitHub:
+```text
+B9:53:89:A0:D9:1F:A0:D0:C6:DC:DA:A0:8D:B5:79:8F:F6:A0:E1:FD
+```
+
+Register that fingerprint on your Google Cloud **Android** OAuth client
+(`com.homeventory.homeventory`).
+
+Encode a production keystore for GitHub (optional later):
 
 ```bash
 base64 -i upload-keystore.jks | pbcopy   # macOS
 base64 -w0 upload-keystore.jks           # Linux
-```
-
-Get that keystore’s SHA-1:
-
-```bash
-keytool -list -v -keystore upload-keystore.jks -alias upload
 ```
 
 ## Layout

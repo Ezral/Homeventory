@@ -25,6 +25,7 @@ mobile/**/GoogleService-Info.plist
 mobile/android/key.properties
 mobile/android/*.jks
 mobile/android/*.keystore
+!mobile/android/ci-upload.jks
 
 
 # Supabase local
