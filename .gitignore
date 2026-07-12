@@ -22,6 +22,10 @@ mobile/**/google-services.json
 mobile/**/GoogleService-Info.plist
 **/secrets.dart
 **/firebase_options.dart
+mobile/android/key.properties
+mobile/android/*.jks
+mobile/android/*.keystore
+
 
 # Supabase local
 supabase/.branches

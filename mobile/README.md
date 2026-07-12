@@ -61,7 +61,42 @@ flutter test
 flutter analyze
 ```
 
-## Security
+## GitHub Actions APK
+
+Workflow: [`.github/workflows/build-apk.yml`](../.github/workflows/build-apk.yml)
+
+1. In the GitHub repo → **Settings → Secrets and variables → Actions**, add:
+
+| Secret | Purpose |
+| --- | --- |
+| `SUPABASE_URL` | `https://eynsgdzsunlhzrxznriz.supabase.co` |
+| `SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `GOOGLE_WEB_CLIENT_ID` | Google **Web** OAuth client ID |
+| `ANDROID_KEYSTORE_BASE64` | (optional) base64 of your upload `.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | (optional) keystore password |
+| `ANDROID_KEY_ALIAS` | (optional) key alias |
+| `ANDROID_KEY_PASSWORD` | (optional) key password |
+
+2. Run **Actions → Build Android APK → Run workflow**, or push to `main`.
+3. Download the **homeventory-apk** artifact (`app-release.apk`).
+
+Without keystore secrets, CI signs with the **debug** keystore (fine for internal testing).  
+For Google Sign-In on that APK, register the signing key’s **SHA-1** on your Google **Android** OAuth client.
+
+Encode a keystore for GitHub:
+
+```bash
+base64 -i upload-keystore.jks | pbcopy   # macOS
+base64 -w0 upload-keystore.jks           # Linux
+```
+
+Get that keystore’s SHA-1:
+
+```bash
+keytool -list -v -keystore upload-keystore.jks -alias upload
+```
+
+## Layout
 
 Being signed in is not enough. Every Home-scoped query relies on Supabase RLS:
 
