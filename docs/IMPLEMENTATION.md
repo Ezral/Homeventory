@@ -4,9 +4,9 @@ Derived from [`Homeventory_Full_Planning.md`](Homeventory_Full_Planning.md) §41
 
 Architecture decisions that are already implemented are recorded in [`docs/adr/`](adr/). Update or add an ADR in the same PR when architecture changes.
 
-Prep plan for stock / predictions / packing: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+Prep plan for stock / packing / predictions: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
 
-Do not build predictions, packing, or push notifications before Home authorization and the inventory hierarchy are reliable.
+Do not build predictions or push notifications before Home authorization, inventory hierarchy, and (for predictions) Phase 6–7 UAT are reliable. Packing may proceed with Phase 6.
 
 ## Recommended build order
 
@@ -21,8 +21,8 @@ Do not build predictions, packing, or push notifications before Home authorizati
 9. Barcode scanning
 10. Quantity transactions
 11. Product containers and refill
-12. Predictions
-13. Packing and unpacking
+12. Packing and unpacking (Trips)
+13. Consumption predictions (after Phase 6–7 UAT)
 14. Notifications
 15. Hardening and release
 
@@ -122,7 +122,7 @@ Do not build predictions, packing, or push notifications before Home authorizati
 
 ## Phase 6 — Inventory Transactions
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Prefer delivering **with Phase 7** in the same program.
 
 - [ ] Schema: `inventory_transactions`, `products`, `product_containers`
 - [ ] INITIAL_STOCK, USE, RESTOCK, ADJUSTMENT, DISPOSE
@@ -132,27 +132,27 @@ See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION
 
 ---
 
-## Phase 7 — Predictions
+## Phase 7 — Packing and Unpacking (Trips)
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
-
-- [ ] Schema: `consumption_predictions`
-- [ ] Active-container refill forecast
-- [ ] Total-stock depletion forecast
-- [ ] Confidence labels and explanations
-- [ ] Exclude refill transfers from consumption
-
----
-
-## Phase 8 — Packing and Unpacking
-
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Prefer delivering **with Phase 6** in the same program.
 
 - [ ] Schema: `trips`, `trip_containers`, `trip_items`, packing templates
 - [ ] Assign mobile containers to Trips
 - [ ] Pack with original location capture
 - [ ] Selective unpack / return to original
 - [ ] Completion check for unconfirmed items
+
+---
+
+## Phase 8 — Predictions
+
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). **Start only after UAT for Phases 6 and 7.**
+
+- [ ] Schema: `consumption_predictions`
+- [ ] Active-container refill forecast
+- [ ] Total-stock depletion forecast
+- [ ] Confidence labels and explanations
+- [ ] Exclude refill transfers from consumption
 
 ---
 
