@@ -66,6 +66,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const JoinHomeScreen(),
       ),
       GoRoute(
+        path: '/homes/:homeId/edit',
+        builder: (context, state) => CreateHomeScreen(
+          existingHomeId: state.pathParameters['homeId'],
+        ),
+      ),
+      GoRoute(
         path: '/homes/:homeId',
         builder: (context, state) =>
             HomeDetailScreen(homeId: state.pathParameters['homeId']!),

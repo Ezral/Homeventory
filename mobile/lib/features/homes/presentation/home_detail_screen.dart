@@ -34,11 +34,24 @@ class HomeDetailScreen extends ConsumerWidget {
       data: (home) {
         final canEdit = home.myRole?.canEditInventory ?? false;
         final canInvite = home.myRole?.canManageMembers ?? false;
+        final canEditHome = home.myRole?.isOwner ?? false;
+        final homeImagesAsync = ref.watch(homeImagesProvider(homeId));
 
         return Scaffold(
           appBar: AppBar(
             title: Text(home.name),
             actions: [
+              if (canEditHome)
+                IconButton(
+                  tooltip: 'Edit home',
+                  onPressed: () async {
+                    await context.push('/homes/$homeId/edit');
+                    ref.invalidate(homeProvider(homeId));
+                    ref.invalidate(homeImagesProvider(homeId));
+                    ref.invalidate(homesListProvider);
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                ),
               IconButton(
                 tooltip: 'Search',
                 onPressed: () => context.push('/homes/$homeId/search'),
@@ -71,6 +84,7 @@ class HomeDetailScreen extends ConsumerWidget {
               ref.invalidate(homeProvider(homeId));
               ref.invalidate(roomsListProvider(homeId));
               ref.invalidate(homeMembersProvider(homeId));
+              ref.invalidate(homeImagesProvider(homeId));
             },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -81,6 +95,30 @@ class HomeDetailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        homeImagesAsync.when(
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
+                          data: (images) {
+                            if (images.isEmpty) return const SizedBox.shrink();
+                            final cover = images.first;
+                            if (cover.signedUrl == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: AspectRatio(
+                                  aspectRatio: 16 / 9,
+                                  child: Image.network(
+                                    cover.signedUrl!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                         if (home.description != null &&
                             home.description!.isNotEmpty)
                           Text(
@@ -95,6 +133,7 @@ class HomeDetailScreen extends ConsumerWidget {
                             if (home.myRole != null)
                               Chip(label: Text(home.myRole!.label)),
                             Chip(label: Text(home.defaultCurrency)),
+                            Chip(label: Text(home.timezone)),
                             if (home.addressText != null)
                               Chip(label: Text(home.addressText!)),
                           ],

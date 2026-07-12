@@ -570,6 +570,26 @@ class InventoryRepository {
     return image;
   }
 
+  Future<EntityImage> uploadHomeImage({
+    required String homeId,
+    required Uint8List bytes,
+    required String mimeType,
+    String extension = 'jpg',
+  }) async {
+    final image = await uploadEntityImage(
+      homeId: homeId,
+      entityType: 'HOME',
+      entityId: homeId,
+      bytes: bytes,
+      mimeType: mimeType,
+      extension: extension,
+    );
+    await _client
+        .from('homes')
+        .update({'cover_image_id': image.id}).eq('id', homeId);
+    return image;
+  }
+
   Future<void> deleteImage(EntityImage image) async {
     await _client.storage.from('home-images').remove([image.storagePath]);
     await _client.from('images').delete().eq('id', image.id);
