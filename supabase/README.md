@@ -34,18 +34,34 @@ Every Home-scoped table stores `home_id` and enables RLS.
 
 ## Connect a hosted Supabase project
 
-1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
-2. Create an access token at [Account → Access Tokens](https://supabase.com/dashboard/account/tokens).
-3. From the repo root:
+### GitHub integration (recommended)
+
+With the repo connected under **Project Settings → Integrations → GitHub**:
+
+| Setting | Value |
+| --- | --- |
+| Repository | `Ezral/Homeventory` |
+| Working directory | `.` |
+| Automatic branching | on (preview DB for PRs that touch `supabase/`) |
+| Deploy to production | on (migrations apply when merging to `main`) |
+
+Merge a PR that includes `supabase/migrations/*.sql` into `main` to deploy. Preview branches run the same migrations for PR validation.
+
+Then:
+
+1. Dashboard → Authentication → Providers → enable **Google** (Web client ID + secret).
+2. Copy **Project URL** and **anon** key into the Flutter `--dart-define` flags (see root README).
+
+### CLI alternative
+
+1. Create an access token at [Account → Access Tokens](https://supabase.com/dashboard/account/tokens).
+2. From the repo root:
 
 ```bash
 npm install
 export SUPABASE_ACCESS_TOKEN=sbp_...
 ./scripts/link-and-push.sh YOUR_PROJECT_REF
 ```
-
-4. Enable **Google** under Authentication → Providers (Web client ID + secret).
-5. Copy **Project URL** and **anon** key into the Flutter `--dart-define` flags (see root README).
 
 Never ship the **service-role** key in the mobile app.
 

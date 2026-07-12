@@ -53,18 +53,24 @@ Still needed for a live device build: your hosted Supabase project credentials +
 
 ## Connect Supabase (hosted)
 
-1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
-2. Create an access token at [Account → Access Tokens](https://supabase.com/dashboard/account/tokens).
-3. From the repo root:
+### Option A — GitHub integration (recommended)
+
+In the Supabase dashboard: **Project Settings → Integrations → GitHub**.
+
+1. Connect the `Ezral/Homeventory` repository.
+2. Set **Working directory** to `.` (`supabase/` is at the repo root).
+3. Enable **Automatic branching** (preview DB per PR) and **Deploy to production** (apply migrations on merge to `main`).
+4. Merge [PR #3](https://github.com/Ezral/Homeventory/pull/3) (or any PR that contains `supabase/migrations`) into `main` to deploy the Phase 1–3 schema.
+5. Dashboard → Authentication → Providers → enable **Google** (Web client ID + secret).
+6. Copy Project URL + **anon** key into the Flutter run command below.
+
+### Option B — CLI push
 
 ```bash
 npm install
 export SUPABASE_ACCESS_TOKEN=sbp_...
 ./scripts/link-and-push.sh YOUR_PROJECT_REF
 ```
-
-4. Dashboard → Authentication → Providers → enable **Google** (Web client ID + secret).
-5. Copy Project URL + **anon** key into the Flutter run command below.
 
 Details: [`supabase/README.md`](supabase/README.md)
 
