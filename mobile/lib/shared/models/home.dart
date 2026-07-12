@@ -5,6 +5,7 @@ class Home {
     required this.id,
     required this.name,
     this.description,
+    this.coverImageId,
     this.addressText,
     this.timezone = 'UTC',
     this.defaultCurrency = 'USD',
@@ -16,6 +17,7 @@ class Home {
   final String id;
   final String name;
   final String? description;
+  final String? coverImageId;
   final String? addressText;
   final String timezone;
   final String defaultCurrency;
@@ -25,16 +27,33 @@ class Home {
 
   bool get isArchived => archivedAt != null;
 
-  Home copyWith({HomeRole? myRole}) {
+  Home copyWith({
+    String? name,
+    String? description,
+    String? coverImageId,
+    String? addressText,
+    String? timezone,
+    String? defaultCurrency,
+    DateTime? archivedAt,
+    HomeRole? myRole,
+    bool clearDescription = false,
+    bool clearCoverImageId = false,
+    bool clearAddressText = false,
+    bool clearArchivedAt = false,
+  }) {
     return Home(
       id: id,
-      name: name,
-      description: description,
-      addressText: addressText,
-      timezone: timezone,
-      defaultCurrency: defaultCurrency,
+      name: name ?? this.name,
+      description:
+          clearDescription ? null : (description ?? this.description),
+      coverImageId:
+          clearCoverImageId ? null : (coverImageId ?? this.coverImageId),
+      addressText:
+          clearAddressText ? null : (addressText ?? this.addressText),
+      timezone: timezone ?? this.timezone,
+      defaultCurrency: defaultCurrency ?? this.defaultCurrency,
       createdByUserId: createdByUserId,
-      archivedAt: archivedAt,
+      archivedAt: clearArchivedAt ? null : (archivedAt ?? this.archivedAt),
       myRole: myRole ?? this.myRole,
     );
   }
@@ -44,6 +63,7 @@ class Home {
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
+      coverImageId: json['cover_image_id'] as String?,
       addressText: json['address_text'] as String?,
       timezone: (json['timezone'] as String?) ?? 'UTC',
       defaultCurrency: (json['default_currency'] as String?) ?? 'USD',
@@ -62,6 +82,15 @@ class Home {
         'timezone': timezone,
         'default_currency': defaultCurrency,
         'created_by_user_id': createdByUserId,
+      };
+
+  Map<String, dynamic> toUpdateJson() => {
+        'name': name,
+        'description': description,
+        'address_text': addressText,
+        'timezone': timezone,
+        'default_currency': defaultCurrency,
+        if (coverImageId != null) 'cover_image_id': coverImageId,
       };
 }
 

@@ -86,6 +86,7 @@ void main() {
         'id': 'h1',
         'name': 'Bangkok Apartment',
         'description': null,
+        'cover_image_id': 'img1',
         'address_text': null,
         'timezone': 'Asia/Bangkok',
         'default_currency': 'THB',
@@ -93,8 +94,10 @@ void main() {
         'archived_at': null,
       }, myRole: HomeRole.owner);
       expect(home.name, 'Bangkok Apartment');
+      expect(home.coverImageId, 'img1');
       expect(home.myRole, HomeRole.owner);
       expect(home.isArchived, isFalse);
+      expect(home.toUpdateJson()['timezone'], 'Asia/Bangkok');
     });
 
     test('Room.fromJson', () {

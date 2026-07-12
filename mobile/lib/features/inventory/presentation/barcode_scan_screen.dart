@@ -18,33 +18,69 @@ class BarcodeScanScreen extends StatefulWidget {
 class _BarcodeScanScreenState extends State<BarcodeScanScreen>
     with WidgetsBindingObserver {
   MobileScannerController? _controller;
-  StreamSubscription<BarcodeCapture>? _subscription;
-  bool _handled = false;
+
+  /// True after the camera permission request finishes.
+  bool _permissionChecked = false;
   bool _permissionDenied = false;
-  bool _starting = true;
-  String? _error;
+
+  /// Prevents processing more than one barcode per screen visit.
+  bool _handled = false;
+
+  /// Guards concurrent manual start/stop calls (lifecycle / retry).
+  bool _startInFlight = false;
+  bool _stopInFlight = false;
+
+  /// Lifecycle / attach retries that are not "camera unavailable".
+  String? _initMessage;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    unawaited(_bootstrap());
+    unawaited(_requestPermissionAndAttach());
   }
 
-  Future<void> _bootstrap() async {
+  Future<void> _requestPermissionAndAttach() async {
     final status = await Permission.camera.request();
     if (!mounted) return;
+
     if (!status.isGranted) {
+      final previous = _controller;
+      _controller = null;
+      unawaited(previous?.dispose());
       setState(() {
         _permissionDenied = true;
-        _starting = false;
+        _permissionChecked = true;
+        _initMessage = null;
       });
       return;
     }
 
+    // Already have a live controller — just clear denied state and ensure start.
+    if (_controller != null && !_permissionDenied) {
+      setState(() {
+        _permissionDenied = false;
+        _permissionChecked = true;
+        _initMessage = null;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_safeStart());
+      });
+      return;
+    }
+
+    // Dispose any previous controller before creating a new one.
+    final previous = _controller;
+    _controller = null;
+    unawaited(previous?.dispose());
+
+    // Only create the controller once permission is granted, then mount
+    // [MobileScanner] in the same frame. autoStart lets the widget start
+    // after it attaches — never call start() before MobileScanner builds.
     final controller = MobileScannerController(
-      autoStart: false,
-      detectionSpeed: DetectionSpeed.normal,
+      autoStart: true,
+      detectionSpeed: DetectionSpeed.noDuplicates,
       facing: CameraFacing.back,
       formats: const [
         BarcodeFormat.ean13,
@@ -56,72 +92,132 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
         BarcodeFormat.qrCode,
       ],
     );
-    _controller = controller;
-    _subscription = controller.barcodes.listen(_onDetect);
 
+    setState(() {
+      _permissionDenied = false;
+      _permissionChecked = true;
+      _controller = controller;
+      _initMessage = null;
+    });
+  }
+
+  Future<void> _safeStart() async {
+    final controller = _controller;
+    if (controller == null ||
+        !mounted ||
+        _permissionDenied ||
+        _handled ||
+        _startInFlight) {
+      return;
+    }
+
+    _startInFlight = true;
     try {
+      if (controller.value.isRunning || controller.value.isStarting) {
+        return;
+      }
       await controller.start();
       if (!mounted) return;
-      setState(() {
-        _starting = false;
-        _error = null;
-      });
-    } catch (e) {
+      setState(() => _initMessage = null);
+    } on MobileScannerException catch (e) {
+      if (!mounted) return;
+      if (e.errorCode == MobileScannerErrorCode.controllerNotAttached ||
+          e.errorCode == MobileScannerErrorCode.controllerInitializing) {
+        setState(() {
+          _initMessage =
+              'Scanner is still starting. Tap Retry once the camera preview is ready.';
+        });
+        return;
+      }
+      if (e.errorCode == MobileScannerErrorCode.permissionDenied) {
+        setState(() {
+          _permissionDenied = true;
+          _initMessage = null;
+        });
+        return;
+      }
+      // Genuine hardware / unsupported failures surface via errorBuilder.
+      setState(() => _initMessage = null);
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _starting = false;
-        _error = e.toString();
+        _initMessage = 'Could not restart the scanner. Tap Retry to try again.';
       });
+    } finally {
+      _startInFlight = false;
+    }
+  }
+
+  Future<void> _safeStop() async {
+    final controller = _controller;
+    if (controller == null || _stopInFlight) return;
+
+    _stopInFlight = true;
+    try {
+      if (!controller.value.isRunning && !controller.value.isStarting) {
+        return;
+      }
+      await controller.stop();
+    } catch (_) {
+      // Ignore stop races during rapid navigation / lifecycle churn.
+    } finally {
+      _stopInFlight = false;
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = _controller;
-    if (controller == null || _permissionDenied) return;
+    // Permission dialogs fire lifecycle events before the scanner exists.
+    if (!_permissionChecked) return;
 
     switch (state) {
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
-        return;
+        break;
       case AppLifecycleState.resumed:
-        unawaited(() async {
-          await _subscription?.cancel();
-          _subscription = controller.barcodes.listen(_onDetect);
-          try {
-            await controller.start();
-          } catch (_) {
-            try {
-              await controller.stop();
-              await controller.start();
-            } catch (_) {}
-          }
-        }());
+        if (_permissionDenied || _controller == null) {
+          // Returning from Settings after a denial — re-check permission.
+          unawaited(_requestPermissionAndAttach());
+          break;
+        }
+        // Restart only after the next frame so MobileScanner stays attached.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          unawaited(_safeStart());
+        });
       case AppLifecycleState.inactive:
-        unawaited(_subscription?.cancel());
-        _subscription = null;
-        unawaited(controller.stop());
+        if (_controller != null && !_permissionDenied) {
+          unawaited(_safeStop());
+        }
     }
   }
 
-  void _onDetect(BarcodeCapture capture) {
+  void _handleBarcode(BarcodeCapture capture) {
     if (_handled) return;
     final value = capture.barcodes
         .map((b) => b.rawValue)
         .whereType<String>()
-        .firstWhere((v) => v.trim().isNotEmpty, orElse: () => '');
+        .map((v) => v.trim())
+        .firstWhere((v) => v.isNotEmpty, orElse: () => '');
     if (value.isEmpty) return;
+
     _handled = true;
-    context.pop(value.trim());
+    unawaited(_safeStop());
+    if (!mounted) return;
+    context.pop(value);
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    unawaited(_subscription?.cancel());
-    unawaited(_controller?.dispose());
-    super.dispose();
+  Future<void> _retryInitialization() async {
+    setState(() => _initMessage = null);
+    if (_controller == null) {
+      await _requestPermissionAndAttach();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_safeStart());
+    });
   }
 
   Future<void> _enterManually() async {
@@ -132,8 +228,21 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
     );
     if (!mounted) return;
     if (value != null && value.trim().isNotEmpty) {
+      _handled = true;
+      unawaited(_safeStop());
       context.pop(value.trim());
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    final controller = _controller;
+    _controller = null;
+    // Dispose exactly once; MobileScanner does not dispose an injected
+    // controller when autoStart stops it on widget teardown.
+    unawaited(controller?.dispose());
+    super.dispose();
   }
 
   @override
@@ -143,7 +252,10 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
         title: Text(widget.title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            unawaited(_safeStop());
+            context.pop();
+          },
         ),
         actions: [
           TextButton(
@@ -157,9 +269,10 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
   }
 
   Widget _buildBody() {
-    if (_starting) {
+    if (!_permissionChecked) {
       return const Center(child: CircularProgressIndicator());
     }
+
     if (_permissionDenied) {
       return _MessagePanel(
         title: 'Camera permission needed',
@@ -171,18 +284,14 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
         onSecondary: _enterManually,
       );
     }
-    if (_error != null || _controller == null) {
+
+    final controller = _controller;
+    if (controller == null) {
       return _MessagePanel(
-        title: 'Camera unavailable',
-        message: _error ?? 'Could not start the camera.',
+        title: 'Scanner not ready',
+        message: 'Tap Retry to initialize the camera scanner.',
         actionLabel: 'Retry',
-        onAction: () {
-          setState(() {
-            _starting = true;
-            _error = null;
-          });
-          unawaited(_bootstrap());
-        },
+        onAction: () => unawaited(_retryInitialization()),
         secondaryLabel: 'Enter manually',
         onSecondary: _enterManually,
       );
@@ -191,7 +300,36 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        MobileScanner(controller: _controller!),
+        MobileScanner(
+          controller: controller,
+          onDetect: _handleBarcode,
+          errorBuilder: (context, error) => _scannerErrorPanel(error),
+        ),
+        if (_initMessage != null)
+          Align(
+            alignment: Alignment.center,
+            child: Material(
+              color: Colors.black54,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _initMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => unawaited(_retryInitialization()),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         Align(
           alignment: Alignment.bottomCenter,
           child: Container(
@@ -207,6 +345,56 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
         ),
       ],
     );
+  }
+
+  Widget _scannerErrorPanel(MobileScannerException error) {
+    switch (error.errorCode) {
+      case MobileScannerErrorCode.permissionDenied:
+        return _MessagePanel(
+          title: 'Camera permission needed',
+          message:
+              'Allow camera access to scan barcodes, or enter the code manually.',
+          actionLabel: 'Open settings',
+          onAction: openAppSettings,
+          secondaryLabel: 'Enter manually',
+          onSecondary: _enterManually,
+        );
+      case MobileScannerErrorCode.unsupported:
+        return _MessagePanel(
+          title: 'Camera unavailable',
+          message: 'No usable camera was found on this device.',
+          actionLabel: 'Enter manually',
+          onAction: () => unawaited(_enterManually()),
+          secondaryLabel: 'Close',
+          onSecondary: () async {
+            if (mounted) context.pop();
+          },
+        );
+      case MobileScannerErrorCode.controllerNotAttached:
+      case MobileScannerErrorCode.controllerInitializing:
+      case MobileScannerErrorCode.controllerUninitialized:
+        return _MessagePanel(
+          title: 'Scanner starting',
+          message:
+              'The camera preview is still attaching. Tap Retry in a moment.',
+          actionLabel: 'Retry',
+          onAction: () => unawaited(_retryInitialization()),
+          secondaryLabel: 'Enter manually',
+          onSecondary: _enterManually,
+        );
+      case MobileScannerErrorCode.controllerAlreadyInitialized:
+      case MobileScannerErrorCode.controllerDisposed:
+      case MobileScannerErrorCode.genericError:
+        return _MessagePanel(
+          title: 'Camera unavailable',
+          message: error.errorDetails?.message ??
+              'Could not start the camera. You can retry or enter a code manually.',
+          actionLabel: 'Retry',
+          onAction: () => unawaited(_retryInitialization()),
+          secondaryLabel: 'Enter manually',
+          onSecondary: _enterManually,
+        );
+    }
   }
 }
 

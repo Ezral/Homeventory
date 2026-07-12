@@ -47,16 +47,19 @@ class HomesRepository {
     required String name,
     String? description,
     String? addressText,
+    String? timezone,
+    String? defaultCurrency,
   }) async {
     final inserted = await client
         .from('homes')
         .insert({
           'name': name.trim(),
-          'description': description?.trim().isEmpty == true
-              ? null
-              : description?.trim(),
-          'address_text':
-              addressText?.trim().isEmpty == true ? null : addressText?.trim(),
+          'description': _nullIfBlank(description),
+          'address_text': _nullIfBlank(addressText),
+          if (timezone != null && timezone.trim().isNotEmpty)
+            'timezone': timezone.trim(),
+          if (defaultCurrency != null && defaultCurrency.trim().isNotEmpty)
+            'default_currency': defaultCurrency.trim().toUpperCase(),
           'created_by_user_id': _userId,
         })
         .select()
@@ -68,6 +71,37 @@ class HomesRepository {
     );
     await localSessionStore.writeActiveHomeId(home.id);
     return home;
+  }
+
+  Future<Home> updateHome({
+    required String homeId,
+    required String name,
+    String? description,
+    String? addressText,
+    String? timezone,
+    String? defaultCurrency,
+  }) async {
+    final updated = await client
+        .from('homes')
+        .update({
+          'name': name.trim(),
+          'description': _nullIfBlank(description),
+          'address_text': _nullIfBlank(addressText),
+          if (timezone != null && timezone.trim().isNotEmpty)
+            'timezone': timezone.trim(),
+          if (defaultCurrency != null && defaultCurrency.trim().isNotEmpty)
+            'default_currency': defaultCurrency.trim().toUpperCase(),
+        })
+        .eq('id', homeId)
+        .select()
+        .single();
+
+    final role =
+        await client.rpc('home_role_of', params: {'p_home_id': homeId});
+    return Home.fromJson(
+      Map<String, dynamic>.from(updated),
+      myRole: role == null ? null : HomeRole.fromDb(role as String),
+    );
   }
 
   Future<Home> getHome(String homeId) async {
@@ -84,6 +118,12 @@ class HomesRepository {
     await client.from('homes').update({
       'archived_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', homeId);
+  }
+
+  String? _nullIfBlank(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   /// Returns the plaintext token once so the UI can show link/QR/code.

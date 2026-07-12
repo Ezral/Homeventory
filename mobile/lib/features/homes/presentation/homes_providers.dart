@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/home.dart';
 import '../../../shared/providers/supabase_provider.dart';
+import '../../inventory/data/inventory_repository.dart';
+import '../../rooms/presentation/rooms_providers.dart';
 import '../data/homes_repository.dart';
 
 final homesRepositoryProvider = Provider<HomesRepository>((ref) {
@@ -23,6 +25,15 @@ final homeProvider =
 final homeMembersProvider =
     FutureProvider.autoDispose.family<List<HomeMember>, String>((ref, homeId) {
   return ref.watch(homesRepositoryProvider).listMembers(homeId);
+});
+
+final homeImagesProvider = FutureProvider.autoDispose
+    .family<List<EntityImage>, String>((ref, homeId) {
+  return ref.watch(inventoryRepositoryProvider).listImages(
+        homeId: homeId,
+        entityType: 'HOME',
+        entityId: homeId,
+      );
 });
 
 final activeHomeIdProvider =
