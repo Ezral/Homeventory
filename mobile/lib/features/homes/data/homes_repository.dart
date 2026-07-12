@@ -129,10 +129,78 @@ class HomesRepository {
     return id;
   }
 
+  Future<void> removeMember({
+    required String homeId,
+    required String userId,
+  }) async {
+    await client.rpc(
+      'remove_home_member',
+      params: {
+        'p_home_id': homeId,
+        'p_user_id': userId,
+      },
+    );
+  }
+
+  Future<void> leaveHome(String homeId) async {
+    await client.rpc('leave_home', params: {'p_home_id': homeId});
+    final active = await localSessionStore.readActiveHomeId();
+    if (active == homeId) {
+      await localSessionStore.clearPrivateState();
+    }
+  }
+
+  Future<List<HomeMember>> listMembers(String homeId) async {
+    final rows = await client
+        .from('home_members')
+        .select('id, home_id, user_id, role, status, profiles(display_name, email)')
+        .eq('home_id', homeId)
+        .eq('status', MembershipStatus.active.dbValue)
+        .order('created_at');
+
+    return (rows as List).map((row) {
+      final map = Map<String, dynamic>.from(row as Map);
+      final profile = map['profiles'] is Map
+          ? Map<String, dynamic>.from(map['profiles'] as Map)
+          : null;
+      return HomeMember(
+        id: map['id'] as String,
+        homeId: map['home_id'] as String,
+        userId: map['user_id'] as String,
+        role: HomeRole.fromDb(map['role'] as String),
+        displayName: profile?['display_name'] as String?,
+        email: profile?['email'] as String?,
+      );
+    }).toList();
+  }
+
   Future<String?> readActiveHomeId() => localSessionStore.readActiveHomeId();
 
   Future<void> setActiveHomeId(String homeId) =>
       localSessionStore.writeActiveHomeId(homeId);
+}
+
+class HomeMember {
+  const HomeMember({
+    required this.id,
+    required this.homeId,
+    required this.userId,
+    required this.role,
+    this.displayName,
+    this.email,
+  });
+
+  final String id;
+  final String homeId;
+  final String userId;
+  final HomeRole role;
+  final String? displayName;
+  final String? email;
+
+  String get label =>
+      (displayName != null && displayName!.trim().isNotEmpty)
+          ? displayName!.trim()
+          : (email ?? userId);
 }
 
 class CreatedInvitation {

@@ -39,30 +39,49 @@ docs/                 Product planning and implementation backlog
 supabase/
   migrations/         Schema, RLS helpers, trusted functions
   tests/              Cross-Home authorization SQL tests
+scripts/              Migration validation + hosted project link/push
 mobile/               Flutter app (Phase 1–3 client)
 ```
 
 ## Current status
 
-- **Backend foundation:** profiles, Homes, membership, invitations, rooms, recursive inventory nodes, RLS helpers, invite/move RPCs
-- **Flutter client:** Google sign-in, homes, invites, rooms, nested inventory browse/create, search
+- **Backend:** profiles, Homes, membership, invitations (token + short code), rooms, recursive inventory, RLS helpers, invite/move/remove/leave RPCs
+- **Flutter client:** Google sign-in, homes, invites, members, rooms, nested inventory browse/create, search
+- **Tooling:** `npm` Supabase CLI, `scripts/validate-migrations.sh`, `scripts/link-and-push.sh`
 
-Still needed for a live build: Supabase project credentials, Google OAuth client IDs, and (later) FCM.
+Still needed for a live device build: your hosted Supabase project credentials + Google OAuth client IDs (and later FCM).
 
-## Local setup (backend)
+## Connect Supabase (hosted)
 
-1. Install the [Supabase CLI](https://supabase.com/docs/guides/cli).
-2. From the repo root:
+1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
+2. Create an access token at [Account → Access Tokens](https://supabase.com/dashboard/account/tokens).
+3. From the repo root:
 
 ```bash
-supabase start
-supabase db reset
+npm install
+export SUPABASE_ACCESS_TOKEN=sbp_...
+./scripts/link-and-push.sh YOUR_PROJECT_REF
 ```
 
-3. Run authorization tests when ready:
+4. Dashboard → Authentication → Providers → enable **Google** (Web client ID + secret).
+5. Copy Project URL + **anon** key into the Flutter run command below.
+
+Details: [`supabase/README.md`](supabase/README.md)
+
+## Validate migrations (no Docker)
 
 ```bash
-supabase test db
+./scripts/validate-migrations.sh
+```
+
+## Local setup (full stack — Docker required)
+
+```bash
+cp supabase/.env.example supabase/.env   # optional Google OAuth for local Auth
+npm install
+npx supabase start
+npx supabase db reset
+npx supabase test db
 ```
 
 ## Local setup (mobile)
@@ -77,6 +96,7 @@ flutter run \
 ```
 
 Use only the Supabase **anon** key in the client — never the service-role key.
+See `mobile/.env.example` for the variable list.
 
 ## Security rule
 

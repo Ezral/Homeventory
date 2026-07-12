@@ -26,9 +26,7 @@ class _JoinHomeScreenState extends ConsumerState<JoinHomeScreen> {
     if (value.isEmpty) return;
     setState(() => _busy = true);
     try {
-      // Accept either raw token or short code — backend RPC expects token.
-      // Short-code acceptance can be added as a separate RPC later; for now
-      // users paste the invite token from the share sheet.
+      // Backend accepts the raw invite token (>=32 chars) or the short code.
       final homeId =
           await ref.read(homesRepositoryProvider).acceptInvitation(value);
       ref.invalidate(homesListProvider);
@@ -52,18 +50,19 @@ class _JoinHomeScreenState extends ConsumerState<JoinHomeScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           Text(
-            'Paste an invite token from a home owner or admin.',
+            'Paste an invite token or short code from a home owner or admin.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _controller,
             decoration: const InputDecoration(
-              labelText: 'Invite token',
-              hintText: 'Paste token…',
+              labelText: 'Invite token or short code',
+              hintText: 'Paste token or code…',
             ),
-            minLines: 2,
+            minLines: 1,
             maxLines: 4,
+            textCapitalization: TextCapitalization.characters,
           ),
           const SizedBox(height: 24),
           FilledButton(

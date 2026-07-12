@@ -20,6 +20,11 @@ final homeProvider =
   return ref.watch(homesRepositoryProvider).getHome(homeId);
 });
 
+final homeMembersProvider =
+    FutureProvider.autoDispose.family<List<HomeMember>, String>((ref, homeId) {
+  return ref.watch(homesRepositoryProvider).listMembers(homeId);
+});
+
 final activeHomeIdProvider =
     AsyncNotifierProvider<ActiveHomeIdController, String?>(
   ActiveHomeIdController.new,

@@ -56,16 +56,18 @@ $$;
 -- ---------------------------------------------------------------------------
 -- Authorization helpers (security definer, stable)
 -- Deny-by-default callers: policies must invoke these explicitly.
+-- Implemented in plpgsql so CREATE FUNCTION does not require tables yet.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.is_home_member(p_home_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select exists (
+begin
+  return exists (
     select 1
     from public.home_members hm
     where hm.home_id = p_home_id
@@ -73,62 +75,77 @@ as $$
       and hm.status = 'ACTIVE'
       and hm.removed_at is null
   );
+end;
 $$;
 
 create or replace function public.home_role_of(p_home_id uuid)
 returns public.home_role
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
+declare
+  result public.home_role;
+begin
   select hm.role
+  into result
   from public.home_members hm
   where hm.home_id = p_home_id
     and hm.user_id = auth.uid()
     and hm.status = 'ACTIVE'
     and hm.removed_at is null
   limit 1;
+  return result;
+end;
 $$;
 
 create or replace function public.can_view_home(p_home_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select public.is_home_member(p_home_id);
+begin
+  return public.is_home_member(p_home_id);
+end;
 $$;
 
 create or replace function public.can_edit_inventory(p_home_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select public.home_role_of(p_home_id) in ('OWNER', 'ADMIN', 'EDITOR');
+begin
+  return public.home_role_of(p_home_id) in ('OWNER', 'ADMIN', 'EDITOR');
+end;
 $$;
 
 create or replace function public.can_manage_members(p_home_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select public.home_role_of(p_home_id) in ('OWNER', 'ADMIN');
+begin
+  return public.home_role_of(p_home_id) in ('OWNER', 'ADMIN');
+end;
 $$;
 
 create or replace function public.can_admin_home(p_home_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select public.home_role_of(p_home_id) = 'OWNER';
+begin
+  return public.home_role_of(p_home_id) = 'OWNER';
+end;
 $$;
 
 revoke all on function public.is_home_member(uuid) from public;

@@ -33,7 +33,8 @@ Never put the Supabase **service-role** key in the app.
 - Google SSO (native ID token + OAuth fallback)
 - Profile load (created by `handle_new_user` trigger)
 - Secure local active-home preference; cleared on logout
-- Homes: list, create, archive-ready model, invite create/accept
+- Homes: list, create, archive-ready model, invite create/accept (token or short code)
+- Members: list, remove (admin), leave home
 - Rooms: list + create
 - Inventory nodes: nested browse, create (furniture / storage / item-as-container), search
 - Role-aware UI (viewer read-only; editors can mutate)

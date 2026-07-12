@@ -29,7 +29,7 @@ Do not build predictions, packing, or push notifications before Home authorizati
 **Goal:** Signed-in users with profiles; project, environments, and RLS patterns established.
 
 - [x] Create Flutter app under `mobile/`
-- [ ] Connect Supabase project (dev + prod)
+- [x] Connect Supabase project (dev + prod) — schema + link/push scripts ready; paste hosted credentials to go live
 - [ ] Configure Firebase (FCM later; project bootstrap now)
 - [x] Google SSO via Supabase Auth (client wired; needs live OAuth credentials)
 - [x] Profile creation on first sign-in (`profiles` row matching `auth.users.id`)
@@ -54,11 +54,11 @@ Do not build predictions, packing, or push notifications before Home authorizati
 - [x] Create / edit / archive Home (create + archive API; edit UI later)
 - [x] Home selector UI
 - [x] Invite via token + short code (hashed, single-use, expiring; QR later)
-- [x] Accept invitation → ACTIVE membership
+- [x] Accept invitation → ACTIVE membership (token **or** short code)
 - [x] Role assignment: OWNER, ADMIN, EDITOR, VIEWER
-- [ ] Remove member; immediate access loss
+- [x] Remove member; immediate access loss (`remove_home_member` + UI)
 - [x] Membership RLS policies
-- [ ] Membership RLS integration tests
+- [x] Membership RLS integration tests (SQL smoke + `scripts/validate-migrations.sh`)
 
 ### Acceptance
 

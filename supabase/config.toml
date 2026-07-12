@@ -15,13 +15,14 @@ port = 54322
 major_version = 15
 
 [db.seed]
-enabled = false
+enabled = true
+sql_paths = ["./seed.sql"]
 
 [studio]
 enabled = true
 port = 54323
 
-[inbucket]
+[local_smtp]
 enabled = true
 port = 54324
 
@@ -32,7 +33,11 @@ file_size_limit = "50MiB"
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "http://127.0.0.1:3000",
+  "io.supabase.flutter://login-callback/",
+  "com.homeventory.homeventory://login-callback/",
+]
 jwt_expiry = 3600
 enable_signup = true
 

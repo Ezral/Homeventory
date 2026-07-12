@@ -17,6 +17,7 @@ mobile/build/
 # Mobile secrets / local env
 mobile/.env
 mobile/.env.*
+!mobile/.env.example
 mobile/**/google-services.json
 mobile/**/GoogleService-Info.plist
 **/secrets.dart
@@ -27,6 +28,7 @@ supabase/.branches
 supabase/.temp
 supabase/.env
 supabase/.env.*
+!supabase/.env.example
 
 # OS / editor
 .DS_Store
@@ -37,3 +39,6 @@ supabase/.env.*
 # Coverage / test
 coverage/
 *.lcov
+
+# Node / Supabase CLI
+node_modules/

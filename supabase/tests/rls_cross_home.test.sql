@@ -3,7 +3,7 @@
 -- These tests assert that membership is required and UUID guessing fails.
 
 begin;
-select plan(8);
+select plan(11);
 
 create extension if not exists pgtap;
 
@@ -26,6 +26,7 @@ select is(
 -- Alice creates Home A as herself
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.email', 'alice@example.com', true);
 
 set local role authenticated;
 
@@ -98,6 +99,56 @@ select is(
   'member can create inventory nodes'
 );
 
+-- Invite Bob with short code
+select public.create_invitation(
+  '11111111-1111-1111-1111-111111111111',
+  'EDITOR',
+  'tokentokentokentokentokentokentoken12',
+  'JOINCODE',
+  null,
+  72
+);
+
+reset role;
+
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.email', 'bob@example.com', true);
+set local role authenticated;
+
+select is(
+  (select count(*)::int from public.inventory_nodes where id = '33333333-3333-3333-3333-333333333333'),
+  0,
+  'non-member cannot read inventory by UUID'
+);
+
+select is(
+  (select role::text from public.accept_invitation('JOINCODE')),
+  'EDITOR',
+  'short-code invitation grants EDITOR'
+);
+
+select is(
+  (select count(*)::int from public.inventory_nodes where id = '33333333-3333-3333-3333-333333333333'),
+  1,
+  'accepted invitee can read inventory'
+);
+
+reset role;
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+set local role authenticated;
+
+select is(
+  (select status::text from public.remove_home_member(
+    '11111111-1111-1111-1111-111111111111',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+  )),
+  'REMOVED',
+  'owner can soft-remove member'
+);
+
 reset role;
 
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', true);
@@ -107,7 +158,7 @@ set local role authenticated;
 select is(
   (select count(*)::int from public.inventory_nodes where id = '33333333-3333-3333-3333-333333333333'),
   0,
-  'non-member cannot read inventory by UUID'
+  'removed member loses inventory access immediately'
 );
 
 reset role;

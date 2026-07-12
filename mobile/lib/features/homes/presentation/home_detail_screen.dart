@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../data/homes_repository.dart';
 import 'homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
@@ -64,6 +65,7 @@ class HomeDetailScreen extends ConsumerWidget {
             onRefresh: () async {
               ref.invalidate(homeProvider(homeId));
               ref.invalidate(roomsListProvider(homeId));
+              ref.invalidate(homeMembersProvider(homeId));
             },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -91,6 +93,14 @@ class HomeDetailScreen extends ConsumerWidget {
                             if (home.addressText != null)
                               Chip(label: Text(home.addressText!)),
                           ],
+                        ),
+                        const SizedBox(height: 20),
+                        const SectionLabel('Members'),
+                        const SizedBox(height: 10),
+                        _MembersSection(
+                          homeId: homeId,
+                          canManage: canInvite,
+                          myRole: home.myRole,
                         ),
                         const SizedBox(height: 20),
                         const SectionLabel('Rooms'),
@@ -264,17 +274,38 @@ class HomeDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: token!));
+                        final value = shortCode ?? token!;
+                        await Clipboard.setData(ClipboardData(text: value));
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Invite token copied'),
+                            SnackBar(
+                              content: Text(
+                                shortCode != null
+                                    ? 'Short code copied'
+                                    : 'Invite token copied',
+                              ),
                             ),
                           );
                         }
                       },
                       icon: const Icon(Icons.copy),
-                      label: const Text('Copy token'),
+                      label: Text(
+                        shortCode != null ? 'Copy short code' : 'Copy token',
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: token!));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Full invite token copied'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.link),
+                      label: const Text('Copy full token'),
                     ),
                   ],
                 ],
@@ -284,5 +315,147 @@ class HomeDetailScreen extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+class _MembersSection extends ConsumerWidget {
+  const _MembersSection({
+    required this.homeId,
+    required this.canManage,
+    required this.myRole,
+  });
+
+  final String homeId;
+  final bool canManage;
+  final HomeRole? myRole;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membersAsync = ref.watch(homeMembersProvider(homeId));
+    return membersAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => ErrorView(
+        message: e.toString(),
+        onRetry: () => ref.invalidate(homeMembersProvider(homeId)),
+      ),
+      data: (members) {
+        if (members.isEmpty) {
+          return Text(
+            'No active members.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          );
+        }
+        return Column(
+          children: [
+            for (final member in members)
+              SoftTile(
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.mossSoft,
+                  child: Text(
+                    member.label.isNotEmpty
+                        ? member.label.substring(0, 1).toUpperCase()
+                        : '?',
+                    style: const TextStyle(color: AppColors.mossDeep),
+                  ),
+                ),
+                title: member.label,
+                subtitle: member.role.label,
+                trailing: canManage && member.role != HomeRole.owner
+                    ? IconButton(
+                        tooltip: 'Remove member',
+                        icon: const Icon(Icons.person_remove_outlined),
+                        onPressed: () => _confirmRemove(context, ref, member),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            if (myRole != null && myRole != HomeRole.owner) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => _confirmLeave(context, ref),
+                  child: const Text('Leave home'),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmRemove(
+    BuildContext context,
+    WidgetRef ref,
+    HomeMember member,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove member?'),
+        content: Text(
+          '${member.label} will lose access to this home immediately.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    try {
+      await ref.read(homesRepositoryProvider).removeMember(
+            homeId: homeId,
+            userId: member.userId,
+          );
+      ref.invalidate(homeMembersProvider(homeId));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmLeave(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave this home?'),
+        content: const Text('You will lose access until invited again.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    try {
+      await ref.read(homesRepositoryProvider).leaveHome(homeId);
+      ref.invalidate(homesListProvider);
+      if (context.mounted) context.go('/homes');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
   }
 }
