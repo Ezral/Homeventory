@@ -49,7 +49,7 @@ jobs:
       - name: Unit tests
         run: flutter test
 
-      - name: Decode release keystore (optional)
+      - name: Configure Android signing
         working-directory: ${{ github.workspace }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -58,17 +58,25 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
-            echo "No release keystore secret; release build will use debug signing."
-            exit 0
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > mobile/android/upload-keystore.jks
+            {
+              echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+              echo "keyPassword=$ANDROID_KEY_PASSWORD"
+              echo "keyAlias=$ANDROID_KEY_ALIAS"
+              echo "storeFile=../upload-keystore.jks"
+            } > mobile/android/key.properties
+            echo "Using upload keystore from GitHub secrets."
+          else
+            # Stable committed CI keystore so Google SHA-1 does not change every build.
+            {
+              echo "storePassword=homeventory-ci"
+              echo "keyPassword=homeventory-ci"
+              echo "keyAlias=upload"
+              echo "storeFile=../ci-upload.jks"
+            } > mobile/android/key.properties
+            echo "Using committed ci-upload.jks (SHA-1 B9:53:89:A0:D9:1F:A0:D0:C6:DC:DA:A0:8D:B5:79:8F:F6:A0:E1:FD)."
           fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > mobile/android/upload-keystore.jks
-          {
-            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
-            echo "keyPassword=$ANDROID_KEY_PASSWORD"
-            echo "keyAlias=$ANDROID_KEY_ALIAS"
-            echo "storeFile=${{ github.workspace }}/mobile/android/upload-keystore.jks"
-          } > mobile/android/key.properties
 
       - name: Build release APK
         env:
