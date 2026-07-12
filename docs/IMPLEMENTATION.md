@@ -4,9 +4,9 @@ Derived from [`Homeventory_Full_Planning.md`](Homeventory_Full_Planning.md) §41
 
 Architecture decisions that are already implemented are recorded in [`docs/adr/`](adr/). Update or add an ADR in the same PR when architecture changes.
 
-Prep plan for stock / packing / predictions: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+Prep plan for next ship (**Phase 6-super** = stock + Trips MVP): [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
 
-Do not build predictions or push notifications before Home authorization, inventory hierarchy, and (for predictions) Phase 6–7 UAT are reliable. Packing may proceed with Phase 6.
+Do not build predictions or push notifications before Home authorization, inventory hierarchy, and (for predictions) **Phase 6-super UAT** are reliable.
 
 ## Recommended build order
 
@@ -20,9 +20,9 @@ Do not build predictions or push notifications before Home authorization, invent
 8. Images
 9. Barcode scanning
 10. Quantity transactions
-11. Product containers and refill
-12. Packing and unpacking (Trips)
-13. Consumption predictions (after Phase 6–7 UAT)
+11. Product containers, refill, dispensers (CC)
+12. Packing and unpacking (Trips) — **ship with 10–11 as Phase 6-super MVP**
+13. Consumption predictions (after Phase 6-super UAT)
 14. Notifications
 15. Hardening and release
 
@@ -121,9 +121,39 @@ Do not build predictions or push notifications before Home authorization, invent
 
 ---
 
-## Phase 6 — Inventory Transactions
+## Phase 6-super — Next ship (stock + Trips MVP)
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Prefer delivering **with Phase 7** in the same program.
+See MVP checklist: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+
+Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UAT. Full Phase 6/7 polish can follow.
+
+### Stock (Must)
+
+- [ ] Move UI (`move_inventory_node`)
+- [ ] `inventory_transactions` + `apply_inventory_transaction`
+- [ ] USE / RESTOCK / ADJUSTMENT / DISPOSE + history UI
+- [ ] Unit `CC` + dispenser capacity MVP
+
+### Trips (Must)
+
+- [ ] `trips`, `trip_containers`, `trip_items`
+- [ ] Pack / unpack RPCs with original location snapshot
+- [ ] Create trip → assign mobile container → pack → unpack
+
+### Should (same ship if possible)
+
+- [ ] TRANSFER_REFILL + thin product/reserve link
+- [ ] Pack via barcode; still-packed list
+
+### Defer
+
+- [ ] Packing templates; full product catalog; Phase 8 predictions
+
+---
+
+## Phase 6 — Inventory Transactions (full depth)
+
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Core MVP is under **Phase 6-super**; this list is remaining depth.
 
 - [ ] Schema: `inventory_transactions`, `products`, `product_containers`
 - [ ] Object dispensers: `is_dispenser`, `capacity`, unit **`CC`** (liquids; equiv. mL)
@@ -134,9 +164,9 @@ See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION
 
 ---
 
-## Phase 7 — Packing and Unpacking (Trips)
+## Phase 7 — Packing and Unpacking (Trips, full depth)
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Prefer delivering **with Phase 6** in the same program.
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Core MVP is under **Phase 6-super**.
 
 - [ ] Schema: `trips`, `trip_containers`, `trip_items`, packing templates
 - [ ] Assign mobile containers to Trips
@@ -148,7 +178,7 @@ See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION
 
 ## Phase 8 — Predictions
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). **Start only after UAT for Phases 6 and 7.**
+See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). **Start only after UAT for Phase 6-super.**
 
 - [ ] Schema: `consumption_predictions`
 - [ ] Active dispenser / container refill forecast (**CC/day** for volume products)

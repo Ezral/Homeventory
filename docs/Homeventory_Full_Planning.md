@@ -2642,7 +2642,7 @@ Export security:
 - Refill reminders.
 - Purchase-date suggestions.
 
-> **Delivery note (2026-07-12):** Working backlog reorders packing before predictions. Prefer implementing Phase 6 and Phase 7 in the same program; start Phase 8 only after UAT for Phases 6 and 7. See `docs/PHASE_6_8_IMPLEMENTATION_PLAN.md`.
+> **Delivery note (2026-07-12):** Working backlog ships stock + Trips as **Phase 6-super MVP** (see `docs/PHASE_6_8_IMPLEMENTATION_PLAN.md`). Full Phase 6/7 polish can follow; Phase 8 predictions start only after 6-super UAT.
 
 ## Phase 9 — Notifications
 
