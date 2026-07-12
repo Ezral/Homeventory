@@ -73,6 +73,8 @@ class HomeMember {
     required this.role,
     required this.status,
     this.joinedAt,
+    this.displayName,
+    this.email,
   });
 
   final String id;
@@ -81,17 +83,32 @@ class HomeMember {
   final HomeRole role;
   final MembershipStatus status;
   final DateTime? joinedAt;
+  final String? displayName;
+  final String? email;
+
+  String get label =>
+      (displayName != null && displayName!.trim().isNotEmpty)
+          ? displayName!.trim()
+          : (email ?? userId);
 
   factory HomeMember.fromJson(Map<String, dynamic> json) {
+    final profile = json['profiles'] is Map
+        ? Map<String, dynamic>.from(json['profiles'] as Map)
+        : null;
     return HomeMember(
       id: json['id'] as String,
       homeId: json['home_id'] as String,
       userId: json['user_id'] as String,
       role: HomeRole.fromDb(json['role'] as String),
-      status: MembershipStatus.fromDb(json['status'] as String),
+      status: MembershipStatus.fromDb(
+        (json['status'] as String?) ?? MembershipStatus.active.dbValue,
+      ),
       joinedAt: json['joined_at'] != null
           ? DateTime.tryParse(json['joined_at'] as String)
           : null,
+      displayName: profile?['display_name'] as String? ??
+          json['display_name'] as String?,
+      email: profile?['email'] as String? ?? json['email'] as String?,
     );
   }
 }

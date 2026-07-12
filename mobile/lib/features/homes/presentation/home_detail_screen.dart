@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
+import '../../../shared/models/home.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../data/homes_repository.dart';
 import 'homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
