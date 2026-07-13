@@ -36,6 +36,11 @@ final homeImagesProvider = FutureProvider.autoDispose
       );
 });
 
+final homeDashboardStatsProvider = FutureProvider.autoDispose
+    .family<HomeDashboardStats, String>((ref, homeId) {
+  return ref.watch(homesRepositoryProvider).dashboardStats(homeId);
+});
+
 final activeHomeIdProvider =
     AsyncNotifierProvider<ActiveHomeIdController, String?>(
   ActiveHomeIdController.new,

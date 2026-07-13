@@ -46,7 +46,9 @@ class HomesRepository {
   Future<Home> createHome({
     required String name,
     String? description,
+    String? remarks,
     String? addressText,
+    DateTime? residingSince,
     String? timezone,
     String? defaultCurrency,
   }) async {
@@ -55,7 +57,9 @@ class HomesRepository {
         .insert({
           'name': name.trim(),
           'description': _nullIfBlank(description),
+          'remarks': _nullIfBlank(remarks),
           'address_text': _nullIfBlank(addressText),
+          'residing_since': residingSince?.toIso8601String().split('T').first,
           if (timezone != null && timezone.trim().isNotEmpty)
             'timezone': timezone.trim(),
           if (defaultCurrency != null && defaultCurrency.trim().isNotEmpty)
@@ -77,7 +81,10 @@ class HomesRepository {
     required String homeId,
     required String name,
     String? description,
+    String? remarks,
     String? addressText,
+    DateTime? residingSince,
+    bool clearResidingSince = false,
     String? timezone,
     String? defaultCurrency,
   }) async {
@@ -86,7 +93,11 @@ class HomesRepository {
         .update({
           'name': name.trim(),
           'description': _nullIfBlank(description),
+          'remarks': _nullIfBlank(remarks),
           'address_text': _nullIfBlank(addressText),
+          'residing_since': clearResidingSince
+              ? null
+              : residingSince?.toIso8601String().split('T').first,
           if (timezone != null && timezone.trim().isNotEmpty)
             'timezone': timezone.trim(),
           if (defaultCurrency != null && defaultCurrency.trim().isNotEmpty)
@@ -102,6 +113,14 @@ class HomesRepository {
       Map<String, dynamic>.from(updated),
       myRole: role == null ? null : HomeRole.fromDb(role as String),
     );
+  }
+
+  Future<HomeDashboardStats> dashboardStats(String homeId) async {
+    final row = await client.rpc(
+      'home_dashboard_stats',
+      params: {'p_home_id': homeId},
+    );
+    return HomeDashboardStats.fromJson(Map<String, dynamic>.from(row as Map));
   }
 
   Future<Home> getHome(String homeId) async {
@@ -129,7 +148,7 @@ class HomesRepository {
   /// Returns the plaintext token once so the UI can show link/QR/code.
   Future<CreatedInvitation> createInvitation({
     required String homeId,
-    HomeRole role = HomeRole.editor,
+    HomeRole role = HomeRole.viewer,
     int expiresHours = 168,
   }) async {
     if (role == HomeRole.owner) {
@@ -195,7 +214,7 @@ class HomesRepository {
         .from('home_members')
         .select(
           'id, home_id, user_id, role, status, joined_at, '
-          'profiles!home_members_user_id_fkey(display_name, email)',
+          'profiles!home_members_user_id_fkey(display_name, email, avatar_url)',
         )
         .eq('home_id', homeId)
         .eq('status', MembershipStatus.active.dbValue)

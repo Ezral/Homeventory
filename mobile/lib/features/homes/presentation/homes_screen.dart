@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_thumbnail.dart';
+import '../../../shared/widgets/user_menu_button.dart';
 import '../../auth/presentation/auth_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 import 'homes_providers.dart';
@@ -20,14 +21,8 @@ class HomesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your homes'),
-        actions: [
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).signOut();
-            },
-            icon: const Icon(Icons.logout),
-          ),
+        actions: const [
+          UserMenuButton(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
