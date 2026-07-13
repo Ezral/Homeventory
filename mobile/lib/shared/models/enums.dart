@@ -199,6 +199,7 @@ enum TripStatus {
 }
 
 enum TripItemStatus {
+  planned('PLANNED'),
   packed('PACKED'),
   unpacked('UNPACKED');
 
@@ -208,10 +209,11 @@ enum TripItemStatus {
   static TripItemStatus fromDb(String value) =>
       TripItemStatus.values.firstWhere(
         (e) => e.dbValue == value,
-        orElse: () => TripItemStatus.packed,
+        orElse: () => TripItemStatus.planned,
       );
 
   String get label => switch (this) {
+    TripItemStatus.planned => 'On plan',
     TripItemStatus.packed => 'Packed',
     TripItemStatus.unpacked => 'Unpacked',
   };

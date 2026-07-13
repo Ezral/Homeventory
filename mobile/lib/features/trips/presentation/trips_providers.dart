@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/providers/supabase_provider.dart';
+import '../../inventory/data/inventory_repository.dart';
+import '../../rooms/presentation/rooms_providers.dart';
 import '../data/trips_repository.dart';
 
 final tripsRepositoryProvider = Provider<TripsRepository>((ref) {
@@ -34,4 +36,14 @@ final tripItemsProvider = FutureProvider.autoDispose
 final mobileContainersProvider = FutureProvider.autoDispose
     .family<List<InventoryNode>, String>((ref, homeId) {
       return ref.watch(tripsRepositoryProvider).listMobileContainers(homeId);
+    });
+
+final nodeDescendantsProvider = FutureProvider.autoDispose
+    .family<List<DescendantNode>, String>((ref, rootNodeId) {
+      return ref.watch(inventoryRepositoryProvider).listDescendants(rootNodeId);
+    });
+
+final homePackedNodesProvider = FutureProvider.autoDispose
+    .family<Map<String, PackedNodeInfo>, String>((ref, homeId) {
+      return ref.watch(inventoryRepositoryProvider).listHomePackedNodes(homeId);
     });
