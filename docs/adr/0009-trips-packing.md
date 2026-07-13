@@ -34,9 +34,9 @@ RPCs:
 - `pack_item_into_container` — mark `PACKED` **without relocating** inventory (also re-packs `UNPACKED` / `PLANNED`)
 - `unpack_item` — return to `PLANNED` (still on checklist)
 - `remove_from_packing_plan` — drop a non-packed plan row
-- `list_node_descendants` / `list_home_packed_nodes` — furniture multi-select + room greying
+- `list_node_descendants` / `list_room_packable_nodes` / `list_home_packed_nodes` — furniture or room multi-select + room greying
 
-Flutter: furniture multi-select packing plan with checkboxes; packed items stay visible (greyed) in original furniture; hierarchical move destination browser; `UNPACKED` rows remain visible so they can be packed again.
+Flutter: packing plan multi-select from **furniture** or **room** (`ITEM` nodes only); checkboxes; packed items stay visible (greyed) in original furniture; hierarchical move destination browser; `UNPACKED` rows remain visible so they can be packed again.
 
 ---
 
@@ -100,7 +100,7 @@ Home → Trips; trip detail for containers and packed items.
 - Trip metadata/status editable regardless of COMPLETED
 - Container/item thumbnails on trip detail via `entityThumbnailsProvider`
 - Packing is a checklist overlay (`PLANNED` / `PACKED` / `UNPACKED`): inventory stays in place; packed items are greyed in room browse
-- Furniture-scoped multi-select via `list_node_descendants` populates the packing plan
+- Furniture- or room-scoped multi-select populates the packing plan; only `ITEM` nodes are listed (furniture/storage hidden)
 - Unpacked items can be packed again on the same trip (checkbox / re-add) or any other trip (new `trip_items` row)
 
 ---
@@ -111,5 +111,6 @@ Home → Trips; trip detail for containers and packed items.
 - [`supabase/migrations/20260713000600_trips_allowance_archive.sql`](../../supabase/migrations/20260713000600_trips_allowance_archive.sql)
 - [`supabase/migrations/20260713000700_packing_plan_no_relocate.sql`](../../supabase/migrations/20260713000700_packing_plan_no_relocate.sql)
 - [`supabase/migrations/20260713000800_repack_unpacked_any_trip.sql`](../../supabase/migrations/20260713000800_repack_unpacked_any_trip.sql)
+- [`supabase/migrations/20260713000900_list_room_packable_nodes.sql`](../../supabase/migrations/20260713000900_list_room_packable_nodes.sql)
 - [`mobile/lib/features/trips/`](../../mobile/lib/features/trips/)
 - Related: [ADR-0005](0005-recursive-inventory-nodes.md), [ADR-0008](0008-inventory-transactions.md)

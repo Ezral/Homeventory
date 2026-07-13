@@ -43,6 +43,13 @@ final nodeDescendantsProvider = FutureProvider.autoDispose
       return ref.watch(inventoryRepositoryProvider).listDescendants(rootNodeId);
     });
 
+final roomPackableNodesProvider = FutureProvider.autoDispose
+    .family<List<DescendantNode>, String>((ref, roomId) {
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listRoomPackableNodes(roomId);
+    });
+
 final homePackedNodesProvider = FutureProvider.autoDispose
     .family<Map<String, PackedNodeInfo>, String>((ref, homeId) {
       return ref.watch(inventoryRepositoryProvider).listHomePackedNodes(homeId);

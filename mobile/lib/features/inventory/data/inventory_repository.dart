@@ -232,6 +232,17 @@ class InventoryRepository {
         .toList();
   }
 
+  /// ITEM nodes in [roomId] (any depth, under furniture/storage), with path labels.
+  Future<List<DescendantNode>> listRoomPackableNodes(String roomId) async {
+    final rows = await _client.rpc(
+      'list_room_packable_nodes',
+      params: {'p_room_id': roomId},
+    );
+    return (rows as List)
+        .map((r) => DescendantNode.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
+
   /// Nodes currently PACKED on a non-archived trip.
   Future<Map<String, PackedNodeInfo>> listHomePackedNodes(String homeId) async {
     final rows = await _client.rpc(

@@ -190,7 +190,7 @@ class TripDetailScreen extends ConsumerWidget {
                                     containers,
                                   ),
                           icon: const Icon(Icons.playlist_add),
-                          label: const Text('From furniture'),
+                          label: const Text('Add items'),
                         ),
                         orElse: () => const SizedBox.shrink(),
                       ),
@@ -198,7 +198,7 @@ class TripDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Check items when packed. They stay in their original furniture, greyed out there. Unpacked items can be packed again here or added to any other trip.',
+                  'Add from a room or furniture. Only items are listed (not furniture/storage). Check when packed — they stay greyed in place. Unpacked items can be packed again on any trip.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.inkMuted,
                       ),
@@ -221,7 +221,7 @@ class TripDetailScreen extends ConsumerWidget {
                         .toList();
                     if (plan.isEmpty) {
                       return Text(
-                        'No items on the packing plan yet. Add from furniture for multi-select.',
+                        'No items on the packing plan yet. Add from a room or furniture.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       );
                     }
