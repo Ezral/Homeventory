@@ -158,5 +158,39 @@ void main() {
       expect(node.weight, 3.5);
       expect(node.weightUnit, 'kg');
     });
+
+    test('buildContainerDestinations nests and skips excluded subtree', () {
+      InventoryNode container({
+        required String id,
+        required String name,
+        String? parent,
+      }) {
+        return InventoryNode(
+          id: id,
+          homeId: 'h1',
+          roomId: 'r1',
+          parentNodeId: parent,
+          nodeKind: InventoryNodeKind.item,
+          name: name,
+          isContainer: true,
+          createdByUserId: 'u1',
+        );
+      }
+
+      final destinations = buildContainerDestinations(
+        [
+          container(id: 'dresser', name: 'Dresser'),
+          container(id: 'top', name: 'Top drawer', parent: 'dresser'),
+          container(id: 'bag', name: 'Bag'),
+          container(id: 'pocket', name: 'Pocket', parent: 'bag'),
+        ],
+        excludeSubtreeRootId: 'bag',
+      );
+
+      expect(destinations.map((d) => d.node.id).toList(), ['dresser', 'top']);
+      expect(destinations.first.pathLabel, 'Dresser');
+      expect(destinations[1].pathLabel, 'Dresser › Top drawer');
+      expect(destinations[1].depth, 1);
+    });
   });
 }

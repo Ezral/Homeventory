@@ -42,9 +42,11 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
     final containersAsync = selectedRoomId == null
         ? null
         : ref.watch(
-            inventoryChildrenProvider(
-              InventoryScope(homeId: widget.homeId, roomId: selectedRoomId),
-            ),
+            roomContainerDestinationsProvider((
+              homeId: widget.homeId,
+              roomId: selectedRoomId,
+              excludeNodeId: widget.nodeId,
+            )),
           );
 
     return Scaffold(
@@ -74,7 +76,7 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
               Text(node.name, style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(
-                'Choose a destination room, then optionally place it inside a container.',
+                'Choose a destination room, then optionally place it inside any container — including nested ones.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
@@ -113,31 +115,36 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => ErrorView(message: e.toString()),
-                  data: (nodes) {
-                    final containers = nodes
-                        .where((n) => n.isContainer && n.id != widget.nodeId)
-                        .toList();
+                  data: (destinations) {
                     final selectedParentExists =
                         _selectedParentId == null ||
-                        containers.any((n) => n.id == _selectedParentId);
+                        destinations.any(
+                          (d) => d.node.id == _selectedParentId,
+                        );
                     final value = selectedParentExists
                         ? _selectedParentId
                         : null;
                     return DropdownButtonFormField<String?>(
                       // ignore: deprecated_member_use
                       value: value,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Container (optional)',
+                        helperText:
+                            'Includes nested containers (drawer inside dresser, bag inside suitcase, …)',
                       ),
                       items: [
                         const DropdownMenuItem<String?>(
                           value: null,
                           child: Text('Room root'),
                         ),
-                        for (final container in containers)
+                        for (final destination in destinations)
                           DropdownMenuItem<String?>(
-                            value: container.id,
-                            child: Text(container.name),
+                            value: destination.node.id,
+                            child: Text(
+                              '${'  ' * destination.depth}${destination.pathLabel}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: _busy
@@ -215,6 +222,13 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
         inventoryChildrenProvider(
           InventoryScope(homeId: widget.homeId, roomId: _selectedRoomId!),
         ),
+      );
+      ref.invalidate(
+        roomContainerDestinationsProvider((
+          homeId: widget.homeId,
+          roomId: _selectedRoomId!,
+          excludeNodeId: widget.nodeId,
+        )),
       );
       if (mounted) context.pop(true);
     } catch (e) {
