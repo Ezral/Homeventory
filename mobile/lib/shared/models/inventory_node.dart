@@ -14,6 +14,9 @@ class InventoryNode {
     this.isDisposed = false,
     this.disposedAt,
     this.isDispenser = false,
+    this.dispenserMode,
+    this.isDispensable = false,
+    this.consumableForm,
     this.capacity,
     this.itemCategory,
     this.quantity,
@@ -42,6 +45,9 @@ class InventoryNode {
   final bool isDisposed;
   final DateTime? disposedAt;
   final bool isDispenser;
+  final DispenserMode? dispenserMode;
+  final bool isDispensable;
+  final ConsumableForm? consumableForm;
   final double? capacity;
   final ItemCategory? itemCategory;
   final double? quantity;
@@ -58,6 +64,9 @@ class InventoryNode {
   final DateTime? archivedAt;
 
   bool get isArchived => archivedAt != null;
+
+  DispenserMode get effectiveDispenserMode =>
+      dispenserMode ?? DispenserMode.single;
 
   String get kindLabel {
     if (isMobileContainer) return 'Mobile container';
@@ -83,6 +92,11 @@ class InventoryNode {
           ? DateTime.tryParse(json['disposed_at'] as String)
           : null,
       isDispenser: json['is_dispenser'] as bool? ?? false,
+      dispenserMode: json['dispenser_mode'] == null
+          ? null
+          : DispenserMode.fromDb(json['dispenser_mode'] as String),
+      isDispensable: json['is_dispensable'] as bool? ?? false,
+      consumableForm: ConsumableForm.fromDb(json['consumable_form'] as String?),
       capacity: (json['capacity'] as num?)?.toDouble(),
       itemCategory: ItemCategory.fromDb(json['item_category'] as String?),
       quantity: (json['quantity'] as num?)?.toDouble(),
@@ -118,6 +132,11 @@ class InventoryNode {
     'is_disposed': isDisposed,
     'disposed_at': disposedAt?.toIso8601String(),
     'is_dispenser': isDispenser,
+    'dispenser_mode': isDispenser
+        ? (dispenserMode ?? DispenserMode.single).dbValue
+        : null,
+    'is_dispensable': isDispensable,
+    'consumable_form': consumableForm?.dbValue,
     'capacity': capacity,
     'item_category': itemCategory?.dbValue,
     'quantity': quantity,
@@ -132,4 +151,33 @@ class InventoryNode {
     'weight_unit': weightUnit,
     'created_by_user_id': createdByUserId,
   };
+}
+
+class DispenserProductAssignment {
+  const DispenserProductAssignment({
+    required this.id,
+    required this.homeId,
+    required this.dispenserItemId,
+    required this.productItemId,
+    required this.slotNumber,
+    this.productName,
+  });
+
+  final String id;
+  final String homeId;
+  final String dispenserItemId;
+  final String productItemId;
+  final int slotNumber;
+  final String? productName;
+
+  factory DispenserProductAssignment.fromJson(Map<String, dynamic> json) {
+    return DispenserProductAssignment(
+      id: json['id'] as String,
+      homeId: json['home_id'] as String,
+      dispenserItemId: json['dispenser_item_id'] as String,
+      productItemId: json['product_item_id'] as String,
+      slotNumber: (json['slot_number'] as num).toInt(),
+      productName: json['product_name'] as String?,
+    );
+  }
 }

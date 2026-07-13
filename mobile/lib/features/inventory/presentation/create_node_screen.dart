@@ -48,6 +48,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   bool _isContainer = false;
   bool _isMobileContainer = false;
   bool _isDispenser = false;
+  DispenserMode _dispenserMode = DispenserMode.single;
+  bool _isDispensable = false;
+  ConsumableForm? _consumableForm;
   DateTime? _purchaseDate;
   DateTime? _expirationDate;
   bool _busy = false;
@@ -89,6 +92,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
         _isContainer = node.isContainer;
         _isMobileContainer = node.isMobileContainer;
         _isDispenser = node.isDispenser;
+        _dispenserMode = node.effectiveDispenserMode;
+        _isDispensable = node.isDispensable;
+        _consumableForm = node.consumableForm;
         _name.text = node.name;
         _description.text = node.description ?? '';
         _quantity.text = node.quantity?.toString() ?? '';
@@ -188,6 +194,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           isContainer: treatAsContainer,
           isMobileContainer: _isMobileContainer,
           isDispenser: _isDispenser,
+          dispenserMode: _isDispenser ? _dispenserMode : null,
+          isDispensable: _isDispensable,
+          consumableForm: _isDispensable ? _consumableForm : null,
           capacity: capacity,
           itemCategory: _kind == InventoryNodeKind.item ? _category : null,
           quantity: qty,
@@ -212,6 +221,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           isContainer: treatAsContainer,
           isMobileContainer: _isMobileContainer,
           isDispenser: _isDispenser,
+          dispenserMode: _isDispenser ? _dispenserMode : null,
+          isDispensable: _isDispensable,
+          consumableForm: _isDispensable ? _consumableForm : null,
           capacity: capacity,
           itemCategory: _kind == InventoryNodeKind.item ? _category : null,
           quantity: qty,
@@ -382,8 +394,65 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                         'Tracks a refillable capacity, such as soap or oil.',
                       ),
                       value: _isDispenser,
-                      onChanged: (v) => setState(() => _isDispenser = v),
+                      onChanged: (v) => setState(() {
+                        _isDispenser = v;
+                        if (v) _isDispensable = false;
+                      }),
                     ),
+                    if (_isDispenser) ...[
+                      DropdownButtonFormField<DispenserMode>(
+                        // ignore: deprecated_member_use
+                        value: _dispenserMode,
+                        decoration: const InputDecoration(
+                          labelText: 'Dispenser mode',
+                        ),
+                        items: [
+                          for (final mode in DispenserMode.values)
+                            DropdownMenuItem(
+                              value: mode,
+                              child: Text(mode.label),
+                            ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() => _dispenserMode = v);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Dispensable product'),
+                      subtitle: const Text(
+                        'Can be linked into a dispenser slot.',
+                      ),
+                      value: _isDispensable,
+                      onChanged: _isDispenser
+                          ? null
+                          : (v) => setState(() => _isDispensable = v),
+                    ),
+                    if (_isDispensable) ...[
+                      DropdownButtonFormField<ConsumableForm>(
+                        // ignore: deprecated_member_use
+                        value: _consumableForm,
+                        decoration: const InputDecoration(
+                          labelText: 'Consumable form (optional)',
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('Not set'),
+                          ),
+                          for (final form in ConsumableForm.values)
+                            DropdownMenuItem(
+                              value: form,
+                              child: Text(form.label),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _consumableForm = v),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       children: [

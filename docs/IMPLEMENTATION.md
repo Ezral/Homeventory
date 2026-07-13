@@ -180,14 +180,14 @@ Canonical detail + acceptance + UAT checklist: [`UAT_PHASE6_SUPER_FOLLOWUP.md`](
 
 | Phase | Goal | Status |
 | --- | --- | --- |
-| **A** | Home profile polish (residing date, remarks, layout, image remove) | **In progress / this ship** |
-| **B** | Bottom nav, user menu, contextual FAB | **In progress / this ship** |
-| **C** | Dashboard cards (rooms, base furniture, members, duration, value stub) | **In progress / this ship** |
+| **A** | Home profile polish (residing date, remarks, layout, image remove) | Shipped |
+| **B** | Bottom nav (Search \| Trips \| Home \| Invite \| Add), user menu | Shipped |
+| **C** | Dashboard cards (rooms, base furniture, members, duration, value) | Shipped (value via home-currency FX) |
 | **D** | Read-only home default + room permission foundation | Not started |
 | **E** | Room creation requests + room owner / co-owner | Not started |
 | **F** | Room invitations + temporary access | Not started |
 | **G** | Room visibility + object inheritance + query privacy | Not started |
-| **H** | Single/multi dispenser product slots | Not started |
+| **H** | Single/multi dispenser product slots | **Shipped** — mode, slots, dispensable products |
 | **I** | Display currency, FX cache, estimated inventory value | **Partial** — home-currency FX sum shipped; user display-currency preference later |
 | **J** | Notifications, permission audit, loading polish, regression UAT | Not started |
 
@@ -200,7 +200,7 @@ See [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Core
 - [x] Schema core: `inventory_transactions` + apply RPC (MVP)
 - [ ] Schema: `products`, `product_containers`
 - [x] Object dispensers MVP: `is_dispenser`, `capacity`, unit **`CC`**
-- [ ] Multi dispenser slots + `is_dispensable` (Phase H)
+- [x] Multi dispenser slots + `is_dispensable` (Phase H)
 - [x] USE, RESTOCK, ADJUSTMENT, DISPOSE (+ TRANSFER_REFILL RPC)
 - [ ] TRANSFER_REFILL UI; multi-reserve defaults
 - [x] Transaction history UI
