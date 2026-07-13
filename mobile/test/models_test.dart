@@ -7,6 +7,7 @@ import 'package:homeventory/shared/models/home.dart';
 import 'package:homeventory/shared/models/inventory_node.dart';
 import 'package:homeventory/shared/models/profile.dart';
 import 'package:homeventory/shared/models/room.dart';
+import 'package:homeventory/features/trips/data/trips_repository.dart';
 
 void main() {
   group('AppConfig', () {
@@ -173,6 +174,86 @@ void main() {
       });
       expect(assignment.fillLabel, '120 / 300 CC');
       expect(assignment.slotNumber, 2);
+    });
+  });
+
+  group('Trip weight', () {
+    InventoryNode node({
+      required String id,
+      required String name,
+      double? weight,
+      String? unit,
+    }) {
+      return InventoryNode(
+        id: id,
+        homeId: 'h1',
+        roomId: 'r1',
+        nodeKind: InventoryNodeKind.item,
+        name: name,
+        isMobileContainer: true,
+        isContainer: true,
+        weight: weight,
+        weightUnit: unit,
+        createdByUserId: 'u1',
+      );
+    }
+
+    test('inventoryWeightKg normalizes units', () {
+      expect(inventoryWeightKg(node(id: '1', name: 'a', weight: 2, unit: 'kg')), 2);
+      expect(inventoryWeightKg(node(id: '2', name: 'b', weight: 500, unit: 'g')), 0.5);
+      expect(
+        inventoryWeightKg(node(id: '3', name: 'c', weight: 10, unit: 'lb'))!,
+        closeTo(4.5359, 0.001),
+      );
+    });
+
+    test('buildTripWeightSummary sums containers + packed items', () {
+      final trip = Trip.fromJson({
+        'id': 't1',
+        'home_id': 'h1',
+        'name': 'Bali',
+        'notes': null,
+        'status': 'ACTIVE',
+        'starts_on': null,
+        'ends_on': null,
+        'luggage_allowance_kg': 23,
+        'archived_at': null,
+        'created_by_user_id': 'u1',
+        'created_at': '2026-07-13T00:00:00Z',
+        'updated_at': '2026-07-13T00:00:00Z',
+      });
+      final suitcase = node(id: 's1', name: 'Suitcase', weight: 3, unit: 'kg');
+      final shirt = node(id: 'i1', name: 'Shirt', weight: 400, unit: 'g');
+      final summary = buildTripWeightSummary(
+        trip: trip,
+        containers: [
+          TripContainer(
+            id: 'tc1',
+            homeId: 'h1',
+            tripId: 't1',
+            inventoryNodeId: suitcase.id,
+            createdAt: DateTime.parse('2026-07-13T00:00:00Z'),
+            node: suitcase,
+          ),
+        ],
+        items: [
+          TripItem(
+            id: 'ti1',
+            homeId: 'h1',
+            tripId: 't1',
+            inventoryNodeId: shirt.id,
+            packedIntoNodeId: suitcase.id,
+            originalRoomId: 'r1',
+            status: TripItemStatus.packed,
+            packedAt: DateTime.parse('2026-07-13T00:00:00Z'),
+            packedByUserId: 'u1',
+            node: shirt,
+          ),
+        ],
+      );
+      expect(summary.packedKg, closeTo(3.4, 0.0001));
+      expect(summary.availableKg, closeTo(19.6, 0.0001));
+      expect(summary.isOverAllowance, isFalse);
     });
   });
 }

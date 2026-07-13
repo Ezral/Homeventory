@@ -92,13 +92,16 @@ Home → Trips; trip detail for containers and packed items.
 
 ## Architecture Notes
 
-- Weight rollup / airline limits deferred
-- Completion “still packed” list is basic via filtering PACKED items
+- Luggage allowance (`luggage_allowance_kg`) + packed weight estimate (containers + PACKED items, normalized to kg)
+- Soft-delete via `archived_at` (hidden in UI, row retained for audit)
+- Trip metadata/status editable regardless of COMPLETED
+- Container/item thumbnails on trip detail via `entityThumbnailsProvider`
 
 ---
 
 ## References
 
 - [`supabase/migrations/20260712000500_phase6_super.sql`](../../supabase/migrations/20260712000500_phase6_super.sql)
+- [`supabase/migrations/20260713000600_trips_allowance_archive.sql`](../../supabase/migrations/20260713000600_trips_allowance_archive.sql)
 - [`mobile/lib/features/trips/`](../../mobile/lib/features/trips/)
 - Related: [ADR-0005](0005-recursive-inventory-nodes.md), [ADR-0008](0008-inventory-transactions.md)
