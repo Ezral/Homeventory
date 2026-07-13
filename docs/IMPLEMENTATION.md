@@ -4,27 +4,32 @@ Derived from [`Homeventory_Full_Planning.md`](Homeventory_Full_Planning.md) §41
 
 Architecture decisions that are already implemented are recorded in [`docs/adr/`](adr/). Update or add an ADR in the same PR when architecture changes.
 
-Prep plan for next ship (**Phase 6-super** = stock + Trips MVP): [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
+| Plan | Role |
+| --- | --- |
+| [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md) | Phase 6-super (shipped) + full 6/7 depth + Phase 8 predictions |
+| [`UAT_PHASE6_SUPER_FOLLOWUP.md`](UAT_PHASE6_SUPER_FOLLOWUP.md) | **Next ship sequence A–J** from 6-super UAT (home profile, nav, room permissions, FX, …) |
 
-Do not build predictions or push notifications before Home authorization, inventory hierarchy, and (for predictions) **Phase 6-super UAT** are reliable.
+Do not build predictions or push notifications before Home authorization is trustworthy. Prefer **A–C** before deep Phase 8 unless product reorders. Room privacy (**G**) before claiming multi-member dashboard valuation (**I**).
 
-## Recommended build order
+## Recommended build order (updated)
 
-1. Google authentication
-2. Profiles
-3. Homes
-4. Membership and RLS
-5. Rooms
-6. Recursive inventory nodes
-7. Search
-8. Images
-9. Barcode scanning
-10. Quantity transactions
-11. Product containers, refill, dispensers (CC)
-12. Packing and unpacking (Trips) — **ship with 10–11 as Phase 6-super MVP**
-13. Consumption predictions (after Phase 6-super UAT)
-14. Notifications
-15. Hardening and release
+1. Google authentication — done  
+2. Profiles — done  
+3. Homes — done (edit + cover photo partial)  
+4. Membership and RLS — done (home-wide roles; **room-level roles = D+**)  
+5. Rooms — done  
+6. Recursive inventory nodes — done  
+7. Search — done (privacy filtering = G)  
+8. Images — done  
+9. Barcode scanning — done  
+10. Quantity transactions + Trips MVP — **Phase 6-super shipped**  
+11. **A–C** Home profile polish, shell navigation, dashboard metrics  
+12. **D–G** Read-only home default, room requests, room invites/temp access, visibility + inheritance  
+13. **H** Multi-dispenser product slots (+ remaining Phase 6 product graph as needed)  
+14. **I** Display currency, FX cache, estimated inventory value  
+15. **J** In-app notifications, permission audit, loading polish, regression UAT  
+16. Phase 8 consumption predictions (when USE history is sufficient)  
+17. Hardening and release  
 
 ---
 
@@ -72,6 +77,13 @@ Do not build predictions or push notifications before Home authorization, invent
 - Removed member loses access immediately
 - UUID guessing cannot cross Homes
 
+### UAT follow-up (Phase A / D)
+
+- [ ] `residing_since`, `remarks`, `updated_by`; residence duration UI
+- [ ] Home header layout: wrap name, members under name, declutter chips, image remove/fallback
+- [ ] New members **read-only by default** (breaking vs current EDITOR default invites)
+- [ ] Room-level roles supersede home-wide edit for day-to-day inventory (see D–G)
+
 ---
 
 ## Phase 3 — Rooms and Inventory Hierarchy
@@ -96,6 +108,13 @@ Do not build predictions or push notifications before Home authorization, invent
 - Cyclic containment rejected
 - Moving a container preserves descendants
 
+### UAT follow-up (Phase E–G)
+
+- [ ] Room creation requests + owner approval
+- [ ] Room ownership / co-ownership
+- [ ] Room invitations + temporary access
+- [ ] Room visibility (all / restricted / private) + object permission inheritance
+
 ---
 
 ## Phase 4 — Item Details
@@ -107,6 +126,7 @@ Do not build predictions or push notifications before Home authorization, invent
 - [ ] Owner assignment
 - [x] Expiration date
 - [ ] Category-specific attributes (`item_category_attributes`)
+- [ ] `price_basis` (per unit vs total), `include_in_home_value` (Phase I)
 
 ---
 
@@ -118,14 +138,13 @@ Do not build predictions or push notifications before Home authorization, invent
 - [x] Private Storage bucket + signed URLs
 - [x] Barcode scan → lookup / attach to item
 - [ ] Internal QR labels
+- [ ] Page-ready loading: wait for initial viewport images (Phase J)
 
 ---
 
-## Phase 6-super — Next ship (stock + Trips MVP)
+## Phase 6-super — Shipped (stock + Trips MVP)
 
-See MVP checklist: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
-
-Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UAT. Full Phase 6/7 polish can follow.
+See checklist: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md).
 
 ### Stock (Must)
 
@@ -142,7 +161,7 @@ Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UA
 - [x] Pack / unpack RPCs with original location snapshot
 - [x] Create trip → assign mobile container → pack → unpack
 
-### Should (same ship if possible)
+### Should (follow-up)
 
 - [x] TRANSFER_REFILL RPC (server); thin refill UI still optional
 - [ ] Thin product/reserve link tables
@@ -151,38 +170,59 @@ Combined MVP of transactions/dispensers **and** Trips/pack-unpack. Prefer one UA
 
 ### Defer
 
-- [ ] Packing templates; full product catalog; Phase 8 predictions; global `audit_logs`
+- [ ] Packing templates; full product catalog; Phase 8 predictions; global permission `audit_logs` (J)
+
+---
+
+## Next ship — UAT follow-up phases A–J
+
+Canonical detail + acceptance + UAT checklist: [`UAT_PHASE6_SUPER_FOLLOWUP.md`](UAT_PHASE6_SUPER_FOLLOWUP.md).
+
+| Phase | Goal | Status |
+| --- | --- | --- |
+| **A** | Home profile polish (residing date, remarks, layout, image remove) | Partial (edit + cover exist) |
+| **B** | Bottom nav, user menu, contextual FAB | Not started |
+| **C** | Dashboard cards (rooms, base furniture, members, duration, value stub) | Not started |
+| **D** | Read-only home default + room permission foundation | Not started |
+| **E** | Room creation requests + room owner / co-owner | Not started |
+| **F** | Room invitations + temporary access | Not started |
+| **G** | Room visibility + object inheritance + query privacy | Not started |
+| **H** | Single/multi dispenser product slots | Not started |
+| **I** | Display currency, FX cache, estimated inventory value | Not started |
+| **J** | Notifications, permission audit, loading polish, regression UAT | Not started |
 
 ---
 
 ## Phase 6 — Inventory Transactions (full depth)
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Core MVP is under **Phase 6-super**; this list is remaining depth.
+See [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Core MVP under **Phase 6-super**; remaining depth + **H**.
 
-- [ ] Schema: `inventory_transactions`, `products`, `product_containers`
-- [ ] Object dispensers: `is_dispenser`, `capacity`, unit **`CC`** (liquids; equiv. mL)
-- [ ] INITIAL_STOCK, USE, RESTOCK, ADJUSTMENT, DISPOSE
-- [ ] TRANSFER_REFILL (total stock unchanged; respect dispenser capacity)
-- [ ] Atomic trusted functions; no silent negative quantities
-- [ ] Transaction history UI
+- [x] Schema core: `inventory_transactions` + apply RPC (MVP)
+- [ ] Schema: `products`, `product_containers`
+- [x] Object dispensers MVP: `is_dispenser`, `capacity`, unit **`CC`**
+- [ ] Multi dispenser slots + `is_dispensable` (Phase H)
+- [x] USE, RESTOCK, ADJUSTMENT, DISPOSE (+ TRANSFER_REFILL RPC)
+- [ ] TRANSFER_REFILL UI; multi-reserve defaults
+- [x] Transaction history UI
 
 ---
 
 ## Phase 7 — Packing and Unpacking (Trips, full depth)
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Core MVP is under **Phase 6-super**.
+See [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Core MVP under **Phase 6-super**.
 
-- [ ] Schema: `trips`, `trip_containers`, `trip_items`, packing templates
-- [ ] Assign mobile containers to Trips
-- [ ] Pack with original location capture
-- [ ] Selective unpack / return to original
+- [x] Schema core: `trips`, `trip_containers`, `trip_items`
+- [ ] Packing templates
+- [x] Assign mobile containers to Trips
+- [x] Pack with original location capture
+- [x] Selective unpack / return to original
 - [ ] Completion check for unconfirmed items
 
 ---
 
 ## Phase 8 — Predictions
 
-See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). **Start only after UAT for Phase 6-super.**
+See [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md). Needs USE history; schedule relative to A–J per product priority.
 
 - [ ] Schema: `consumption_predictions`
 - [ ] Active dispenser / container refill forecast (**CC/day** for volume products)
@@ -192,30 +232,15 @@ See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION
 
 ---
 
-## Phase 9 — Notifications
+## Former Phase 9–11 (superseded by A–J)
 
-- [ ] Schema: notifications, preferences, device tokens
-- [ ] In-app notification center (source of truth)
-- [ ] FCM via Edge Function
-- [ ] Quiet hours + preview privacy
+Old backlog slots for notifications / dashboard / release quality are **replaced** by follow-up phases:
 
----
-
-## Phase 10 — Search and Dashboard
-
-- [ ] Global / room / container search
-- [ ] Filters
-- [ ] Dashboard: expiring, low stock, predicted depletion, active Trips, recent activity
-
----
-
-## Phase 11 — Quality and Release
-
-- [ ] Unit, integration, authorization, performance tests
-- [ ] Crash reporting
-- [ ] Accessibility review
-- [ ] Internal Android testing
-- [ ] Play Store preparation
+- Notifications → **J** (in-app first; FCM still later)
+- Dashboard → **C** + valuation **I** (privacy **G**)
+- Search filters / privacy → **G**
+- Loading / regression → **J**
+- Play Store / hardening → after J regression UAT
 
 ---
 
@@ -223,6 +248,8 @@ See detailed prep: [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION
 
 Google SSO · profiles · multi-Home · invites · roles · rooms · inventory nodes · nested containers · item-as-container · categories · quantity/units · price/currency/purchase date · expiration · images · barcode · use/restock/refill · search · move · basic predictions · packing · templates · in-app + Android push · audit history · private images · RLS tests · archive-over-delete
 
+**UAT amendment:** home profile dashboard, shell navigation, read-only home default, room-level permissions/requests/invites/visibility, multi-dispenser, display-currency valuation — tracked in A–J before claiming full multi-member MVP.
+
 ## Explicitly post-MVP
 
-Full offline sync · seasonality · AI recognition · receipt OCR · auto barcode product lookup · multi-batch expiration · warranty · airline baggage rules · lending · messaging · NFC · smart home · insurance reports · shopping integrations · depreciation · iOS · web dashboard
+Full offline sync · seasonality · AI recognition · receipt OCR · auto barcode product lookup · multi-batch expiration · warranty · airline baggage rules · lending · messaging · NFC · smart home · insurance reports · shopping integrations · depreciation · historical FX valuation · iOS · web dashboard · email/push (beyond in-app) · exportable valuation reports · dashboard charts

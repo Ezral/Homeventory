@@ -1,13 +1,21 @@
 # Homeventory
 ## Full Product and Technical Planning Specification
 
-**Document status:** Initial full-scope planning  
+**Document status:** Initial full-scope planning + **Phase 6-super UAT amendments**  
 **Primary platform:** Android mobile application  
 **Recommended client:** Flutter  
 **Recommended backend platform:** Supabase  
 **Authentication:** Google SSO  
 **Notifications:** In-app notifications and Android push notifications only  
 **Primary storage model:** Home → Room → Inventory Node → Nested Inventory Node
+
+**Post–6-super UAT amendments** (home profile/dashboard, shell navigation, room-level permissions, room requests/invites/visibility, multi-dispenser, display-currency valuation, FX, loading polish) are sequenced in:
+
+- [`UAT_PHASE6_SUPER_FOLLOWUP.md`](UAT_PHASE6_SUPER_FOLLOWUP.md) — canonical requirements + phases **A–J**
+- [`IMPLEMENTATION.md`](IMPLEMENTATION.md) — backlog checkboxes
+- [`PHASE_6_8_IMPLEMENTATION_PLAN.md`](PHASE_6_8_IMPLEMENTATION_PLAN.md) — 6-super shipped status + predictions gate
+
+Where UAT amendments conflict with earlier sections (especially home-wide EDITOR default and room inheritance-only permissions), **prefer the UAT follow-up plan** until this document is fully rewritten.
 
 ---
 

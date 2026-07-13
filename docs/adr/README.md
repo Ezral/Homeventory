@@ -27,11 +27,19 @@ The source code remains the source of truth for **how**.
 
 ## Not yet documented (not implemented)
 
-Prep notes: [`../PHASE_6_8_IMPLEMENTATION_PLAN.md`](../PHASE_6_8_IMPLEMENTATION_PLAN.md).
+Prep notes:
+
+- [`../PHASE_6_8_IMPLEMENTATION_PLAN.md`](../PHASE_6_8_IMPLEMENTATION_PLAN.md) — 6-super shipped; Phase 8 predictions
+- [`../UAT_PHASE6_SUPER_FOLLOWUP.md`](../UAT_PHASE6_SUPER_FOLLOWUP.md) — post-UAT phases A–J
 
 Still without ADRs (not implemented or not landed as architecture):
 
+- Home profile fields (`residing_since`, `remarks`) and dashboard aggregates
+- Room-level authorization, visibility, requests, temporary access
+- Multi-dispenser product assignments
+- Display currency vs home/item currency + exchange-rate cache
 - Full product / multi-reserve catalog model
 - Consumption predictions
 - Notifications / FCM
-- Global audit log subsystem
+- Permission / access audit log subsystem
+- Page-ready image loading strategy
