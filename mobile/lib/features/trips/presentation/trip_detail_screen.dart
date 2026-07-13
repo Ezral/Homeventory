@@ -198,7 +198,7 @@ class TripDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Check items when packed. They stay in their original furniture, greyed out there.',
+                  'Check items when packed. They stay in their original furniture, greyed out there. Unpacked items can be packed again here or added to any other trip.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.inkMuted,
                       ),
@@ -209,11 +209,14 @@ class TripDetailScreen extends ConsumerWidget {
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => ErrorView(message: e.toString()),
                   data: (items) {
+                    // PLANNED + PACKED are active; UNPACKED stays visible so it
+                    // can be packed again on this trip (or re-added to any trip).
                     final plan = items
                         .where(
                           (i) =>
                               i.status == TripItemStatus.planned ||
-                              i.status == TripItemStatus.packed,
+                              i.status == TripItemStatus.packed ||
+                              i.status == TripItemStatus.unpacked,
                         )
                         .toList();
                     if (plan.isEmpty) {
