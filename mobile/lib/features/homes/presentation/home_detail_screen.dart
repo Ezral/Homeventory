@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/home.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_thumbnail.dart';
+import '../../../shared/widgets/user_menu_button.dart';
 import 'homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
@@ -20,12 +22,14 @@ class HomeDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final homeAsync = ref.watch(homeProvider(homeId));
     final roomsAsync = ref.watch(roomsListProvider(homeId));
+    final statsAsync = ref.watch(homeDashboardStatsProvider(homeId));
+    final membersAsync = ref.watch(homeMembersProvider(homeId));
 
     return homeAsync.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(actions: const [UserMenuButton()]),
         body: ErrorView(
           message: e.toString(),
           onRetry: () => ref.invalidate(homeProvider(homeId)),
@@ -36,10 +40,11 @@ class HomeDetailScreen extends ConsumerWidget {
         final canInvite = home.myRole?.canManageMembers ?? false;
         final canEditHome = home.myRole?.isOwner ?? false;
         final homeImagesAsync = ref.watch(homeImagesProvider(homeId));
+        final duration = home.residenceDurationLabel();
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(home.name),
+            title: const Text('Home'),
             actions: [
               if (canEditHome)
                 IconButton(
@@ -48,26 +53,12 @@ class HomeDetailScreen extends ConsumerWidget {
                     await context.push('/homes/$homeId/edit');
                     ref.invalidate(homeProvider(homeId));
                     ref.invalidate(homeImagesProvider(homeId));
+                    ref.invalidate(homeDashboardStatsProvider(homeId));
                     ref.invalidate(homesListProvider);
                   },
                   icon: const Icon(Icons.edit_outlined),
                 ),
-              IconButton(
-                tooltip: 'Search',
-                onPressed: () => context.push('/homes/$homeId/search'),
-                icon: const Icon(Icons.search),
-              ),
-              IconButton(
-                tooltip: 'Trips',
-                onPressed: () => context.push('/homes/$homeId/trips'),
-                icon: const Icon(Icons.luggage_outlined),
-              ),
-              if (canInvite)
-                IconButton(
-                  tooltip: 'Invite',
-                  onPressed: () => _showInviteSheet(context, ref),
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                ),
+              const UserMenuButton(),
             ],
           ),
           floatingActionButton: canEdit
@@ -79,12 +70,57 @@ class HomeDetailScreen extends ConsumerWidget {
                   label: const Text('Add room'),
                 )
               : null,
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: 0,
+            onDestinationSelected: (index) async {
+              switch (index) {
+                case 0:
+                  break;
+                case 1:
+                  await context.push('/homes/$homeId/search');
+                case 2:
+                  await context.push('/homes/$homeId/trips');
+                case 3:
+                  if (canInvite) {
+                    await _showInviteSheet(context, ref);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Only owners and admins can invite members.',
+                        ),
+                      ),
+                    );
+                  }
+              }
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.search),
+                label: 'Search',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.luggage_outlined),
+                label: 'Trips',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_add_alt_1_outlined),
+                label: 'Invite',
+              ),
+            ],
+          ),
           body: RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(homeProvider(homeId));
               ref.invalidate(roomsListProvider(homeId));
               ref.invalidate(homeMembersProvider(homeId));
               ref.invalidate(homeImagesProvider(homeId));
+              ref.invalidate(homeDashboardStatsProvider(homeId));
             },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -96,14 +132,13 @@ class HomeDetailScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         homeImagesAsync.when(
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, _) => const SizedBox.shrink(),
+                          loading: () => const _HomeCoverFallback(),
+                          error: (_, _) => const _HomeCoverFallback(),
                           data: (images) {
-                            if (images.isEmpty) return const SizedBox.shrink();
-                            final cover = images.first;
-                            if (cover.signedUrl == null) {
-                              return const SizedBox.shrink();
-                            }
+                            final url = images.isNotEmpty
+                                ? images.first.signedUrl
+                                : null;
+                            if (url == null) return const _HomeCoverFallback();
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 16),
                               child: ClipRRect(
@@ -111,42 +146,76 @@ class HomeDetailScreen extends ConsumerWidget {
                                 child: AspectRatio(
                                   aspectRatio: 16 / 9,
                                   child: Image.network(
-                                    cover.signedUrl!,
+                                    url,
                                     fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) =>
+                                        const _HomeCoverFallback(
+                                      asAspectRatio: false,
+                                    ),
                                   ),
                                 ),
                               ),
                             );
                           },
                         ),
+                        Text(
+                          home.name,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                          softWrap: true,
+                        ),
+                        const SizedBox(height: 12),
+                        membersAsync.when(
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
+                          data: (members) => _MemberAvatarRow(members: members),
+                        ),
+                        if (duration != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            duration,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        ],
                         if (home.description != null &&
-                            home.description!.isNotEmpty)
+                            home.description!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
                           Text(
                             home.description!,
                             style: Theme.of(context).textTheme.bodyLarge,
                           ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            if (home.myRole != null)
-                              Chip(label: Text(home.myRole!.label)),
-                            Chip(label: Text(home.defaultCurrency)),
-                            Chip(label: Text(home.timezone)),
-                            if (home.addressText != null)
-                              Chip(label: Text(home.addressText!)),
-                          ],
-                        ),
+                        ],
+                        if (home.remarks != null &&
+                            home.remarks!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            home.remarks!,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                        if (home.addressText != null &&
+                            home.addressText!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            home.addressText!,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: AppColors.inkMuted),
+                          ),
+                        ],
                         const SizedBox(height: 20),
-                        const SectionLabel('Members'),
-                        const SizedBox(height: 10),
-                        _MembersSection(
-                          homeId: homeId,
-                          canManage: canInvite,
-                          myRole: home.myRole,
+                        statsAsync.when(
+                          loading: () => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          error: (e, _) => Text(
+                            'Dashboard unavailable: $e',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          data: (stats) => _DashboardGrid(stats: stats),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         const SectionLabel('Rooms'),
                         const SizedBox(height: 10),
                       ],
@@ -220,6 +289,9 @@ class HomeDetailScreen extends ConsumerWidget {
                                       );
                                       ref.invalidate(roomsListProvider(homeId));
                                       ref.invalidate(
+                                        homeDashboardStatsProvider(homeId),
+                                      );
+                                      ref.invalidate(
                                         entityThumbnailsProvider((
                                           homeId: homeId,
                                           entityType: 'ROOM',
@@ -237,6 +309,16 @@ class HomeDetailScreen extends ConsumerWidget {
                     );
                   },
                 ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                    child: _MembersManageSection(
+                      homeId: homeId,
+                      canManage: canInvite,
+                      myRole: home.myRole,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -246,7 +328,8 @@ class HomeDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _showInviteSheet(BuildContext context, WidgetRef ref) async {
-    HomeRole role = HomeRole.editor;
+    // Default VIEWER aligns with upcoming Phase D read-only membership.
+    HomeRole role = HomeRole.viewer;
     var busy = false;
     String? token;
     String? shortCode;
@@ -275,7 +358,7 @@ class HomeDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Creates a single-use invite. Only the token hash is stored on the server.',
+                    'Creates a single-use invite. New members are read-only by default.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -380,8 +463,156 @@ class HomeDetailScreen extends ConsumerWidget {
   }
 }
 
-class _MembersSection extends ConsumerWidget {
-  const _MembersSection({
+class _HomeCoverFallback extends StatelessWidget {
+  const _HomeCoverFallback({this.asAspectRatio = true});
+
+  final bool asAspectRatio;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = ColoredBox(
+      color: AppColors.mossSoft,
+      child: Center(
+        child: Icon(
+          Icons.home_outlined,
+          size: 48,
+          color: AppColors.mossDeep.withValues(alpha: 0.7),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: asAspectRatio
+            ? AspectRatio(aspectRatio: 16 / 9, child: child)
+            : SizedBox(height: 160, width: double.infinity, child: child),
+      ),
+    );
+  }
+}
+
+class _MemberAvatarRow extends StatelessWidget {
+  const _MemberAvatarRow({required this.members});
+
+  final List<HomeMember> members;
+
+  @override
+  Widget build(BuildContext context) {
+    if (members.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: members.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final member = members[index];
+          final url = member.avatarUrl;
+          return Tooltip(
+            message: member.label,
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: AppColors.mossSoft,
+              foregroundColor: AppColors.mossDeep,
+              backgroundImage:
+                  url != null && url.isNotEmpty ? NetworkImage(url) : null,
+              child: url == null || url.isEmpty
+                  ? Text(
+                      member.initials,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  : null,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DashboardGrid extends StatelessWidget {
+  const _DashboardGrid({required this.stats});
+
+  final HomeDashboardStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final valueFormat = NumberFormat.compactCurrency(
+      symbol: '${stats.valueCurrency} ',
+      decimalDigits: 0,
+    );
+    final cards = [
+      _DashCard(label: 'Rooms', value: '${stats.roomsCount}'),
+      _DashCard(label: 'Furniture', value: '${stats.baseFurnitureCount}'),
+      _DashCard(label: 'Members', value: '${stats.membersCount}'),
+      _DashCard(
+        label: 'Est. value',
+        value: valueFormat.format(stats.estimatedValue),
+        caption: stats.valueIsPartial ? 'Home currency only' : null,
+      ),
+    ];
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.55,
+      children: cards,
+    );
+  }
+}
+
+class _DashCard extends StatelessWidget {
+  const _DashCard({
+    required this.label,
+    required this.value,
+    this.caption,
+  });
+
+  final String label;
+  final String value;
+  final String? caption;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.mossSoft.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelLarge),
+          const Spacer(),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (caption != null)
+            Text(
+              caption!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.inkMuted,
+                  ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MembersManageSection extends ConsumerWidget {
+  const _MembersManageSection({
     required this.homeId,
     required this.canManage,
     required this.myRole,
@@ -395,52 +626,53 @@ class _MembersSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(homeMembersProvider(homeId));
     return membersAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => ErrorView(
-        message: e.toString(),
-        onRetry: () => ref.invalidate(homeMembersProvider(homeId)),
-      ),
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (members) {
-        if (members.isEmpty) {
-          return Text(
-            'No active members.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          );
-        }
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final member in members)
-              SoftTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.mossSoft,
-                  child: Text(
-                    member.label.isNotEmpty
-                        ? member.label.substring(0, 1).toUpperCase()
-                        : '?',
-                    style: const TextStyle(color: AppColors.mossDeep),
+            const SectionLabel('Member details'),
+            const SizedBox(height: 10),
+            if (members.isEmpty)
+              Text(
+                'No active members.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else
+              for (final member in members)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SoftTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.mossSoft,
+                      foregroundColor: AppColors.mossDeep,
+                      backgroundImage: member.avatarUrl != null &&
+                              member.avatarUrl!.isNotEmpty
+                          ? NetworkImage(member.avatarUrl!)
+                          : null,
+                      child: member.avatarUrl == null ||
+                              member.avatarUrl!.isEmpty
+                          ? Text(member.initials)
+                          : null,
+                    ),
+                    title: member.label,
+                    subtitle: member.role.label,
+                    trailing: canManage && member.role != HomeRole.owner
+                        ? IconButton(
+                            tooltip: 'Remove member',
+                            icon: const Icon(Icons.person_remove_outlined),
+                            onPressed: () =>
+                                _confirmRemove(context, ref, member),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ),
-                title: member.label,
-                subtitle: member.role.label,
-                trailing: canManage && member.role != HomeRole.owner
-                    ? IconButton(
-                        tooltip: 'Remove member',
-                        icon: const Icon(Icons.person_remove_outlined),
-                        onPressed: () => _confirmRemove(context, ref, member),
-                      )
-                    : const SizedBox.shrink(),
-              ),
             if (myRole != null && myRole != HomeRole.owner) ...[
               const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => _confirmLeave(context, ref),
-                  child: const Text('Leave home'),
-                ),
+              TextButton(
+                onPressed: () => _confirmLeave(context, ref),
+                child: const Text('Leave home'),
               ),
             ],
           ],
@@ -479,6 +711,7 @@ class _MembersSection extends ConsumerWidget {
           .read(homesRepositoryProvider)
           .removeMember(homeId: homeId, userId: member.userId);
       ref.invalidate(homeMembersProvider(homeId));
+      ref.invalidate(homeDashboardStatsProvider(homeId));
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -510,7 +743,7 @@ class _MembersSection extends ConsumerWidget {
     try {
       await ref.read(homesRepositoryProvider).leaveHome(homeId);
       ref.invalidate(homesListProvider);
-      if (context.mounted) context.go('/homes');
+      if (context.mounted) context.go('/');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(

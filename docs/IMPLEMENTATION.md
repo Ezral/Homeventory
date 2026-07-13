@@ -180,9 +180,9 @@ Canonical detail + acceptance + UAT checklist: [`UAT_PHASE6_SUPER_FOLLOWUP.md`](
 
 | Phase | Goal | Status |
 | --- | --- | --- |
-| **A** | Home profile polish (residing date, remarks, layout, image remove) | Partial (edit + cover exist) |
-| **B** | Bottom nav, user menu, contextual FAB | Not started |
-| **C** | Dashboard cards (rooms, base furniture, members, duration, value stub) | Not started |
+| **A** | Home profile polish (residing date, remarks, layout, image remove) | **In progress / this ship** |
+| **B** | Bottom nav, user menu, contextual FAB | **In progress / this ship** |
+| **C** | Dashboard cards (rooms, base furniture, members, duration, value stub) | **In progress / this ship** |
 | **D** | Read-only home default + room permission foundation | Not started |
 | **E** | Room creation requests + room owner / co-owner | Not started |
 | **F** | Room invitations + temporary access | Not started |

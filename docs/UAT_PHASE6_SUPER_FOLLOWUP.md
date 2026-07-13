@@ -26,7 +26,9 @@ This document incorporates new requirements into the Homeventory roadmap. It doe
 - Home cover on detail + list thumbnails
 - Stock ledger, dispose, dispenser capacity MVP, Trips pack/unpack
 
-**Still missing from UAT §1 even where edit exists:** residing date, remarks (vs description), residence duration, member-under-name layout, non-truncating title, decluttered chips, dashboard summary cards, image remove + fallback polish.
+**Phases A–C ship (this iteration):** `residing_since`, `remarks`, `updated_by`, residence duration label, wrapping home name, member avatars under name, decluttered header chips, cover remove + fallback, bottom nav (Search/Trips/Invite), user menu (Preferences + Sign out), dashboard RPC cards (rooms / base furniture / members / home-currency value stub). Invite default role → **VIEWER**.
+
+**Still later (D+):** room-level RLS, room requests, temporary access, visibility, FX conversion, multi-dispenser slots, notifications/audit/loading polish.
 
 ---
 

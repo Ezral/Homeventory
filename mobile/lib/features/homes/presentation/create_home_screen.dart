@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../shared/utils/image_pick.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 import 'homes_providers.dart';
 
-const _kCurrencies = ['USD', 'THB', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'IDR', 'MYR'];
+const _kCurrencies = [
+  'USD',
+  'THB',
+  'EUR',
+  'GBP',
+  'JPY',
+  'AUD',
+  'CAD',
+  'SGD',
+  'IDR',
+  'MYR',
+];
 
 const _kTimezones = [
   'UTC',
@@ -38,11 +50,14 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _description = TextEditingController();
+  final _remarks = TextEditingController();
   final _address = TextEditingController();
   String _timezone = 'UTC';
   String _currency = 'USD';
+  DateTime? _residingSince;
   bool _busy = false;
   bool _loading = false;
+  bool _removeExistingImage = false;
   PickedImageBytes? _pendingImage;
   List<EntityImage> _existingImages = const [];
 
@@ -57,8 +72,9 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
 
   Future<void> _load() async {
     try {
-      final home =
-          await ref.read(homesRepositoryProvider).getHome(widget.existingHomeId!);
+      final home = await ref
+          .read(homesRepositoryProvider)
+          .getHome(widget.existingHomeId!);
       final images = await ref.read(inventoryRepositoryProvider).listImages(
             homeId: widget.existingHomeId!,
             entityType: 'HOME',
@@ -68,9 +84,11 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
       setState(() {
         _name.text = home.name;
         _description.text = home.description ?? '';
+        _remarks.text = home.remarks ?? '';
         _address.text = home.addressText ?? '';
         _timezone = home.timezone;
         _currency = home.defaultCurrency.toUpperCase();
+        _residingSince = home.residingSince;
         _existingImages = images;
         _loading = false;
       });
@@ -88,6 +106,7 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
   void dispose() {
     _name.dispose();
     _description.dispose();
+    _remarks.dispose();
     _address.dispose();
     super.dispose();
   }
@@ -95,7 +114,22 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
   Future<void> _pickImage() async {
     final picked = await pickEntityImage(context);
     if (picked == null || !mounted) return;
-    setState(() => _pendingImage = picked);
+    setState(() {
+      _pendingImage = picked;
+      _removeExistingImage = false;
+    });
+  }
+
+  Future<void> _pickResidingDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _residingSince ?? now,
+      firstDate: DateTime(1950),
+      lastDate: now,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _residingSince = picked);
   }
 
   Future<void> _submit() async {
@@ -111,7 +145,10 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
           homeId: widget.existingHomeId!,
           name: _name.text,
           description: _description.text,
+          remarks: _remarks.text,
           addressText: _address.text,
+          residingSince: _residingSince,
+          clearResidingSince: _residingSince == null,
           timezone: _timezone,
           defaultCurrency: _currency,
         );
@@ -121,11 +158,22 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
         final home = await homes.createHome(
           name: _name.text,
           description: _description.text,
+          remarks: _remarks.text,
           addressText: _address.text,
+          residingSince: _residingSince,
           timezone: _timezone,
           defaultCurrency: _currency,
         );
         homeId = home.id;
+      }
+
+      if (_removeExistingImage &&
+          _pendingImage == null &&
+          _existingImages.isNotEmpty) {
+        await inventory.clearHomeCoverImage(
+          homeId: homeId,
+          image: _existingImages.first,
+        );
       }
 
       if (_pendingImage != null) {
@@ -140,6 +188,7 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
       ref.invalidate(homesListProvider);
       ref.invalidate(homeImagesProvider(homeId));
       ref.invalidate(homeProvider(homeId));
+      ref.invalidate(homeDashboardStatsProvider(homeId));
       if (!mounted) return;
       if (widget.isEditing) {
         context.pop(true);
@@ -169,6 +218,11 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
       if (!_kCurrencies.contains(_currency)) _currency,
     }.toList()
       ..sort();
+
+    final showExisting = !_removeExistingImage &&
+        _pendingImage == null &&
+        _existingImages.isNotEmpty &&
+        _existingImages.first.signedUrl != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -201,9 +255,19 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _description,
-                    maxLines: 3,
+                    maxLines: 2,
                     decoration: const InputDecoration(
-                      labelText: 'Description (optional)',
+                      labelText: 'Short description (optional)',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _remarks,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Remarks (optional)',
+                      hintText: 'Household notes…',
+                      alignLabelWithHint: true,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -214,6 +278,34 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Residing since'),
+                    subtitle: Text(
+                      _residingSince == null
+                          ? 'Not set'
+                          : DateFormat.yMMMMd().format(_residingSince!),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_residingSince != null)
+                          IconButton(
+                            tooltip: 'Clear date',
+                            onPressed: _busy
+                                ? null
+                                : () => setState(() => _residingSince = null),
+                            icon: const Icon(Icons.clear),
+                          ),
+                        IconButton(
+                          tooltip: 'Pick date',
+                          onPressed: _busy ? null : _pickResidingDate,
+                          icon: const Icon(Icons.event),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     // ignore: deprecated_member_use
                     value: timezoneItems.contains(_timezone)
@@ -238,7 +330,7 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
                         ? _currency
                         : currencyItems.first,
                     decoration:
-                        const InputDecoration(labelText: 'Default currency'),
+                        const InputDecoration(labelText: 'Home currency'),
                     items: [
                       for (final c in currencyItems)
                         DropdownMenuItem(value: c, child: Text(c)),
@@ -263,8 +355,7 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
                         fit: BoxFit.cover,
                       ),
                     )
-                  else if (_existingImages.isNotEmpty &&
-                      _existingImages.first.signedUrl != null)
+                  else if (showExisting)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
@@ -275,19 +366,42 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
                       ),
                     )
                   else
-                    Text(
-                      'No photo yet.',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Container(
+                      height: 120,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.home_outlined, size: 40),
                     ),
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _pickImage,
-                    icon: const Icon(Icons.add_a_photo_outlined),
-                    label: Text(
-                      _pendingImage != null || _existingImages.isNotEmpty
-                          ? 'Replace photo'
-                          : 'Add photo',
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _pickImage,
+                        icon: const Icon(Icons.add_a_photo_outlined),
+                        label: Text(
+                          _pendingImage != null || showExisting
+                              ? 'Replace photo'
+                              : 'Add photo',
+                        ),
+                      ),
+                      if (_pendingImage != null || showExisting)
+                        TextButton.icon(
+                          onPressed: _busy
+                              ? null
+                              : () => setState(() {
+                                    _pendingImage = null;
+                                    _removeExistingImage = true;
+                                  }),
+                          icon: const Icon(Icons.hide_image_outlined),
+                          label: const Text('Remove photo'),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 28),
                   FilledButton(

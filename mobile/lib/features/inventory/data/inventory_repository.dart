@@ -590,6 +590,18 @@ class InventoryRepository {
     return image;
   }
 
+  Future<void> clearHomeCoverImage({
+    required String homeId,
+    EntityImage? image,
+  }) async {
+    await _client
+        .from('homes')
+        .update({'cover_image_id': null}).eq('id', homeId);
+    if (image != null) {
+      await deleteImage(image);
+    }
+  }
+
   Future<void> deleteImage(EntityImage image) async {
     await _client.storage.from('home-images').remove([image.storagePath]);
     await _client.from('images').delete().eq('id', image.id);

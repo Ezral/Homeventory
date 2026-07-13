@@ -86,8 +86,10 @@ void main() {
         'id': 'h1',
         'name': 'Bangkok Apartment',
         'description': null,
+        'remarks': 'Near the park',
         'cover_image_id': 'img1',
         'address_text': null,
+        'residing_since': '2024-03-01',
         'timezone': 'Asia/Bangkok',
         'default_currency': 'THB',
         'created_by_user_id': 'u1',
@@ -95,9 +97,15 @@ void main() {
       }, myRole: HomeRole.owner);
       expect(home.name, 'Bangkok Apartment');
       expect(home.coverImageId, 'img1');
+      expect(home.remarks, 'Near the park');
+      expect(home.residingSince?.year, 2024);
       expect(home.myRole, HomeRole.owner);
       expect(home.isArchived, isFalse);
       expect(home.toUpdateJson()['timezone'], 'Asia/Bangkok');
+      expect(
+        home.residenceDurationLabel(DateTime(2026, 7, 1)),
+        'Living here for 2 years, 4 months',
+      );
     });
 
     test('Room.fromJson', () {

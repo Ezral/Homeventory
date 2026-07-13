@@ -8,6 +8,7 @@ import '../features/homes/presentation/create_home_screen.dart';
 import '../features/homes/presentation/home_detail_screen.dart';
 import '../features/homes/presentation/homes_screen.dart';
 import '../features/homes/presentation/join_home_screen.dart';
+import '../features/homes/presentation/preferences_screen.dart';
 import '../features/inventory/presentation/barcode_scan_screen.dart';
 import '../features/inventory/presentation/create_node_screen.dart';
 import '../features/inventory/presentation/move_node_screen.dart';
@@ -57,6 +58,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SignInScreen(),
       ),
       GoRoute(path: '/', builder: (context, state) => const HomesScreen()),
+      GoRoute(
+        path: '/preferences',
+        builder: (context, state) => const PreferencesScreen(),
+      ),
       GoRoute(
         path: '/homes/new',
         builder: (context, state) => const CreateHomeScreen(),
