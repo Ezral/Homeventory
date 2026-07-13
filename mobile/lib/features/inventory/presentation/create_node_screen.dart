@@ -486,8 +486,13 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
-                        decoration: const InputDecoration(
-                          labelText: 'Capacity (optional)',
+                        decoration: InputDecoration(
+                          labelText: _dispenserMode == DispenserMode.multi
+                              ? 'Capacity per chamber (optional)'
+                              : 'Capacity (optional)',
+                          helperText: _dispenserMode == DispenserMode.multi
+                              ? 'Each product slot gets this capacity (e.g. 300 CC × 2 gels).'
+                              : 'Max fill for this dispenser.',
                         ),
                       ),
                     ],

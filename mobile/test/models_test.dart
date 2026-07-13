@@ -158,5 +158,21 @@ void main() {
       expect(node.weight, 3.5);
       expect(node.weightUnit, 'kg');
     });
+
+    test('DispenserProductAssignment.fillLabel shows chamber fill', () {
+      final assignment = DispenserProductAssignment.fromJson({
+        'id': 'a1',
+        'home_id': 'h1',
+        'dispenser_item_id': 'd1',
+        'product_item_id': 'p1',
+        'slot_number': 2,
+        'capacity': 300,
+        'quantity': 120,
+        'quantity_unit': 'CC',
+        'product_name': 'Aloe gel',
+      });
+      expect(assignment.fillLabel, '120 / 300 CC');
+      expect(assignment.slotNumber, 2);
+    });
   });
 }
