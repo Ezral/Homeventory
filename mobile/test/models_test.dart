@@ -135,6 +135,8 @@ void main() {
         'is_disposed': false,
         'disposed_at': null,
         'is_dispenser': true,
+        'dispenser_mode': 'MULTI',
+        'is_dispensable': false,
         'capacity': 10,
         'item_category': 'BAG_LUGGAGE',
         'quantity': 1,
@@ -150,6 +152,8 @@ void main() {
       expect(node.kindLabel, 'Mobile container');
       expect(node.isDisposed, isFalse);
       expect(node.isDispenser, isTrue);
+      expect(node.effectiveDispenserMode, DispenserMode.multi);
+      expect(node.isDispensable, isFalse);
       expect(node.capacity, 10);
       expect(node.weight, 3.5);
       expect(node.weightUnit, 'kg');

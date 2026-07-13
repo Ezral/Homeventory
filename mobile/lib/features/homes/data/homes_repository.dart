@@ -4,6 +4,7 @@ import '../../../core/utils/invite_token.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/home.dart';
 import '../../../shared/providers/supabase_provider.dart';
+import 'exchange_rate_service.dart';
 
 class HomesRepository {
   HomesRepository({
@@ -116,6 +117,27 @@ class HomesRepository {
   }
 
   Future<HomeDashboardStats> dashboardStats(String homeId) async {
+    final home = await getHome(homeId);
+    final foreign = await client.rpc(
+      'home_item_currencies',
+      params: {'p_home_id': homeId},
+    );
+    final foreignList = (foreign as List?)
+            ?.map((e) => e.toString())
+            .where((e) => e.isNotEmpty)
+            .toList() ??
+        const <String>[];
+
+    try {
+      await ExchangeRateService(client: client).ensureRatesToHome(
+        homeCurrency: home.defaultCurrency,
+        foreignCurrencies: foreignList,
+      );
+    } catch (_) {
+      // Offline / provider failure: still return stats; unconverted items
+      // surface as value_is_partial.
+    }
+
     final row = await client.rpc(
       'home_dashboard_stats',
       params: {'p_home_id': homeId},

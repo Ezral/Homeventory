@@ -7,6 +7,9 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_thumbnail.dart';
+import '../../../shared/widgets/home_invite_sheet.dart';
+import '../../../shared/widgets/home_shell_bottom_nav.dart';
+import '../../../shared/widgets/user_menu_button.dart';
 import '../../homes/presentation/homes_providers.dart';
 import 'rooms_providers.dart';
 
@@ -41,6 +44,10 @@ class RoomDetailScreen extends ConsumerWidget {
 
     final canEdit = homeAsync.maybeWhen(
       data: (h) => h.myRole?.canEditInventory ?? false,
+      orElse: () => false,
+    );
+    final canInvite = homeAsync.maybeWhen(
+      data: (h) => h.myRole?.canManageMembers ?? false,
       orElse: () => false,
     );
 
@@ -87,37 +94,55 @@ class RoomDetailScreen extends ConsumerWidget {
               ),
               icon: const Icon(Icons.info_outline),
             ),
-          if (canEdit)
-            IconButton(
-              tooltip: 'Add item',
-              onPressed: () async {
-                await context.push(
-                  parentNodeId == null
-                      ? '/homes/$homeId/rooms/$roomId/nodes/new'
-                      : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
-                );
-                ref.invalidate(inventoryChildrenProvider(scope));
-              },
-              icon: const Icon(Icons.add_box_outlined),
-            ),
+          const UserMenuButton(),
         ],
       ),
-      floatingActionButton: canEdit
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                await context.push(
-                  parentNodeId == null
-                      ? '/homes/$homeId/rooms/$roomId/nodes/new'
-                      : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
+      floatingActionButton: null,
+      bottomNavigationBar: HomeShellBottomNav(
+        selectedIndex: 2,
+        addLabel: 'Add object',
+        onSelect: (index) async {
+          switch (index) {
+            case 0:
+              await context.push('/homes/$homeId/search');
+            case 1:
+              await context.push('/homes/$homeId/trips');
+            case 2:
+              context.go('/homes/$homeId');
+            case 3:
+              if (canInvite) {
+                await showHomeInviteSheet(
+                  context: context,
+                  ref: ref,
+                  homeId: homeId,
                 );
-                ref.invalidate(inventoryChildrenProvider(scope));
-              },
-              backgroundColor: AppColors.moss,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('Add'),
-            )
-          : null,
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Only owners and admins can invite members.',
+                    ),
+                  ),
+                );
+              }
+            case 4:
+              if (!canEdit) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You do not have permission to add objects.'),
+                  ),
+                );
+                return;
+              }
+              await context.push(
+                parentNodeId == null
+                    ? '/homes/$homeId/rooms/$roomId/nodes/new'
+                    : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
+              );
+              ref.invalidate(inventoryChildrenProvider(scope));
+          }
+        },
+      ),
       body: childrenAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(

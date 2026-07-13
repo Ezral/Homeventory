@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +8,8 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/home.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_thumbnail.dart';
+import '../../../shared/widgets/home_invite_sheet.dart';
+import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
 import 'homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
@@ -61,28 +62,25 @@ class HomeDetailScreen extends ConsumerWidget {
               const UserMenuButton(),
             ],
           ),
-          floatingActionButton: canEdit
-              ? FloatingActionButton.extended(
-                  onPressed: () => context.push('/homes/$homeId/rooms/new'),
-                  backgroundColor: AppColors.moss,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add room'),
-                )
-              : null,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: 0,
-            onDestinationSelected: (index) async {
+          floatingActionButton: null,
+          bottomNavigationBar: HomeShellBottomNav(
+            selectedIndex: 2,
+            addLabel: 'Add room',
+            onSelect: (index) async {
               switch (index) {
                 case 0:
-                  break;
-                case 1:
                   await context.push('/homes/$homeId/search');
-                case 2:
+                case 1:
                   await context.push('/homes/$homeId/trips');
+                case 2:
+                  break;
                 case 3:
                   if (canInvite) {
-                    await _showInviteSheet(context, ref);
+                    await showHomeInviteSheet(
+                      context: context,
+                      ref: ref,
+                      homeId: homeId,
+                    );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -92,27 +90,20 @@ class HomeDetailScreen extends ConsumerWidget {
                       ),
                     );
                   }
+                case 4:
+                  if (!canEdit) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('You do not have permission to add rooms.'),
+                      ),
+                    );
+                    return;
+                  }
+                  await context.push('/homes/$homeId/rooms/new');
+                  ref.invalidate(roomsListProvider(homeId));
+                  ref.invalidate(homeDashboardStatsProvider(homeId));
               }
             },
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.search),
-                label: 'Search',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.luggage_outlined),
-                label: 'Trips',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_add_alt_1_outlined),
-                label: 'Invite',
-              ),
-            ],
           ),
           body: RefreshIndicator(
             onRefresh: () async {
@@ -326,141 +317,6 @@ class HomeDetailScreen extends ConsumerWidget {
       },
     );
   }
-
-  Future<void> _showInviteSheet(BuildContext context, WidgetRef ref) async {
-    // Default VIEWER aligns with upcoming Phase D read-only membership.
-    HomeRole role = HomeRole.viewer;
-    var busy = false;
-    String? token;
-    String? shortCode;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 8,
-                bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Invite someone',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Creates a single-use invite. New members are read-only by default.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<HomeRole>(
-                    // ignore: deprecated_member_use
-                    value: role,
-                    items: HomeRole.values
-                        .where((r) => r != HomeRole.owner)
-                        .map(
-                          (r) =>
-                              DropdownMenuItem(value: r, child: Text(r.label)),
-                        )
-                        .toList(),
-                    onChanged: token != null
-                        ? null
-                        : (v) {
-                            if (v != null) setModalState(() => role = v);
-                          },
-                    decoration: const InputDecoration(labelText: 'Role'),
-                  ),
-                  const SizedBox(height: 16),
-                  if (token == null)
-                    FilledButton(
-                      onPressed: busy
-                          ? null
-                          : () async {
-                              setModalState(() => busy = true);
-                              try {
-                                final invite = await ref
-                                    .read(homesRepositoryProvider)
-                                    .createInvitation(
-                                      homeId: homeId,
-                                      role: role,
-                                    );
-                                setModalState(() {
-                                  token = invite.token;
-                                  shortCode = invite.shortCode;
-                                });
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
-                              } finally {
-                                setModalState(() => busy = false);
-                              }
-                            },
-                      child: Text(busy ? 'Creating…' : 'Create invite'),
-                    )
-                  else ...[
-                    SelectableText(
-                      'Short code: $shortCode',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    SelectableText(token!),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final value = shortCode ?? token!;
-                        await Clipboard.setData(ClipboardData(text: value));
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                shortCode != null
-                                    ? 'Short code copied'
-                                    : 'Invite token copied',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.copy),
-                      label: Text(
-                        shortCode != null ? 'Copy short code' : 'Copy token',
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: token!));
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Full invite token copied'),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.link),
-                      label: const Text('Copy full token'),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 }
 
 class _HomeCoverFallback extends StatelessWidget {
@@ -552,7 +408,7 @@ class _DashboardGrid extends StatelessWidget {
       _DashCard(
         label: 'Est. value',
         value: valueFormat.format(stats.estimatedValue),
-        caption: stats.valueIsPartial ? 'Home currency only' : null,
+        caption: _valueCaption(stats),
       ),
     ];
 
@@ -565,6 +421,19 @@ class _DashboardGrid extends StatelessWidget {
       childAspectRatio: 1.55,
       children: cards,
     );
+  }
+
+  String? _valueCaption(HomeDashboardStats stats) {
+    final parts = <String>[];
+    parts.add('In ${stats.valueCurrency}');
+    if (stats.rateDate != null) {
+      parts.add('FX ${DateFormat.yMMMd().format(stats.rateDate!.toLocal())}');
+    }
+    if (stats.ratesStale) parts.add('stale rates');
+    if (stats.valueIsPartial && stats.unconvertedItemCount > 0) {
+      parts.add('${stats.unconvertedItemCount} unconverted');
+    }
+    return parts.join(' · ');
   }
 }
 
@@ -601,6 +470,8 @@ class _DashCard extends StatelessWidget {
           if (caption != null)
             Text(
               caption!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.inkMuted,
                   ),

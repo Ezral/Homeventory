@@ -215,6 +215,9 @@ class InventoryRepository {
     bool isContainer = false,
     bool isMobileContainer = false,
     bool isDispenser = false,
+    DispenserMode? dispenserMode,
+    bool isDispensable = false,
+    ConsumableForm? consumableForm,
     double? capacity,
     ItemCategory? itemCategory,
     double? quantity,
@@ -240,6 +243,11 @@ class InventoryRepository {
           'is_container': isContainer || isMobileContainer,
           'is_mobile_container': isMobileContainer,
           'is_dispenser': isDispenser,
+          'dispenser_mode': isDispenser
+              ? (dispenserMode ?? DispenserMode.single).dbValue
+              : null,
+          'is_dispensable': isDispensable,
+          'consumable_form': consumableForm?.dbValue,
           'capacity': capacity,
           'item_category': itemCategory?.dbValue,
           'quantity': quantity,
@@ -267,6 +275,9 @@ class InventoryRepository {
     bool? isContainer,
     bool? isMobileContainer,
     bool? isDispenser,
+    DispenserMode? dispenserMode,
+    bool? isDispensable,
+    ConsumableForm? consumableForm,
     double? capacity,
     ItemCategory? itemCategory,
     double? quantity,
@@ -280,10 +291,16 @@ class InventoryRepository {
     double? weight,
     String? weightUnit,
   }) async {
+    final dispenser = isDispenser ?? false;
     final payload = <String, dynamic>{
       'name': name.trim(),
       'description': _nullIfBlank(description),
-      'is_dispenser': isDispenser ?? false,
+      'is_dispenser': dispenser,
+      'dispenser_mode': dispenser
+          ? (dispenserMode ?? DispenserMode.single).dbValue
+          : null,
+      'is_dispensable': isDispensable ?? false,
+      'consumable_form': consumableForm?.dbValue,
       'capacity': capacity,
       'item_category': itemCategory?.dbValue,
       'quantity': quantity,
@@ -588,6 +605,79 @@ class InventoryRepository {
         .from('homes')
         .update({'cover_image_id': image.id}).eq('id', homeId);
     return image;
+  }
+
+  Future<List<DispenserProductAssignment>> listDispenserAssignments(
+    String dispenserItemId,
+  ) async {
+    final rows = await _client
+        .from('dispenser_product_assignments')
+        .select(
+          'id, home_id, dispenser_item_id, product_item_id, slot_number',
+        )
+        .eq('dispenser_item_id', dispenserItemId)
+        .order('slot_number');
+
+    final assignments = <DispenserProductAssignment>[];
+    for (final row in rows as List) {
+      final map = Map<String, dynamic>.from(row as Map);
+      String? productName;
+      try {
+        final product = await getNode(map['product_item_id'] as String);
+        productName = product.name;
+      } catch (_) {}
+      map['product_name'] = productName;
+      assignments.add(DispenserProductAssignment.fromJson(map));
+    }
+    return assignments;
+  }
+
+  Future<List<InventoryNode>> listDispensableProducts({
+    required String homeId,
+    String? excludeNodeId,
+  }) async {
+    var query = _client
+        .from('inventory_nodes')
+        .select()
+        .eq('home_id', homeId)
+        .eq('is_dispensable', true)
+        .eq('is_disposed', false)
+        .isFilter('archived_at', null)
+        .eq('is_dispenser', false)
+        .order('name');
+    final rows = await query;
+    return (rows as List)
+        .map((r) => InventoryNode.fromJson(Map<String, dynamic>.from(r as Map)))
+        .where((n) => excludeNodeId == null || n.id != excludeNodeId)
+        .toList();
+  }
+
+  Future<void> assignProductToDispenser({
+    required String dispenserItemId,
+    required String productItemId,
+    required int slotNumber,
+  }) async {
+    await _client.rpc(
+      'assign_product_to_dispenser',
+      params: {
+        'p_dispenser_item_id': dispenserItemId,
+        'p_product_item_id': productItemId,
+        'p_slot_number': slotNumber,
+      },
+    );
+  }
+
+  Future<void> clearDispenserSlot({
+    required String dispenserItemId,
+    required int slotNumber,
+  }) async {
+    await _client.rpc(
+      'clear_dispenser_slot',
+      params: {
+        'p_dispenser_item_id': dispenserItemId,
+        'p_slot_number': slotNumber,
+      },
+    );
   }
 
   Future<void> clearHomeCoverImage({

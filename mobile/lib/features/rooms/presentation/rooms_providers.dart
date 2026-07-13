@@ -121,3 +121,23 @@ final inventorySearchProvider = FutureProvider.autoDispose
           .watch(inventoryRepositoryProvider)
           .search(homeId: args.homeId, query: args.query);
     });
+
+final dispenserAssignmentsProvider = FutureProvider.autoDispose
+    .family<List<DispenserProductAssignment>, String>((ref, dispenserItemId) {
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listDispenserAssignments(dispenserItemId);
+    });
+
+final dispensableProductsProvider = FutureProvider.autoDispose
+    .family<List<InventoryNode>, ({String homeId, String? excludeNodeId})>((
+      ref,
+      args,
+    ) {
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listDispensableProducts(
+            homeId: args.homeId,
+            excludeNodeId: args.excludeNodeId,
+          );
+    });

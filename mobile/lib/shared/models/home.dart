@@ -220,7 +220,13 @@ class HomeDashboardStats {
     required this.membersCount,
     required this.estimatedValue,
     required this.valueCurrency,
-    this.valueIsPartial = true,
+    this.valueIsPartial = false,
+    this.unconvertedItemCount = 0,
+    this.convertedItemCount = 0,
+    this.rateDate,
+    this.ratesRetrievedAt,
+    this.ratesStale = false,
+    this.fxProvider,
   });
 
   final int roomsCount;
@@ -229,15 +235,34 @@ class HomeDashboardStats {
   final double estimatedValue;
   final String valueCurrency;
   final bool valueIsPartial;
+  final int unconvertedItemCount;
+  final int convertedItemCount;
+  final DateTime? rateDate;
+  final DateTime? ratesRetrievedAt;
+  final bool ratesStale;
+  final String? fxProvider;
 
   factory HomeDashboardStats.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(Object? raw) {
+      if (raw == null) return null;
+      if (raw is String && raw.isNotEmpty) return DateTime.tryParse(raw);
+      return null;
+    }
+
     return HomeDashboardStats(
       roomsCount: (json['rooms_count'] as num?)?.toInt() ?? 0,
       baseFurnitureCount: (json['base_furniture_count'] as num?)?.toInt() ?? 0,
       membersCount: (json['members_count'] as num?)?.toInt() ?? 0,
       estimatedValue: (json['estimated_value'] as num?)?.toDouble() ?? 0,
       valueCurrency: (json['value_currency'] as String?) ?? 'USD',
-      valueIsPartial: json['value_is_partial'] as bool? ?? true,
+      valueIsPartial: json['value_is_partial'] as bool? ?? false,
+      unconvertedItemCount:
+          (json['unconverted_item_count'] as num?)?.toInt() ?? 0,
+      convertedItemCount: (json['converted_item_count'] as num?)?.toInt() ?? 0,
+      rateDate: parseDate(json['rate_date']),
+      ratesRetrievedAt: parseDate(json['rates_retrieved_at']),
+      ratesStale: json['rates_stale'] as bool? ?? false,
+      fxProvider: json['fx_provider'] as String?,
     );
   }
 }

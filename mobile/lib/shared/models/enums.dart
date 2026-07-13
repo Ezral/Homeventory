@@ -124,6 +124,58 @@ enum InventoryTransactionType {
   };
 }
 
+enum DispenserMode {
+  single('SINGLE'),
+  multi('MULTI');
+
+  const DispenserMode(this.dbValue);
+  final String dbValue;
+
+  static DispenserMode fromDb(String? value) => DispenserMode.values.firstWhere(
+    (e) => e.dbValue == value,
+    orElse: () => DispenserMode.single,
+  );
+
+  String get label => switch (this) {
+    DispenserMode.single => 'Single product',
+    DispenserMode.multi => 'Multi (up to 3)',
+  };
+
+  int get maxSlots => switch (this) {
+    DispenserMode.single => 1,
+    DispenserMode.multi => 3,
+  };
+}
+
+enum ConsumableForm {
+  liquid('LIQUID'),
+  gel('GEL'),
+  cream('CREAM'),
+  foam('FOAM'),
+  powder('POWDER'),
+  other('OTHER');
+
+  const ConsumableForm(this.dbValue);
+  final String dbValue;
+
+  static ConsumableForm? fromDb(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return ConsumableForm.values.firstWhere(
+      (e) => e.dbValue == value,
+      orElse: () => ConsumableForm.other,
+    );
+  }
+
+  String get label => switch (this) {
+    ConsumableForm.liquid => 'Liquid',
+    ConsumableForm.gel => 'Gel',
+    ConsumableForm.cream => 'Cream',
+    ConsumableForm.foam => 'Foam',
+    ConsumableForm.powder => 'Powder',
+    ConsumableForm.other => 'Other',
+  };
+}
+
 enum TripStatus {
   planned('PLANNED'),
   active('ACTIVE'),

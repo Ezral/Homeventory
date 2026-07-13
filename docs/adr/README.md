@@ -24,6 +24,7 @@ The source code remains the source of truth for **how**.
 | [0007](0007-flutter-client-architecture.md) | Flutter client structure (Riverpod, go_router, repositories) | Accepted |
 | [0008](0008-inventory-transactions.md) | Inventory transactions and dispose | Accepted |
 | [0009](0009-trips-packing.md) | Trips packing and unpacking | Accepted |
+| [0010](0010-home-currency-fx-cache.md) | Home-currency FX cache via Frankfurter | Accepted |
 
 ## Not yet documented (not implemented)
 
@@ -34,10 +35,9 @@ Prep notes:
 
 Still without ADRs (not implemented or not landed as architecture):
 
-- Home profile fields (`residing_since`, `remarks`) and dashboard aggregates
 - Room-level authorization, visibility, requests, temporary access
 - Multi-dispenser product assignments
-- Display currency vs home/item currency + exchange-rate cache
+- User display-currency preference (home-currency FX sum already shipped)
 - Full product / multi-reserve catalog model
 - Consumption predictions
 - Notifications / FCM

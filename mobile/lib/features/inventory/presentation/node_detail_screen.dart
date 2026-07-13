@@ -8,6 +8,8 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/image_pick.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/home_invite_sheet.dart';
+import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 import '../data/inventory_repository.dart';
@@ -37,6 +39,10 @@ class NodeDetailScreen extends ConsumerWidget {
     final dateFormat = DateFormat.yMMMd();
     final canEdit = homeAsync.maybeWhen(
       data: (h) => h.myRole?.canEditInventory ?? false,
+      orElse: () => false,
+    );
+    final canInvite = homeAsync.maybeWhen(
+      data: (h) => h.myRole?.canManageMembers ?? false,
       orElse: () => false,
     );
 
@@ -75,6 +81,66 @@ class NodeDetailScreen extends ConsumerWidget {
             ),
         ],
       ),
+      bottomNavigationBar: HomeShellBottomNav(
+        selectedIndex: 2,
+        addLabel: 'Add object',
+        onSelect: (index) async {
+          switch (index) {
+            case 0:
+              await context.push('/homes/$homeId/search');
+            case 1:
+              await context.push('/homes/$homeId/trips');
+            case 2:
+              context.go('/homes/$homeId');
+            case 3:
+              if (canInvite) {
+                await showHomeInviteSheet(
+                  context: context,
+                  ref: ref,
+                  homeId: homeId,
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Only owners and admins can invite members.',
+                    ),
+                  ),
+                );
+              }
+            case 4:
+              if (!canEdit) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You do not have permission to add objects.'),
+                  ),
+                );
+                return;
+              }
+              final node = nodeAsync.asData?.value;
+              final parent = node != null &&
+                      (node.isContainer || node.isMobileContainer)
+                  ? nodeId
+                  : null;
+              await context.push(
+                parent == null
+                    ? '/homes/$homeId/rooms/$roomId/nodes/new'
+                    : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parent',
+              );
+              if (parent != null) {
+                ref.invalidate(
+                  inventoryChildrenProvider(
+                    InventoryScope(
+                      homeId: homeId,
+                      roomId: roomId,
+                      parentNodeId: parent,
+                    ),
+                  ),
+                );
+              }
+          }
+        },
+      ),
       body: nodeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
@@ -95,7 +161,13 @@ class NodeDetailScreen extends ConsumerWidget {
                 runSpacing: 8,
                 children: [
                   Chip(label: Text(node.kindLabel)),
-                  if (node.isDispenser) const Chip(label: Text('Dispenser')),
+                  if (node.isDispenser)
+                    Chip(
+                      label: Text(
+                        'Dispenser · ${node.effectiveDispenserMode.label}',
+                      ),
+                    ),
+                  if (node.isDispensable) const Chip(label: Text('Dispensable')),
                   if (node.isDisposed) const Chip(label: Text('Disposed')),
                   if (node.itemCategory != null)
                     Chip(label: Text(node.itemCategory!.label)),
@@ -214,13 +286,40 @@ class NodeDetailScreen extends ConsumerWidget {
               ),
               _DetailRow(
                 label: 'Dispenser',
-                value: node.isDispenser ? 'Yes' : 'No',
+                value: node.isDispenser
+                    ? node.effectiveDispenserMode.label
+                    : 'No',
               ),
+              if (node.isDispensable)
+                _DetailRow(
+                  label: 'Consumable form',
+                  value: node.consumableForm?.label ?? 'Not set',
+                ),
               if (node.disposedAt != null)
                 _DetailRow(
                   label: 'Disposed',
                   value: dateFormat.format(node.disposedAt!),
                 ),
+              if (node.isDispenser) ...[
+                const SizedBox(height: 24),
+                const SectionLabel('Dispenser products'),
+                const SizedBox(height: 8),
+                Text(
+                  node.effectiveDispenserMode == DispenserMode.multi
+                      ? 'Link up to 3 dispensable products (one per slot).'
+                      : 'Link one dispensable product to this dispenser.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.inkMuted,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                _DispenserSlotsSection(
+                  homeId: homeId,
+                  roomId: roomId,
+                  dispenser: node,
+                  canEdit: canEdit && !node.isDisposed,
+                ),
+              ],
               _DetailRow(label: 'Brand', value: node.brand ?? '—'),
               _DetailRow(
                 label: 'Weight',
@@ -691,5 +790,219 @@ class _DetailRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DispenserSlotsSection extends ConsumerWidget {
+  const _DispenserSlotsSection({
+    required this.homeId,
+    required this.roomId,
+    required this.dispenser,
+    required this.canEdit,
+  });
+
+  final String homeId;
+  final String roomId;
+  final InventoryNode dispenser;
+  final bool canEdit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final assignmentsAsync = ref.watch(
+      dispenserAssignmentsProvider(dispenser.id),
+    );
+
+    return assignmentsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(12),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Text(e.toString()),
+      data: (assignments) {
+        final bySlot = {
+          for (final a in assignments) a.slotNumber: a,
+        };
+        final maxSlots = dispenser.effectiveDispenserMode.maxSlots;
+        return Column(
+          children: [
+            for (var slot = 1; slot <= maxSlots; slot++)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.mossSoft,
+                  child: Text('$slot'),
+                ),
+                title: Text(
+                  bySlot[slot]?.productName ?? 'Empty slot',
+                ),
+                subtitle: Text(
+                  bySlot[slot] == null
+                      ? 'No product linked'
+                      : 'Slot $slot',
+                ),
+                trailing: canEdit
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            onPressed: () => _assignSlot(
+                              context,
+                              ref,
+                              slotNumber: slot,
+                            ),
+                            child: Text(
+                              bySlot[slot] == null ? 'Assign' : 'Change',
+                            ),
+                          ),
+                          if (bySlot[slot] != null)
+                            IconButton(
+                              tooltip: 'Clear slot',
+                              onPressed: () => _clearSlot(
+                                context,
+                                ref,
+                                slotNumber: slot,
+                              ),
+                              icon: const Icon(Icons.close),
+                            ),
+                        ],
+                      )
+                    : null,
+              ),
+            if (canEdit)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    await context.push(
+                      '/homes/$homeId/rooms/$roomId/nodes/new',
+                    );
+                    ref.invalidate(
+                      dispensableProductsProvider((
+                        homeId: homeId,
+                        excludeNodeId: dispenser.id,
+                      )),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create dispensable product'),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _assignSlot(
+    BuildContext context,
+    WidgetRef ref, {
+    required int slotNumber,
+  }) async {
+    final productsAsync = ref.read(
+      dispensableProductsProvider((
+        homeId: homeId,
+        excludeNodeId: dispenser.id,
+      )).future,
+    );
+    List<InventoryNode> products;
+    try {
+      products = await productsAsync;
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    if (products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No dispensable products yet. Create one and mark it dispensable.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final selected = await showModalBottomSheet<InventoryNode>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: Text(
+                  'Assign to slot $slotNumber',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              for (final product in products)
+                ListTile(
+                  title: Text(product.name),
+                  subtitle: Text(
+                    [
+                      if (product.consumableForm != null)
+                        product.consumableForm!.label,
+                      if (product.quantity != null)
+                        [
+                          product.quantity ==
+                                  product.quantity!.roundToDouble()
+                              ? product.quantity!.toInt().toString()
+                              : product.quantity.toString(),
+                          if (product.quantityUnit != null)
+                            product.quantityUnit!,
+                        ].join(' '),
+                    ].where((e) => e.isNotEmpty).join(' · '),
+                  ),
+                  onTap: () => Navigator.of(context).pop(product),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null) return;
+
+    try {
+      await ref.read(inventoryRepositoryProvider).assignProductToDispenser(
+            dispenserItemId: dispenser.id,
+            productItemId: selected.id,
+            slotNumber: slotNumber,
+          );
+      ref.invalidate(dispenserAssignmentsProvider(dispenser.id));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _clearSlot(
+    BuildContext context,
+    WidgetRef ref, {
+    required int slotNumber,
+  }) async {
+    try {
+      await ref.read(inventoryRepositoryProvider).clearDispenserSlot(
+            dispenserItemId: dispenser.id,
+            slotNumber: slotNumber,
+          );
+      ref.invalidate(dispenserAssignmentsProvider(dispenser.id));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 }
