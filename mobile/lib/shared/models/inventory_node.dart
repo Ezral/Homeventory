@@ -160,6 +160,9 @@ class DispenserProductAssignment {
     required this.dispenserItemId,
     required this.productItemId,
     required this.slotNumber,
+    this.capacity,
+    this.quantity = 0,
+    this.quantityUnit,
     this.productName,
   });
 
@@ -168,7 +171,22 @@ class DispenserProductAssignment {
   final String dispenserItemId;
   final String productItemId;
   final int slotNumber;
+  final double? capacity;
+  final double quantity;
+  final String? quantityUnit;
   final String? productName;
+
+  String get fillLabel {
+    final unit = quantityUnit?.trim().isNotEmpty == true ? quantityUnit! : 'CC';
+    final qty = quantity == quantity.roundToDouble()
+        ? quantity.toInt().toString()
+        : quantity.toString();
+    if (capacity == null) return '$qty $unit';
+    final cap = capacity == capacity!.roundToDouble()
+        ? capacity!.toInt().toString()
+        : capacity.toString();
+    return '$qty / $cap $unit';
+  }
 
   factory DispenserProductAssignment.fromJson(Map<String, dynamic> json) {
     return DispenserProductAssignment(
@@ -177,6 +195,9 @@ class DispenserProductAssignment {
       dispenserItemId: json['dispenser_item_id'] as String,
       productItemId: json['product_item_id'] as String,
       slotNumber: (json['slot_number'] as num).toInt(),
+      capacity: (json['capacity'] as num?)?.toDouble(),
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      quantityUnit: json['quantity_unit'] as String?,
       productName: json['product_name'] as String?,
     );
   }

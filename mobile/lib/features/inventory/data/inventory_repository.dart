@@ -79,6 +79,7 @@ class InventoryTransaction {
     this.quantityAfter,
     this.quantityUnit,
     this.reason,
+    this.slotNumber,
     required this.createdByUserId,
     required this.createdAt,
   });
@@ -93,6 +94,7 @@ class InventoryTransaction {
   final double? quantityAfter;
   final String? quantityUnit;
   final String? reason;
+  final int? slotNumber;
   final String createdByUserId;
   final DateTime createdAt;
 
@@ -110,6 +112,7 @@ class InventoryTransaction {
       quantityAfter: (json['quantity_after'] as num?)?.toDouble(),
       quantityUnit: json['quantity_unit'] as String?,
       reason: json['reason'] as String?,
+      slotNumber: (json['slot_number'] as num?)?.toInt(),
       createdByUserId: json['created_by_user_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -326,7 +329,15 @@ class InventoryRepository {
         .eq('id', nodeId)
         .select()
         .single();
-    return InventoryNode.fromJson(Map<String, dynamic>.from(updated));
+    final node = InventoryNode.fromJson(Map<String, dynamic>.from(updated));
+    if (node.isDispenser &&
+        node.effectiveDispenserMode == DispenserMode.multi &&
+        capacity != null) {
+      await _client
+          .from('dispenser_product_assignments')
+          .update({'capacity': capacity}).eq('dispenser_item_id', nodeId);
+    }
+    return node;
   }
 
   Future<void> moveNode({
@@ -367,6 +378,7 @@ class InventoryRepository {
     String? quantityUnit,
     String? reason,
     String? relatedNodeId,
+    int? slotNumber,
   }) async {
     final row = await _client.rpc(
       'apply_inventory_transaction',
@@ -377,6 +389,7 @@ class InventoryRepository {
         'p_quantity_unit': _nullIfBlank(quantityUnit),
         'p_reason': _nullIfBlank(reason),
         'p_related_node_id': relatedNodeId,
+        'p_slot_number': slotNumber,
       },
     );
     return InventoryTransaction.fromJson(Map<String, dynamic>.from(row as Map));
@@ -613,7 +626,7 @@ class InventoryRepository {
     final rows = await _client
         .from('dispenser_product_assignments')
         .select(
-          'id, home_id, dispenser_item_id, product_item_id, slot_number',
+          'id, home_id, dispenser_item_id, product_item_id, slot_number, capacity, quantity, quantity_unit',
         )
         .eq('dispenser_item_id', dispenserItemId)
         .order('slot_number');

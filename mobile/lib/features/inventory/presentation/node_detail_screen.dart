@@ -262,14 +262,17 @@ class NodeDetailScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               _DetailRow(
                 label: 'Quantity',
-                value: node.quantity == null
-                    ? '—'
-                    : [
-                        node.quantity == node.quantity!.roundToDouble()
-                            ? node.quantity!.toInt().toString()
-                            : node.quantity.toString(),
-                        if (node.quantityUnit != null) node.quantityUnit!,
-                      ].join(' '),
+                value: node.isDispenser &&
+                        node.effectiveDispenserMode == DispenserMode.multi
+                    ? 'Per chamber (below)'
+                    : node.quantity == null
+                        ? '—'
+                        : [
+                            node.quantity == node.quantity!.roundToDouble()
+                                ? node.quantity!.toInt().toString()
+                                : node.quantity.toString(),
+                            if (node.quantityUnit != null) node.quantityUnit!,
+                          ].join(' '),
               ),
               _DetailRow(
                 label: 'Min quantity',
@@ -282,6 +285,9 @@ class NodeDetailScreen extends ConsumerWidget {
                     : [
                         _formatQty(node.capacity!),
                         if (node.quantityUnit != null) node.quantityUnit!,
+                        if (node.isDispenser &&
+                            node.effectiveDispenserMode == DispenserMode.multi)
+                          'per chamber',
                       ].join(' '),
               ),
               _DetailRow(
@@ -306,7 +312,9 @@ class NodeDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   node.effectiveDispenserMode == DispenserMode.multi
-                      ? 'Link up to 3 dispensable products (one per slot).'
+                      ? node.capacity == null
+                          ? 'Each slot is an independent chamber. Set capacity on edit, then use/refill per product.'
+                          : 'Each linked product fills its own ${_formatQty(node.capacity!)}${node.quantityUnit != null ? ' ${node.quantityUnit}' : ' CC'} chamber. Use and refill per slot.'
                       : 'Link one dispensable product to this dispenser.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.inkMuted,
@@ -354,40 +362,54 @@ class NodeDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 const SectionLabel('Stock actions'),
                 const SizedBox(height: 12),
+                if (node.isDispenser &&
+                    node.effectiveDispenserMode == DispenserMode.multi)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Use and refill each chamber under Dispenser products.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.inkMuted,
+                          ),
+                    ),
+                  ),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    FilledButton.tonalIcon(
-                      onPressed: () => _quantityAction(
-                        context,
-                        ref,
-                        node,
-                        InventoryTransactionType.use,
+                    if (!(node.isDispenser &&
+                        node.effectiveDispenserMode == DispenserMode.multi)) ...[
+                      FilledButton.tonalIcon(
+                        onPressed: () => _quantityAction(
+                          context,
+                          ref,
+                          node,
+                          InventoryTransactionType.use,
+                        ),
+                        icon: const Icon(Icons.remove_circle_outline),
+                        label: const Text('Use'),
                       ),
-                      icon: const Icon(Icons.remove_circle_outline),
-                      label: const Text('Use'),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: () => _quantityAction(
-                        context,
-                        ref,
-                        node,
-                        InventoryTransactionType.restock,
+                      FilledButton.tonalIcon(
+                        onPressed: () => _quantityAction(
+                          context,
+                          ref,
+                          node,
+                          InventoryTransactionType.restock,
+                        ),
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('Restock'),
                       ),
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Restock'),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: () => _quantityAction(
-                        context,
-                        ref,
-                        node,
-                        InventoryTransactionType.adjustment,
+                      FilledButton.tonalIcon(
+                        onPressed: () => _quantityAction(
+                          context,
+                          ref,
+                          node,
+                          InventoryTransactionType.adjustment,
+                        ),
+                        icon: const Icon(Icons.tune),
+                        label: const Text('Adjust'),
                       ),
-                      icon: const Icon(Icons.tune),
-                      label: const Text('Adjust'),
-                    ),
+                    ],
                     OutlinedButton.icon(
                       onPressed: () => _disposeNode(context, ref, node),
                       icon: const Icon(Icons.delete_outline),
@@ -422,6 +444,8 @@ class NodeDetailScreen extends ConsumerWidget {
                           subtitle: Text(
                             [
                               dateFormat.format(transaction.createdAt),
+                              if (transaction.slotNumber != null)
+                                'Slot ${transaction.slotNumber}',
                               if (transaction.reason != null)
                                 transaction.reason!,
                             ].join(' · '),
@@ -502,14 +526,15 @@ class NodeDetailScreen extends ConsumerWidget {
     InventoryNode node,
     InventoryTransactionType type,
   ) async {
-    final controller = TextEditingController(
-      text: type == InventoryTransactionType.adjustment && node.quantity != null
-          ? _formatQty(node.quantity!)
-          : '',
-    );
+    final current = node.quantity ?? 0;
     final unit = node.quantityUnit?.trim().isNotEmpty == true
         ? node.quantityUnit!
         : 'unit';
+    final controller = TextEditingController(
+      text: type == InventoryTransactionType.adjustment
+          ? _formatQty(current)
+          : '',
+    );
     final quantity = await showDialog<double>(
       context: context,
       builder: (context) {
@@ -522,7 +547,13 @@ class NodeDetailScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Current: ${_formatNodeQuantity(node)}'),
+                  Text(
+                    [
+                      'Current: ${_formatQty(current)} $unit',
+                      if (node.capacity != null)
+                        'Capacity: ${_formatQty(node.capacity!)} $unit',
+                    ].join('\n'),
+                  ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: controller,
@@ -574,7 +605,7 @@ class NodeDetailScreen extends ConsumerWidget {
     if (quantity == null || !context.mounted) return;
 
     final delta = type == InventoryTransactionType.adjustment
-        ? quantity - (node.quantity ?? 0)
+        ? quantity - current
         : quantity;
     try {
       await ref
@@ -583,7 +614,7 @@ class NodeDetailScreen extends ConsumerWidget {
             nodeId: node.id,
             transactionType: type,
             quantityDelta: delta,
-            quantityUnit: node.quantityUnit,
+            quantityUnit: unit,
             reason: type.label,
           );
       _invalidateNode(ref, node);
@@ -747,14 +778,6 @@ class NodeDetailScreen extends ConsumerWidget {
     ].join(' ');
   }
 
-  String _formatNodeQuantity(InventoryNode node) {
-    if (node.quantity == null) return '—';
-    return [
-      _formatQty(node.quantity!),
-      if (node.quantityUnit != null) node.quantityUnit!,
-    ].join(' ');
-  }
-
   String _formatQty(double value) {
     return value == value.roundToDouble()
         ? value.toInt().toString()
@@ -823,51 +846,20 @@ class _DispenserSlotsSection extends ConsumerWidget {
           for (final a in assignments) a.slotNumber: a,
         };
         final maxSlots = dispenser.effectiveDispenserMode.maxSlots;
+        final isMulti =
+            dispenser.effectiveDispenserMode == DispenserMode.multi;
         return Column(
           children: [
-            for (var slot = 1; slot <= maxSlots; slot++)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.mossSoft,
-                  child: Text('$slot'),
-                ),
-                title: Text(
-                  bySlot[slot]?.productName ?? 'Empty slot',
-                ),
-                subtitle: Text(
-                  bySlot[slot] == null
-                      ? 'No product linked'
-                      : 'Slot $slot',
-                ),
-                trailing: canEdit
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextButton(
-                            onPressed: () => _assignSlot(
-                              context,
-                              ref,
-                              slotNumber: slot,
-                            ),
-                            child: Text(
-                              bySlot[slot] == null ? 'Assign' : 'Change',
-                            ),
-                          ),
-                          if (bySlot[slot] != null)
-                            IconButton(
-                              tooltip: 'Clear slot',
-                              onPressed: () => _clearSlot(
-                                context,
-                                ref,
-                                slotNumber: slot,
-                              ),
-                              icon: const Icon(Icons.close),
-                            ),
-                        ],
-                      )
-                    : null,
+            for (var slot = 1; slot <= maxSlots; slot++) ...[
+              if (slot > 1) const SizedBox(height: 12),
+              _slotCard(
+                context: context,
+                ref: ref,
+                slotNumber: slot,
+                assignment: bySlot[slot],
+                isMulti: isMulti,
               ),
+            ],
             if (canEdit)
               Align(
                 alignment: Alignment.centerLeft,
@@ -891,6 +883,237 @@ class _DispenserSlotsSection extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Widget _slotCard({
+    required BuildContext context,
+    required WidgetRef ref,
+    required int slotNumber,
+    required DispenserProductAssignment? assignment,
+    required bool isMulti,
+  }) {
+    final empty = assignment == null;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: AppColors.mossSoft.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: AppColors.paperElevated,
+                child: Text('$slotNumber'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      empty
+                          ? 'Empty slot'
+                          : (assignment.productName ?? 'Product'),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      empty
+                          ? 'No product linked'
+                          : isMulti
+                              ? 'Chamber ${assignment.fillLabel}'
+                              : 'Linked product',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.inkMuted,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              if (canEdit)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: () => _assignSlot(
+                        context,
+                        ref,
+                        slotNumber: slotNumber,
+                      ),
+                      child: Text(empty ? 'Assign' : 'Change'),
+                    ),
+                    if (!empty)
+                      IconButton(
+                        tooltip: 'Clear slot',
+                        onPressed: () => _clearSlot(
+                          context,
+                          ref,
+                          slotNumber: slotNumber,
+                        ),
+                        icon: const Icon(Icons.close),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+          if (canEdit && isMulti && !empty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: () => _slotQuantityAction(
+                    context,
+                    ref,
+                    assignment: assignment,
+                    type: InventoryTransactionType.use,
+                  ),
+                  icon: const Icon(Icons.remove_circle_outline, size: 18),
+                  label: const Text('Use'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: () => _slotQuantityAction(
+                    context,
+                    ref,
+                    assignment: assignment,
+                    type: InventoryTransactionType.restock,
+                  ),
+                  icon: const Icon(Icons.add_circle_outline, size: 18),
+                  label: const Text('Refill'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: () => _slotQuantityAction(
+                    context,
+                    ref,
+                    assignment: assignment,
+                    type: InventoryTransactionType.adjustment,
+                  ),
+                  icon: const Icon(Icons.tune, size: 18),
+                  label: const Text('Adjust'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _slotQuantityAction(
+    BuildContext context,
+    WidgetRef ref, {
+    required DispenserProductAssignment assignment,
+    required InventoryTransactionType type,
+  }) async {
+    final unit = assignment.quantityUnit?.trim().isNotEmpty == true
+        ? assignment.quantityUnit!
+        : (dispenser.quantityUnit?.trim().isNotEmpty == true
+              ? dispenser.quantityUnit!
+              : 'CC');
+    final current = assignment.quantity;
+    final capacity = assignment.capacity ?? dispenser.capacity;
+    final controller = TextEditingController(
+      text: type == InventoryTransactionType.adjustment
+          ? (current == current.roundToDouble()
+                ? current.toInt().toString()
+                : current.toString())
+          : '',
+    );
+    final label = assignment.productName ?? 'Slot ${assignment.slotNumber}';
+    final quantity = await showDialog<double>(
+      context: context,
+      builder: (context) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('${type == InventoryTransactionType.restock ? 'Refill' : type.label} · $label'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      'Current: ${assignment.fillLabel}',
+                      if (capacity != null)
+                        'Chamber capacity: ${capacity == capacity.roundToDouble() ? capacity.toInt() : capacity} $unit',
+                    ].join('\n'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: type == InventoryTransactionType.adjustment
+                          ? 'New quantity ($unit)'
+                          : 'Quantity ($unit)',
+                      errorText: errorText,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final value = double.tryParse(controller.text.trim());
+                    final valid = value != null &&
+                        (type == InventoryTransactionType.adjustment
+                            ? value >= 0
+                            : value > 0);
+                    if (!valid) {
+                      setDialogState(() {
+                        errorText = type == InventoryTransactionType.adjustment
+                            ? 'Enter zero or more'
+                            : 'Enter more than zero';
+                      });
+                      return;
+                    }
+                    Navigator.pop(context, value);
+                  },
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    controller.dispose();
+    if (quantity == null || !context.mounted) return;
+
+    final delta = type == InventoryTransactionType.adjustment
+        ? quantity - current
+        : quantity;
+    try {
+      await ref.read(inventoryRepositoryProvider).applyTransaction(
+            nodeId: dispenser.id,
+            transactionType: type,
+            quantityDelta: delta,
+            quantityUnit: unit,
+            reason: '${type.label} · $label',
+            slotNumber: assignment.slotNumber,
+          );
+      ref.invalidate(dispenserAssignmentsProvider(dispenser.id));
+      ref.invalidate(inventoryTransactionsProvider(dispenser.id));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 
   Future<void> _assignSlot(
