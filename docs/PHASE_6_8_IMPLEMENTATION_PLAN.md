@@ -1,16 +1,19 @@
 # Phase 6–8 Implementation Plan
 
-Prep plan for the next product slice after the current catalog/map UX.
+Prep plan for the catalog/map → stock → trips → predictions slice.
 Derived from [`Homeventory_Full_Planning.md`](Homeventory_Full_Planning.md) §16–18, §25–26, §42 and [`IMPLEMENTATION.md`](IMPLEMENTATION.md).
+
+**Status:** Phase **6-super MVP shipped**. Post–UAT product work (home profile polish, shell nav, room-level permissions, dashboard valuation, etc.) lives in [`UAT_PHASE6_SUPER_FOLLOWUP.md`](UAT_PHASE6_SUPER_FOLLOWUP.md) as phases **A–J**.
 
 ## Phase numbering
 
 | Phase | Scope |
 | --- | --- |
-| **6-super (next ship)** | Combined **MVP** of stock transactions + Trips/packing |
+| **6-super (shipped)** | Combined **MVP** of stock transactions + Trips/packing |
 | **6 (full)** | Richer product graph, refill UX polish, dispenser linking beyond MVP |
 | **7 (full)** | Packing templates, trip completion polish, weight estimates |
-| **8** | Consumption predictions (CC/day) — **after UAT of 6-super** |
+| **8** | Consumption predictions (CC/day) — after meaningful USE history; coordinate with A–J |
+| **A–J** | UAT follow-up (profile, nav, dashboard, room permissions, FX, …) — see follow-up plan |
 
 ### Why ship 6 + 7 together as 6-super?
 
@@ -25,12 +28,12 @@ Yes — **ideal as one MVP program**, not as two complete phases dumped into one
 
 **Not ideal:** implementing *every* Phase 6 and Phase 7 checkbox before shipping. That is two full phases. **6-super** means one coherent MVP with explicit deferrals.
 
-**Gate for Phase 8:** start predictions only after **UAT sign-off on Phase 6-super**.
+**Next after 6-super UAT:** prefer phases **A–C** (home profile, shell, dashboard shell) before full product-graph depth, unless product reorders. Room privacy (**G**) gates trustworthy multi-member dashboard totals (**I**).
 
-Related ADRs to add when 6-super lands (not yet written):
+Related ADRs (6-super):
 
-- Inventory transactions (+ thin product/dispenser model)
-- Packing / trips architecture
+- [`0008-inventory-transactions.md`](adr/0008-inventory-transactions.md)
+- [`0009-trips-packing.md`](adr/0009-trips-packing.md)
 
 ---
 
@@ -39,14 +42,15 @@ Related ADRs to add when 6-super lands (not yet written):
 - Homes, membership, RLS, invites
 - Rooms + recursive `inventory_nodes`
 - Item fields: quantity, min qty, price/currency, dates, brand, optional weight
-- Images (node + room) and barcodes (attach + search)
+- Images (node + room + **home cover**) and barcodes (attach + search)
 - Search by name/barcode
 - `is_mobile_container` flag on nodes
-- Move RPC exists; **move UI still missing**
+- Move UI + stock transactions + dispose + dispenser capacity MVP + Trips pack/unpack
+- Home edit (owner): name, description, address, timezone, currency, cover photo
 
 ---
 
-# Phase 6-super — MVP checklist (next APK target)
+# Phase 6-super — MVP checklist (shipped)
 
 Ship when **all Must** items below are done. Should / Could can slip to a follow-up APK without blocking UAT of the core loop.
 
@@ -83,7 +87,7 @@ Optional later (not Must): “Show disposed” / restore from dispose.
 
 ### Audit trail — what 6-super guarantees vs later
 
-**Not every app action has a global audit log today**, and full `audit_logs` remains **deferred**.
+**Not every app action has a global audit log today**, and full `audit_logs` remains **deferred** (see follow-up phase **J** for permission audit).
 
 | Action family | Trail in Phase 6-super |
 | --- | --- |
@@ -147,9 +151,9 @@ So after topping up 150 CC into a half-empty 300 CC dispenser, “days until emp
 
 ---
 
-## Should have (same APK if time; else immediate follow-up)
+## Should have (follow-up APK; not blocking A–J)
 
-- [ ] `TRANSFER_REFILL` RPC + simple “refill dispenser from another node” UI (same unit; respect capacity)
+- [ ] `TRANSFER_REFILL` simple “refill dispenser from another node” UI (RPC exists)
 - [ ] Thin `products` + `product_containers` (ACTIVE/RESERVE, `is_dispenser`) linking dispenser + one reserve
 - [ ] Pack via **barcode scan**
 - [ ] Trip “still packed” list (completion check without templates)
@@ -157,14 +161,14 @@ So after topping up 150 CC into a half-empty 300 CC dispenser, “days until emp
 - [ ] Move actions appear in item history (zero-qty `MOVE` or equivalent)
 - [ ] Optional “Disposed items” view / undo dispose (clears `is_disposed`, writes restore note)
 
-## Could have / defer (not 6-super)
+## Could have / defer
 
 - [ ] Packing **templates**
 - [ ] Full product catalog / barcode product groups
 - [ ] Multi-reserve shopping UX polish
 - [ ] Trip weight estimates / airline limits
 - [ ] Predictions / CC/day (Phase 8)
-- [ ] Notifications, dashboard, **global `audit_logs`**, offline
+- [ ] See **A–J** for notifications, dashboard, permission audit, FX (no longer a vague “defer” bucket)
 
 ---
 
@@ -173,6 +177,8 @@ So after topping up 150 CC into a half-empty 300 CC dispenser, “days until emp
 ### Goal
 
 Richer product/container stock model; refill transfers that preserve total product stock.
+
+Coordinate with follow-up **H** (multi-dispenser product slots).
 
 ### Schema additions (if not already in 6-super Should)
 
@@ -212,7 +218,7 @@ Explainable **CC/day** (or unit/day) forecasts for active dispenser and total st
 
 ### Gate
 
-**Only after UAT of Phase 6-super.** Needs real USE history (including CC).
+Needs real USE history (including CC). Prefer after 6-super UAT and enough household usage; can run in parallel with mid A–J if product prioritizes forecasts over room privacy.
 
 ### MVP when started
 
@@ -246,4 +252,4 @@ A 6-super ship PR (or PR set) is ready when:
 - ADR(s) created/updated  
 - APK version bumped  
 
-Phase 8 additionally requires documented **6-super UAT** completion.
+Post–UAT work is tracked in [`UAT_PHASE6_SUPER_FOLLOWUP.md`](UAT_PHASE6_SUPER_FOLLOWUP.md).
