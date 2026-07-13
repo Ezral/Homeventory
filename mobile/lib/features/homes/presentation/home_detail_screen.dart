@@ -404,7 +404,7 @@ class _DashboardGrid extends StatelessWidget {
     final cards = [
       _DashCard(label: 'Rooms', value: '${stats.roomsCount}'),
       _DashCard(label: 'Furniture', value: '${stats.baseFurnitureCount}'),
-      _DashCard(label: 'Members', value: '${stats.membersCount}'),
+      _DashCard(label: 'Items', value: '${stats.itemsCount}'),
       _DashCard(
         label: 'Est. value',
         value: valueFormat.format(stats.estimatedValue),
