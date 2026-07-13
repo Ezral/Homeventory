@@ -58,6 +58,11 @@ class TripsListScreen extends ConsumerWidget {
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final trip = trips[index];
+                final subtitle = [
+                  trip.status.label,
+                  if (trip.luggageAllowanceKg != null)
+                    '${_fmtKg(trip.luggageAllowanceKg!)} kg allowance',
+                ].join(' · ');
                 return SoftTile(
                   leading: Container(
                     width: 44,
@@ -72,7 +77,7 @@ class TripsListScreen extends ConsumerWidget {
                     ),
                   ),
                   title: trip.name,
-                  subtitle: trip.status.label,
+                  subtitle: subtitle,
                   onTap: () => context.push('/homes/$homeId/trips/${trip.id}'),
                 );
               },
@@ -84,8 +89,9 @@ class TripsListScreen extends ConsumerWidget {
   }
 
   Future<void> _createTrip(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
+    final nameController = TextEditingController();
+    final allowanceController = TextEditingController();
+    final created = await showDialog<({String name, double? allowance})>(
       context: context,
       builder: (context) {
         String? errorText;
@@ -93,14 +99,29 @@ class TripsListScreen extends ConsumerWidget {
           builder: (context, setDialogState) {
             return AlertDialog(
               title: const Text('Create trip'),
-              content: TextField(
-                controller: controller,
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  errorText: errorText,
-                ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: 'Name',
+                      errorText: errorText,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: allowanceController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Luggage allowance (kg, optional)',
+                    ),
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
@@ -109,12 +130,25 @@ class TripsListScreen extends ConsumerWidget {
                 ),
                 FilledButton(
                   onPressed: () {
-                    final value = controller.text.trim();
+                    final value = nameController.text.trim();
                     if (value.isEmpty) {
                       setDialogState(() => errorText = 'Name is required');
                       return;
                     }
-                    Navigator.pop(context, value);
+                    final allowanceText = allowanceController.text.trim();
+                    final allowance = allowanceText.isEmpty
+                        ? null
+                        : double.tryParse(allowanceText);
+                    if (allowanceText.isNotEmpty && allowance == null) {
+                      setDialogState(
+                        () => errorText = 'Allowance must be a number',
+                      );
+                      return;
+                    }
+                    Navigator.pop(
+                      context,
+                      (name: value, allowance: allowance),
+                    );
                   },
                   child: const Text('Create'),
                 ),
@@ -124,13 +158,16 @@ class TripsListScreen extends ConsumerWidget {
         );
       },
     );
-    controller.dispose();
-    if (name == null || !context.mounted) return;
+    nameController.dispose();
+    allowanceController.dispose();
+    if (created == null || !context.mounted) return;
 
     try {
-      final trip = await ref
-          .read(tripsRepositoryProvider)
-          .createTrip(homeId: homeId, name: name);
+      final trip = await ref.read(tripsRepositoryProvider).createTrip(
+            homeId: homeId,
+            name: created.name,
+            luggageAllowanceKg: created.allowance,
+          );
       ref.invalidate(tripsListProvider(homeId));
       if (context.mounted) {
         context.push('/homes/$homeId/trips/${trip.id}');
@@ -143,4 +180,9 @@ class TripsListScreen extends ConsumerWidget {
       }
     }
   }
+}
+
+String _fmtKg(double value) {
+  if (value == value.roundToDouble()) return value.toInt().toString();
+  return value.toStringAsFixed(2);
 }

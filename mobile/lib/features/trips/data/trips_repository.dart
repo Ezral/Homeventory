@@ -12,6 +12,8 @@ class Trip {
     required this.status,
     this.startsOn,
     this.endsOn,
+    this.luggageAllowanceKg,
+    this.archivedAt,
     required this.createdByUserId,
     required this.createdAt,
     required this.updatedAt,
@@ -24,9 +26,13 @@ class Trip {
   final TripStatus status;
   final DateTime? startsOn;
   final DateTime? endsOn;
+  final double? luggageAllowanceKg;
+  final DateTime? archivedAt;
   final String createdByUserId;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  bool get isArchived => archivedAt != null;
 
   factory Trip.fromJson(Map<String, dynamic> json) {
     return Trip(
@@ -40,6 +46,10 @@ class Trip {
           : null,
       endsOn: json['ends_on'] != null
           ? DateTime.tryParse(json['ends_on'] as String)
+          : null,
+      luggageAllowanceKg: (json['luggage_allowance_kg'] as num?)?.toDouble(),
+      archivedAt: json['archived_at'] != null
+          ? DateTime.tryParse(json['archived_at'] as String)
           : null,
       createdByUserId: json['created_by_user_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -136,6 +146,78 @@ class TripItem {
   }
 }
 
+class TripWeightSummary {
+  const TripWeightSummary({
+    required this.allowanceKg,
+    required this.packedKg,
+    required this.containersKg,
+    required this.itemsKg,
+    required this.missingWeightCount,
+  });
+
+  final double? allowanceKg;
+  final double packedKg;
+  final double containersKg;
+  final double itemsKg;
+  final int missingWeightCount;
+
+  double? get availableKg =>
+      allowanceKg == null ? null : allowanceKg! - packedKg;
+
+  bool get isOverAllowance =>
+      allowanceKg != null && packedKg > allowanceKg!;
+}
+
+/// Convert a node weight to kilograms; null if weight is unset.
+double? inventoryWeightKg(InventoryNode? node) {
+  if (node?.weight == null) return null;
+  final w = node!.weight!;
+  final unit = (node.weightUnit ?? 'kg').trim().toLowerCase();
+  return switch (unit) {
+    'kg' || 'kilogram' || 'kilograms' => w,
+    'g' || 'gram' || 'grams' => w / 1000,
+    'lb' || 'lbs' || 'pound' || 'pounds' => w * 0.45359237,
+    'oz' || 'ounce' || 'ounces' => w * 0.028349523125,
+    _ => w,
+  };
+}
+
+TripWeightSummary buildTripWeightSummary({
+  required Trip trip,
+  required List<TripContainer> containers,
+  required List<TripItem> items,
+}) {
+  var containersKg = 0.0;
+  var missing = 0;
+  for (final container in containers) {
+    final kg = inventoryWeightKg(container.node);
+    if (kg == null) {
+      if (container.node != null) missing += 1;
+    } else {
+      containersKg += kg;
+    }
+  }
+
+  var itemsKg = 0.0;
+  for (final item in items) {
+    if (item.status != TripItemStatus.packed) continue;
+    final kg = inventoryWeightKg(item.node);
+    if (kg == null) {
+      missing += 1;
+    } else {
+      itemsKg += kg;
+    }
+  }
+
+  return TripWeightSummary(
+    allowanceKg: trip.luggageAllowanceKg,
+    packedKg: containersKg + itemsKg,
+    containersKg: containersKg,
+    itemsKg: itemsKg,
+    missingWeightCount: missing,
+  );
+}
+
 class TripsRepository {
   TripsRepository(this._client);
 
@@ -152,6 +234,7 @@ class TripsRepository {
         .from('trips')
         .select()
         .eq('home_id', homeId)
+        .isFilter('archived_at', null)
         .order('created_at', ascending: false);
 
     return (rows as List)
@@ -163,6 +246,7 @@ class TripsRepository {
     required String homeId,
     required String name,
     String? notes,
+    double? luggageAllowanceKg,
   }) async {
     final row = await _client
         .from('trips')
@@ -170,12 +254,47 @@ class TripsRepository {
           'home_id': homeId,
           'name': name.trim(),
           'notes': _nullIfBlank(notes),
+          'luggage_allowance_kg': luggageAllowanceKg,
           'created_by_user_id': _userId,
         })
         .select()
         .single();
 
     return Trip.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<Trip> updateTrip({
+    required String tripId,
+    required String name,
+    String? notes,
+    TripStatus? status,
+    double? luggageAllowanceKg,
+    DateTime? startsOn,
+    DateTime? endsOn,
+  }) async {
+    final row = await _client
+        .from('trips')
+        .update({
+          'name': name.trim(),
+          'notes': _nullIfBlank(notes),
+          if (status != null) 'status': status.dbValue,
+          'luggage_allowance_kg': luggageAllowanceKg,
+          'starts_on': startsOn?.toIso8601String().split('T').first,
+          'ends_on': endsOn?.toIso8601String().split('T').first,
+        })
+        .eq('id', tripId)
+        .select()
+        .single();
+    return Trip.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> archiveTrip(String tripId) async {
+    await _client
+        .from('trips')
+        .update({
+          'archived_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', tripId);
   }
 
   Future<Trip> getTrip(String tripId) async {
