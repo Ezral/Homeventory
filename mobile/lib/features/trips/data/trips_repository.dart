@@ -100,7 +100,7 @@ class TripItem {
     required this.originalRoomId,
     this.originalParentNodeId,
     required this.status,
-    required this.packedAt,
+    this.packedAt,
     this.unpackedAt,
     required this.packedByUserId,
     this.node,
@@ -115,7 +115,7 @@ class TripItem {
   final String originalRoomId;
   final String? originalParentNodeId;
   final TripItemStatus status;
-  final DateTime packedAt;
+  final DateTime? packedAt;
   final DateTime? unpackedAt;
   final String packedByUserId;
   final InventoryNode? node;
@@ -135,7 +135,9 @@ class TripItem {
       originalRoomId: json['original_room_id'] as String,
       originalParentNodeId: json['original_parent_node_id'] as String?,
       status: TripItemStatus.fromDb(json['status'] as String),
-      packedAt: DateTime.parse(json['packed_at'] as String),
+      packedAt: json['packed_at'] != null
+          ? DateTime.parse(json['packed_at'] as String)
+          : null,
       unpackedAt: json['unpacked_at'] != null
           ? DateTime.tryParse(json['unpacked_at'] as String)
           : null,
@@ -401,6 +403,29 @@ class TripsRepository {
       params: {'p_trip_item_id': tripItemId},
     );
     return TripItem.fromJson(Map<String, dynamic>.from(row as Map));
+  }
+
+  Future<int> addItemsToPackingPlan({
+    required String tripId,
+    required List<String> nodeIds,
+    required String packedIntoNodeId,
+  }) async {
+    final count = await _client.rpc(
+      'add_items_to_packing_plan',
+      params: {
+        'p_trip_id': tripId,
+        'p_node_ids': nodeIds,
+        'p_packed_into_node_id': packedIntoNodeId,
+      },
+    );
+    return (count as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> removeFromPackingPlan(String tripItemId) async {
+    await _client.rpc(
+      'remove_from_packing_plan',
+      params: {'p_trip_item_id': tripItemId},
+    );
   }
 
   Future<InventoryNode> _getNode(String nodeId) async {

@@ -11,6 +11,7 @@ import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 import '../data/trips_repository.dart';
+import 'add_from_furniture_sheet.dart';
 import 'trips_providers.dart';
 
 class TripDetailScreen extends ConsumerWidget {
@@ -177,19 +178,30 @@ class TripDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    const Expanded(child: SectionLabel('Packed items')),
+                    const Expanded(child: SectionLabel('Packing plan')),
                     if (canEdit)
                       containersAsync.maybeWhen(
                         data: (containers) => TextButton.icon(
                           onPressed: containers.isEmpty
                               ? null
-                              : () => _packItem(context, ref, containers),
-                          icon: const Icon(Icons.add_box_outlined),
-                          label: const Text('Pack'),
+                              : () => _addFromFurniture(
+                                    context,
+                                    ref,
+                                    containers,
+                                  ),
+                          icon: const Icon(Icons.playlist_add),
+                          label: const Text('From furniture'),
                         ),
                         orElse: () => const SizedBox.shrink(),
                       ),
                   ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Check items when packed. They stay in their original furniture, greyed out there.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.inkMuted,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 itemsAsync.when(
@@ -197,14 +209,21 @@ class TripDetailScreen extends ConsumerWidget {
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => ErrorView(message: e.toString()),
                   data: (items) {
-                    if (items.isEmpty) {
+                    final plan = items
+                        .where(
+                          (i) =>
+                              i.status == TripItemStatus.planned ||
+                              i.status == TripItemStatus.packed,
+                        )
+                        .toList();
+                    if (plan.isEmpty) {
                       return Text(
-                        'No items packed yet.',
+                        'No items on the packing plan yet. Add from furniture for multi-select.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       );
                     }
                     final idsKey =
-                        items.map((i) => i.inventoryNodeId).join(',');
+                        plan.map((i) => i.inventoryNodeId).join(',');
                     final thumbs = ref
                         .watch(
                           entityThumbnailsProvider(
@@ -221,28 +240,47 @@ class TripDetailScreen extends ConsumerWidget {
                         );
                     return Column(
                       children: [
-                        for (final item in items) ...[
+                        for (final item in plan) ...[
                           SoftTile(
                             leading: EntityThumbnail(
                               imageUrl: thumbs[item.inventoryNodeId],
-                              fallback: item.status == TripItemStatus.packed
-                                  ? Icons.inventory_2_outlined
-                                  : Icons.undo,
+                              fallback: Icons.inventory_2_outlined,
                             ),
-                            title: item.node?.name ?? 'Packed item',
+                            title: item.node?.name ?? 'Item',
                             subtitle: [
-                              item.status.label,
                               if (item.packedIntoNode != null)
-                                'in ${item.packedIntoNode!.name}',
+                                'Bag: ${item.packedIntoNode!.name}',
                               if (inventoryWeightKg(item.node) != null)
                                 '${_fmtKg(inventoryWeightKg(item.node)!)} kg',
+                              item.status.label,
                             ].join(' · '),
-                            trailing:
-                                canEdit && item.status == TripItemStatus.packed
-                                ? TextButton(
-                                    onPressed: () =>
-                                        _unpackItem(context, ref, item),
-                                    child: const Text('Unpack'),
+                            dimmed: item.status == TripItemStatus.packed,
+                            trailing: canEdit
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Checkbox(
+                                        value: item.status ==
+                                            TripItemStatus.packed,
+                                        onChanged: (checked) =>
+                                            _togglePacked(
+                                          context,
+                                          ref,
+                                          item,
+                                          checked == true,
+                                        ),
+                                      ),
+                                      if (item.status != TripItemStatus.packed)
+                                        IconButton(
+                                          tooltip: 'Remove from plan',
+                                          onPressed: () => _removeFromPlan(
+                                            context,
+                                            ref,
+                                            item,
+                                          ),
+                                          icon: const Icon(Icons.close),
+                                        ),
+                                    ],
                                   )
                                 : null,
                             onTap: item.node == null
@@ -523,40 +561,52 @@ class TripDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _packItem(
+  Future<void> _addFromFurniture(
     BuildContext context,
     WidgetRef ref,
     List<TripContainer> containers,
   ) async {
-    final selection = await showModalBottomSheet<_PackSelection>(
+    final added = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) =>
-          _PackItemSheet(homeId: homeId, containers: containers),
+      builder: (context) => AddFromFurnitureSheet(
+        homeId: homeId,
+        tripId: tripId,
+        containers: containers,
+      ),
     );
-    if (selection == null || !context.mounted) return;
-
-    try {
-      await ref
-          .read(tripsRepositoryProvider)
-          .packItem(
-            tripId: tripId,
-            nodeId: selection.node.id,
-            packedIntoNodeId: selection.containerId,
-          );
-      _invalidateTrip(ref);
-      _invalidateMovedNode(ref, selection.node);
-      ref.invalidate(inventoryNodeProvider(selection.containerId));
-      ref.invalidate(
-        inventoryChildrenProvider(
-          InventoryScope(
-            homeId: homeId,
-            roomId: selection.node.roomId,
-            parentNodeId: selection.containerId,
-          ),
+    if (added == null || !context.mounted) return;
+    _invalidateTrip(ref);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          added == 1
+              ? 'Added 1 item to the packing plan'
+              : 'Added $added items to the packing plan',
         ),
-      );
+      ),
+    );
+  }
+
+  Future<void> _togglePacked(
+    BuildContext context,
+    WidgetRef ref,
+    TripItem item,
+    bool pack,
+  ) async {
+    try {
+      if (pack) {
+        await ref.read(tripsRepositoryProvider).packItem(
+              tripId: tripId,
+              nodeId: item.inventoryNodeId,
+              packedIntoNodeId: item.packedIntoNodeId,
+            );
+      } else {
+        await ref.read(tripsRepositoryProvider).unpackItem(item.id);
+      }
+      _invalidateTrip(ref);
+      ref.invalidate(homePackedNodesProvider(homeId));
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -566,26 +616,14 @@ class TripDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _unpackItem(
+  Future<void> _removeFromPlan(
     BuildContext context,
     WidgetRef ref,
     TripItem item,
   ) async {
     try {
-      await ref.read(tripsRepositoryProvider).unpackItem(item.id);
+      await ref.read(tripsRepositoryProvider).removeFromPackingPlan(item.id);
       _invalidateTrip(ref);
-      if (item.node != null) _invalidateMovedNode(ref, item.node!);
-      ref.invalidate(inventoryNodeProvider(item.inventoryNodeId));
-      ref.invalidate(inventoryNodeProvider(item.packedIntoNodeId));
-      ref.invalidate(
-        inventoryChildrenProvider(
-          InventoryScope(
-            homeId: item.homeId,
-            roomId: item.originalRoomId,
-            parentNodeId: item.originalParentNodeId,
-          ),
-        ),
-      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -599,19 +637,7 @@ class TripDetailScreen extends ConsumerWidget {
     ref.invalidate(tripProvider(tripId));
     ref.invalidate(tripContainersProvider(tripId));
     ref.invalidate(tripItemsProvider(tripId));
-  }
-
-  void _invalidateMovedNode(WidgetRef ref, InventoryNode node) {
-    ref.invalidate(inventoryNodeProvider(node.id));
-    ref.invalidate(
-      inventoryChildrenProvider(
-        InventoryScope(
-          homeId: node.homeId,
-          roomId: node.roomId,
-          parentNodeId: node.parentNodeId,
-        ),
-      ),
-    );
+    ref.invalidate(homePackedNodesProvider(homeId));
   }
 }
 
@@ -723,160 +749,4 @@ class _WeightSummaryCard extends StatelessWidget {
 String _fmtKg(double value) {
   if (value == value.roundToDouble()) return value.toInt().toString();
   return value.toStringAsFixed(2);
-}
-
-class _PackItemSheet extends ConsumerStatefulWidget {
-  const _PackItemSheet({required this.homeId, required this.containers});
-
-  final String homeId;
-  final List<TripContainer> containers;
-
-  @override
-  ConsumerState<_PackItemSheet> createState() => _PackItemSheetState();
-}
-
-class _PackItemSheetState extends ConsumerState<_PackItemSheet> {
-  final _controller = TextEditingController();
-  String _query = '';
-  InventoryNode? _selectedNode;
-  String? _selectedContainerId;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.containers.length == 1) {
-      _selectedContainerId = widget.containers.first.inventoryNodeId;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final results = _query.trim().isEmpty
-        ? null
-        : ref.watch(
-            inventorySearchProvider((homeId: widget.homeId, query: _query)),
-          );
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 8,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.82,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Pack item', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
-                value: _selectedContainerId,
-                decoration: const InputDecoration(labelText: 'Pack into'),
-                items: widget.containers
-                    .map(
-                      (container) => DropdownMenuItem(
-                        value: container.inventoryNodeId,
-                        child: Text(container.node?.name ?? 'Container'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedContainerId = value),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _controller,
-                decoration: const InputDecoration(
-                  hintText: 'Search item to pack',
-                  prefixIcon: Icon(Icons.search),
-                ),
-                onChanged: (value) => setState(() => _query = value),
-              ),
-              if (_selectedNode != null) ...[
-                const SizedBox(height: 10),
-                InputChip(
-                  label: Text(_selectedNode!.name),
-                  onDeleted: () => setState(() => _selectedNode = null),
-                ),
-              ],
-              const SizedBox(height: 10),
-              Flexible(
-                child: results == null
-                    ? const EmptyState(
-                        icon: Icons.search,
-                        title: 'Search inventory',
-                        message: 'Pick an item to pack into this trip.',
-                      )
-                    : results.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (e, _) => ErrorView(message: e.toString()),
-                        data: (nodes) {
-                          final filtered = nodes
-                              .where((n) => n.id != _selectedContainerId)
-                              .toList();
-                          if (filtered.isEmpty) {
-                            return const EmptyState(
-                              title: 'No matches',
-                              message: 'Try a different search.',
-                            );
-                          }
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: filtered.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final node = filtered[index];
-                              return SoftTile(
-                                title: node.name,
-                                subtitle: node.kindLabel,
-                                onTap: () =>
-                                    setState(() => _selectedNode = node),
-                              );
-                            },
-                          );
-                        },
-                      ),
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _selectedNode == null || _selectedContainerId == null
-                    ? null
-                    : () => Navigator.pop(
-                        context,
-                        _PackSelection(
-                          node: _selectedNode!,
-                          containerId: _selectedContainerId!,
-                        ),
-                      ),
-                icon: const Icon(Icons.add_box_outlined),
-                label: const Text('Pack'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PackSelection {
-  const _PackSelection({required this.node, required this.containerId});
-
-  final InventoryNode node;
-  final String containerId;
 }

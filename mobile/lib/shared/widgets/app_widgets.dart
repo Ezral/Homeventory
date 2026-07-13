@@ -123,6 +123,7 @@ class SoftTile extends StatelessWidget {
     this.leading,
     this.trailing,
     this.onTap,
+    this.dimmed = false,
   });
 
   final String title;
@@ -130,10 +131,11 @@ class SoftTile extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final tile = Material(
       color: AppColors.paperElevated,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
@@ -153,13 +155,17 @@ class SoftTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: dimmed ? AppColors.inkMuted : null,
+                          ),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         subtitle!,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.inkMuted,
+                            ),
                       ),
                     ],
                   ],
@@ -175,5 +181,7 @@ class SoftTile extends StatelessWidget {
         ),
       ),
     );
+    if (!dimmed) return tile;
+    return Opacity(opacity: 0.55, child: tile);
   }
 }

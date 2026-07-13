@@ -11,6 +11,8 @@ import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
 import '../../homes/presentation/homes_providers.dart';
+import '../../inventory/data/inventory_repository.dart';
+import '../../trips/presentation/trips_providers.dart';
 import 'rooms_providers.dart';
 
 class RoomDetailScreen extends ConsumerWidget {
@@ -164,10 +166,17 @@ class RoomDetailScreen extends ConsumerWidget {
             data: (m) => m,
             orElse: () => const <String, String>{},
           );
+          final packedMap = ref
+              .watch(homePackedNodesProvider(homeId))
+              .maybeWhen(
+                data: (m) => m,
+                orElse: () => const <String, PackedNodeInfo>{},
+              );
 
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(inventoryChildrenProvider(scope));
+              ref.invalidate(homePackedNodesProvider(homeId));
               if (parentNodeId == null) {
                 ref.invalidate(
                   roomImagesProvider((homeId: homeId, roomId: roomId)),
@@ -219,13 +228,15 @@ class RoomDetailScreen extends ConsumerWidget {
                       Builder(
                         builder: (context) {
                           final node = nodes[i];
+                          final packed = packedMap[node.id];
                           return SoftTile(
                             leading: EntityThumbnail(
                               imageUrl: thumbs[node.id],
                               fallback: _nodeIcon(node),
                             ),
                             title: node.name,
-                            subtitle: _subtitle(node),
+                            subtitle: _subtitle(node, packed),
+                            dimmed: packed != null,
                             trailing: node.isContainer
                                 ? IconButton(
                                     tooltip: 'Details',
@@ -260,7 +271,7 @@ class RoomDetailScreen extends ConsumerWidget {
     );
   }
 
-  String _subtitle(InventoryNode node) {
+  String _subtitle(InventoryNode node, PackedNodeInfo? packed) {
     final parts = <String>[node.kindLabel];
     if (node.itemCategory != null) parts.add(node.itemCategory!.label);
     if (node.quantity != null) {
@@ -274,6 +285,12 @@ class RoomDetailScreen extends ConsumerWidget {
     if (node.purchasePrice != null) {
       parts.add(
         '${node.currency ?? ''} ${_formatQty(node.purchasePrice!)}'.trim(),
+      );
+    }
+    if (packed != null) {
+      parts.add(
+        'Packed · ${packed.tripName}'
+        '${packed.packedIntoName != null ? ' (${packed.packedIntoName})' : ''}',
       );
     }
     return parts.join(' · ');

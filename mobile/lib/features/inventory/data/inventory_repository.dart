@@ -6,6 +6,73 @@ import 'package:uuid/uuid.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 
+class DescendantNode {
+  const DescendantNode({
+    required this.id,
+    required this.homeId,
+    required this.roomId,
+    this.parentNodeId,
+    required this.nodeKind,
+    required this.name,
+    required this.isContainer,
+    required this.isMobileContainer,
+    required this.depth,
+    required this.pathLabel,
+  });
+
+  final String id;
+  final String homeId;
+  final String roomId;
+  final String? parentNodeId;
+  final InventoryNodeKind nodeKind;
+  final String name;
+  final bool isContainer;
+  final bool isMobileContainer;
+  final int depth;
+  final String pathLabel;
+
+  factory DescendantNode.fromJson(Map<String, dynamic> json) {
+    return DescendantNode(
+      id: json['id'] as String,
+      homeId: json['home_id'] as String,
+      roomId: json['room_id'] as String,
+      parentNodeId: json['parent_node_id'] as String?,
+      nodeKind: InventoryNodeKind.fromDb(json['node_kind'] as String),
+      name: json['name'] as String,
+      isContainer: json['is_container'] as bool? ?? false,
+      isMobileContainer: json['is_mobile_container'] as bool? ?? false,
+      depth: (json['depth'] as num?)?.toInt() ?? 0,
+      pathLabel: json['path_label'] as String? ?? json['name'] as String,
+    );
+  }
+}
+
+class PackedNodeInfo {
+  const PackedNodeInfo({
+    required this.inventoryNodeId,
+    required this.tripId,
+    required this.tripName,
+    required this.packedIntoNodeId,
+    this.packedIntoName,
+  });
+
+  final String inventoryNodeId;
+  final String tripId;
+  final String tripName;
+  final String packedIntoNodeId;
+  final String? packedIntoName;
+
+  factory PackedNodeInfo.fromJson(Map<String, dynamic> json) {
+    return PackedNodeInfo(
+      inventoryNodeId: json['inventory_node_id'] as String,
+      tripId: json['trip_id'] as String,
+      tripName: json['trip_name'] as String,
+      packedIntoNodeId: json['packed_into_node_id'] as String,
+      packedIntoName: json['packed_into_name'] as String?,
+    );
+  }
+}
+
 class ItemBarcode {
   const ItemBarcode({
     required this.id,
@@ -152,6 +219,31 @@ class InventoryRepository {
     return (rows as List)
         .map((r) => InventoryNode.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
+  }
+
+  /// All descendants under [rootNodeId] (any depth), with path labels.
+  Future<List<DescendantNode>> listDescendants(String rootNodeId) async {
+    final rows = await _client.rpc(
+      'list_node_descendants',
+      params: {'p_root_node_id': rootNodeId},
+    );
+    return (rows as List)
+        .map((r) => DescendantNode.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
+
+  /// Nodes currently PACKED on a non-archived trip.
+  Future<Map<String, PackedNodeInfo>> listHomePackedNodes(String homeId) async {
+    final rows = await _client.rpc(
+      'list_home_packed_nodes',
+      params: {'p_home_id': homeId},
+    );
+    final map = <String, PackedNodeInfo>{};
+    for (final r in rows as List) {
+      final info = PackedNodeInfo.fromJson(Map<String, dynamic>.from(r as Map));
+      map[info.inventoryNodeId] = info;
+    }
+    return map;
   }
 
   Future<InventoryNode> getNode(String nodeId) async {

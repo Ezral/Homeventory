@@ -20,20 +20,23 @@ Users pack belongings into mobile containers for trips and must return them to o
 
 ## Decision
 
-Phase 6-super introduces:
+Phase 6-super introduced trips tables. Later refinement (packing plan):
 
 | Table | Role |
 | --- | --- |
-| `trips` | Trip metadata + status |
+| `trips` | Trip metadata + status + luggage allowance + soft-delete |
 | `trip_containers` | Mobile containers assigned to a trip |
-| `trip_items` | Packed node + original room/parent snapshot + PACKED/UNPACKED |
+| `trip_items` | Packing plan rows: `PLANNED` / `PACKED` / `UNPACKED` |
 
 RPCs:
 
-- `pack_item_into_container(trip, node, bag)` — records origin, moves into bag via `move_inventory_node`, marks PACKED, writes MOVE transaction
-- `unpack_item(trip_item)` — moves back to original room/parent, marks UNPACKED, writes MOVE transaction
+- `add_items_to_packing_plan` — batch add furniture descendants as `PLANNED`
+- `pack_item_into_container` — mark `PACKED` **without relocating** inventory
+- `unpack_item` — return to `PLANNED` (still on checklist)
+- `remove_from_packing_plan` — drop a non-packed plan row
+- `list_node_descendants` / `list_home_packed_nodes` — furniture multi-select + room greying
 
-Flutter: trips list/detail under a home; assign containers; pack/unpack actions.
+Flutter: furniture multi-select packing plan with checkboxes; packed items stay visible (greyed) in original furniture; hierarchical move destination browser.
 
 ---
 
@@ -96,6 +99,8 @@ Home → Trips; trip detail for containers and packed items.
 - Soft-delete via `archived_at` (hidden in UI, row retained for audit)
 - Trip metadata/status editable regardless of COMPLETED
 - Container/item thumbnails on trip detail via `entityThumbnailsProvider`
+- Packing is a checklist overlay (`PLANNED` / `PACKED`): inventory stays in place; packed items are greyed in room browse
+- Furniture-scoped multi-select via `list_node_descendants` populates the packing plan
 
 ---
 
