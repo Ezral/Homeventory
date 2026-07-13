@@ -181,3 +181,54 @@ class DispenserProductAssignment {
     );
   }
 }
+
+/// A container destination for move pickers, with nesting depth + path label.
+class ContainerDestination {
+  const ContainerDestination({
+    required this.node,
+    required this.depth,
+    required this.pathLabel,
+  });
+
+  final InventoryNode node;
+  final int depth;
+  final String pathLabel;
+}
+
+/// Depth-first list of containers for a room, optionally skipping a subtree.
+List<ContainerDestination> buildContainerDestinations(
+  List<InventoryNode> containers, {
+  String? excludeSubtreeRootId,
+}) {
+  final byParent = <String?, List<InventoryNode>>{};
+  for (final node in containers) {
+    if (!node.isContainer) continue;
+    byParent.putIfAbsent(node.parentNodeId, () => []).add(node);
+  }
+  for (final list in byParent.values) {
+    list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  }
+
+  final result = <ContainerDestination>[];
+  void walk(String? parentId, int depth, List<String> pathNames) {
+    final children = byParent[parentId];
+    if (children == null) return;
+    for (final node in children) {
+      if (excludeSubtreeRootId != null && node.id == excludeSubtreeRootId) {
+        continue;
+      }
+      final path = [...pathNames, node.name];
+      result.add(
+        ContainerDestination(
+          node: node,
+          depth: depth,
+          pathLabel: path.join(' › '),
+        ),
+      );
+      walk(node.id, depth + 1, path);
+    }
+  }
+
+  walk(null, 0, const []);
+  return result;
+}

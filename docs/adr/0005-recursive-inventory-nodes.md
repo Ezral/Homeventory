@@ -48,7 +48,7 @@ Client behavior today:
 
 - Browse children by `(home_id, room_id, parent_node_id)`.
 - Create/update nodes with quantity, price, currency, dates, brand, etc.
-- Repository exposes `moveNode` and `archiveNode`; **move UI is not built yet**.
+- Repository exposes `moveNode` and `archiveNode`; move UI supports nested container destinations and long-press drag-drop onto containers in room browse.
 - Breadcrumb helper exists in the repository; **breadcrumb UI is not built yet**.
 
 Rooms remain a separate table (`rooms`) as the top spatial partition under a Home.

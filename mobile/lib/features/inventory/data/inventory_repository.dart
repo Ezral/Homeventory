@@ -151,6 +151,32 @@ class InventoryRepository {
         .toList();
   }
 
+  /// All containers in a room (any nesting depth), depth-first for pickers.
+  Future<List<ContainerDestination>> listContainerDestinations({
+    required String homeId,
+    required String roomId,
+    String? excludeSubtreeRootId,
+  }) async {
+    final rows = await _client
+        .from('inventory_nodes')
+        .select()
+        .eq('home_id', homeId)
+        .eq('room_id', roomId)
+        .eq('is_container', true)
+        .eq('is_disposed', false)
+        .isFilter('archived_at', null)
+        .order('name');
+
+    final containers = (rows as List)
+        .map((r) => InventoryNode.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+
+    return buildContainerDestinations(
+      containers,
+      excludeSubtreeRootId: excludeSubtreeRootId,
+    );
+  }
+
   Future<InventoryNode> getNode(String nodeId) async {
     final row = await _client
         .from('inventory_nodes')

@@ -122,6 +122,20 @@ final inventorySearchProvider = FutureProvider.autoDispose
           .search(homeId: args.homeId, query: args.query);
     });
 
+final roomContainerDestinationsProvider = FutureProvider.autoDispose
+    .family<
+      List<ContainerDestination>,
+      ({String homeId, String roomId, String? excludeNodeId})
+    >((ref, args) {
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listContainerDestinations(
+            homeId: args.homeId,
+            roomId: args.roomId,
+            excludeSubtreeRootId: args.excludeNodeId,
+          );
+    });
+
 final dispenserAssignmentsProvider = FutureProvider.autoDispose
     .family<List<DispenserProductAssignment>, String>((ref, dispenserItemId) {
       return ref
