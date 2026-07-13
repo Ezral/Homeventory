@@ -37,6 +37,7 @@ Users need photos of belongings and barcode attach/lookup. Images must not be wo
 - RLS via `can_view_home` / `can_edit_inventory`.
 - Client: `mobile_scanner` screen returns a string; node detail can scan or manual-enter; search resolves barcode matches to nodes.
 - CAMERA permission declared on Android.
+- Release APKs must keep ML Kit barcode classes via `android/app/proguard-rules.pro` — Flutter enables R8 by default, and `mobile_scanner` consumer rules are too narrow (`com.google.mlkit.*` vs `.**`), which causes a null NPE on `BarcodeScanning.getClient()` shown as “Camera unavailable”.
 
 Internal QR label generation and “create item from unknown barcode” flows are **not** implemented.
 

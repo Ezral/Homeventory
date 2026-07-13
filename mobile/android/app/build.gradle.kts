@@ -50,6 +50,12 @@ android {
                 // Local/CI fallback until a release keystore is configured.
                 signingConfigs.getByName("debug")
             }
+            // Flutter enables R8 for release; keep ML Kit barcode classes used
+            // by mobile_scanner (see proguard-rules.pro).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
