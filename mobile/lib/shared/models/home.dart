@@ -217,9 +217,10 @@ class HomeDashboardStats {
   const HomeDashboardStats({
     required this.roomsCount,
     required this.baseFurnitureCount,
-    required this.membersCount,
+    required this.itemsCount,
     required this.estimatedValue,
     required this.valueCurrency,
+    this.membersCount = 0,
     this.valueIsPartial = false,
     this.unconvertedItemCount = 0,
     this.convertedItemCount = 0,
@@ -231,6 +232,7 @@ class HomeDashboardStats {
 
   final int roomsCount;
   final int baseFurnitureCount;
+  final int itemsCount;
   final int membersCount;
   final double estimatedValue;
   final String valueCurrency;
@@ -252,6 +254,7 @@ class HomeDashboardStats {
     return HomeDashboardStats(
       roomsCount: (json['rooms_count'] as num?)?.toInt() ?? 0,
       baseFurnitureCount: (json['base_furniture_count'] as num?)?.toInt() ?? 0,
+      itemsCount: (json['items_count'] as num?)?.toInt() ?? 0,
       membersCount: (json['members_count'] as num?)?.toInt() ?? 0,
       estimatedValue: (json['estimated_value'] as num?)?.toDouble() ?? 0,
       valueCurrency: (json['value_currency'] as String?) ?? 'USD',
