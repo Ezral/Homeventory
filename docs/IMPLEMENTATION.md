@@ -188,7 +188,7 @@ Canonical detail + acceptance + UAT checklist: [`UAT_PHASE6_SUPER_FOLLOWUP.md`](
 | **F** | Room invitations + temporary access | Not started |
 | **G** | Room visibility + object inheritance + query privacy | Not started |
 | **H** | Single/multi dispenser product slots | Not started |
-| **I** | Display currency, FX cache, estimated inventory value | Not started |
+| **I** | Display currency, FX cache, estimated inventory value | **Partial** — home-currency FX sum shipped; user display-currency preference later |
 | **J** | Notifications, permission audit, loading polish, regression UAT | Not started |
 
 ---

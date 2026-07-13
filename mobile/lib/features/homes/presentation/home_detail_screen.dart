@@ -552,7 +552,7 @@ class _DashboardGrid extends StatelessWidget {
       _DashCard(
         label: 'Est. value',
         value: valueFormat.format(stats.estimatedValue),
-        caption: stats.valueIsPartial ? 'Home currency only' : null,
+        caption: _valueCaption(stats),
       ),
     ];
 
@@ -565,6 +565,19 @@ class _DashboardGrid extends StatelessWidget {
       childAspectRatio: 1.55,
       children: cards,
     );
+  }
+
+  String? _valueCaption(HomeDashboardStats stats) {
+    final parts = <String>[];
+    parts.add('In ${stats.valueCurrency}');
+    if (stats.rateDate != null) {
+      parts.add('FX ${DateFormat.yMMMd().format(stats.rateDate!.toLocal())}');
+    }
+    if (stats.ratesStale) parts.add('stale rates');
+    if (stats.valueIsPartial && stats.unconvertedItemCount > 0) {
+      parts.add('${stats.unconvertedItemCount} unconverted');
+    }
+    return parts.join(' · ');
   }
 }
 
@@ -601,6 +614,8 @@ class _DashCard extends StatelessWidget {
           if (caption != null)
             Text(
               caption!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.inkMuted,
                   ),
