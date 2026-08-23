@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
@@ -45,6 +46,7 @@ class NodeDetailScreen extends ConsumerWidget {
       data: (h) => h.myRole?.canManageMembers ?? false,
       orElse: () => false,
     );
+    final desktop = isWebDesktopLayout(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -81,66 +83,70 @@ class NodeDetailScreen extends ConsumerWidget {
             ),
         ],
       ),
-      bottomNavigationBar: HomeShellBottomNav(
-        selectedIndex: 2,
-        addLabel: 'Add object',
-        onSelect: (index) async {
-          switch (index) {
-            case 0:
-              await context.push('/homes/$homeId/search');
-            case 1:
-              await context.push('/homes/$homeId/trips');
-            case 2:
-              context.go('/homes/$homeId');
-            case 3:
-              if (canInvite) {
-                await showHomeInviteSheet(
-                  context: context,
-                  ref: ref,
-                  homeId: homeId,
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Only owners and admins can invite members.',
-                    ),
-                  ),
-                );
-              }
-            case 4:
-              if (!canEdit) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('You do not have permission to add objects.'),
-                  ),
-                );
-                return;
-              }
-              final node = nodeAsync.asData?.value;
-              final parent = node != null &&
-                      (node.isContainer || node.isMobileContainer)
-                  ? nodeId
-                  : null;
-              await context.push(
-                parent == null
-                    ? '/homes/$homeId/rooms/$roomId/nodes/new'
-                    : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parent',
-              );
-              if (parent != null) {
-                ref.invalidate(
-                  inventoryChildrenProvider(
-                    InventoryScope(
-                      homeId: homeId,
-                      roomId: roomId,
-                      parentNodeId: parent,
-                    ),
-                  ),
-                );
-              }
-          }
-        },
-      ),
+      bottomNavigationBar: desktop
+          ? null
+          : HomeShellBottomNav(
+              selectedIndex: 2,
+              addLabel: 'Add object',
+              onSelect: (index) async {
+                switch (index) {
+                  case 0:
+                    await context.push('/homes/$homeId/search');
+                  case 1:
+                    await context.push('/homes/$homeId/trips');
+                  case 2:
+                    context.go('/homes/$homeId');
+                  case 3:
+                    if (canInvite) {
+                      await showHomeInviteSheet(
+                        context: context,
+                        ref: ref,
+                        homeId: homeId,
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Only owners and admins can invite members.',
+                          ),
+                        ),
+                      );
+                    }
+                  case 4:
+                    if (!canEdit) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'You do not have permission to add objects.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    final node = nodeAsync.asData?.value;
+                    final parent = node != null &&
+                            (node.isContainer || node.isMobileContainer)
+                        ? nodeId
+                        : null;
+                    await context.push(
+                      parent == null
+                          ? '/homes/$homeId/rooms/$roomId/nodes/new'
+                          : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parent',
+                    );
+                    if (parent != null) {
+                      ref.invalidate(
+                        inventoryChildrenProvider(
+                          InventoryScope(
+                            homeId: homeId,
+                            roomId: roomId,
+                            parentNodeId: parent,
+                          ),
+                        ),
+                      );
+                    }
+                }
+              },
+            ),
       body: nodeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(

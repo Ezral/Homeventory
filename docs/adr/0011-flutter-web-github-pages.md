@@ -29,6 +29,7 @@ Ship the existing Flutter client to **web** and host it on **GitHub Pages**:
 | URL | `https://ezral.github.io/Homeventory/` (`--base-href /Homeventory/`) |
 | Auth | Google SSO only via Supabase OAuth (PKCE); web redirect is the Pages origin |
 | SPA routing | Copy `index.html` → `404.html` so path URLs work on Pages |
+| Responsive web | Viewport ≥ 900px → sidebar + panes; narrower browser → phone UI (bottom nav) |
 
 Barcode camera on web falls back to manual entry when the browser camera path is unavailable. Item rows under furniture/room browse expose an **Edit** action so attributes like “also a container” are reachable without hunting through details.
 
@@ -84,8 +85,8 @@ None (same Supabase project).
 
 ## UI Impact
 
-- Web build of the Flutter UI.
-- Furniture/room child rows: overflow menu with Edit / Details / Open.
+- Web build of the Flutter UI with **responsive** chrome: desktop sidebar + inventory split panes; mobile browser keeps the app GUI
+- Furniture/room child rows: overflow menu with Edit / Details / Open
 
 ---
 
