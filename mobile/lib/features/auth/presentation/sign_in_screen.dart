@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
@@ -17,6 +18,19 @@ class SignInScreen extends ConsumerStatefulWidget {
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _busy = false;
   String? _error;
+  bool _persistedNext = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_persistedNext) return;
+    final next = GoRouterState.of(context).uri.queryParameters['next'];
+    if (next != null && next.startsWith('/')) {
+      _persistedNext = true;
+      // Survives Google OAuth full-page redirect on web.
+      ref.read(localSessionStoreProvider).writePendingNav(next);
+    }
+  }
 
   Future<void> _signIn() async {
     setState(() {
@@ -24,6 +38,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       _error = null;
     });
     try {
+      final next = GoRouterState.of(context).uri.queryParameters['next'];
+      if (next != null && next.startsWith('/')) {
+        await ref.read(localSessionStoreProvider).writePendingNav(next);
+      }
       final repo = ref.read(authRepositoryProvider);
       // Prefer browser OAuth on mobile: avoids Google Credential Manager
       // "[16] Account reauth failed" when Android SHA clients are misconfigured.

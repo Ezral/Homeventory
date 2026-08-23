@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../core/layout/web_layout.dart';
+
 /// Returns scanned barcode value via `context.pop(String)`.
 class BarcodeScanScreen extends StatefulWidget {
   const BarcodeScanScreen({super.key, this.title = 'Scan barcode'});
@@ -38,16 +40,53 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (kIsWeb) {
-      // Prefer typed entry on web; camera scanning varies by browser.
-      _permissionChecked = true;
-      _permissionDenied = true;
-    } else {
-      unawaited(_requestPermissionAndAttach());
-    }
+    // Defer so MediaQuery is available for desktop-vs-mobile web.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final desktopWeb = kIsWeb && isWebDesktopLayout(context);
+      if (desktopWeb) {
+        // Desktop browsers: typed entry first; user can retry camera from UI.
+        setState(() {
+          _permissionChecked = true;
+          _permissionDenied = true;
+        });
+      } else {
+        unawaited(_requestPermissionAndAttach());
+      }
+    });
   }
 
   Future<void> _requestPermissionAndAttach() async {
+    if (kIsWeb) {
+      // Browser prompts via getUserMedia when MobileScanner starts.
+      final previous = _controller;
+      _controller = null;
+      unawaited(previous?.dispose());
+
+      final controller = MobileScannerController(
+        autoStart: true,
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        facing: CameraFacing.back,
+        formats: const [
+          BarcodeFormat.ean13,
+          BarcodeFormat.ean8,
+          BarcodeFormat.upcA,
+          BarcodeFormat.upcE,
+          BarcodeFormat.code128,
+          BarcodeFormat.code39,
+          BarcodeFormat.qrCode,
+        ],
+      );
+
+      setState(() {
+        _permissionDenied = false;
+        _permissionChecked = true;
+        _controller = controller;
+        _initMessage = null;
+      });
+      return;
+    }
+
     final status = await Permission.camera.request();
     if (!mounted) return;
 
@@ -283,14 +322,21 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
     if (_permissionDenied) {
       if (kIsWeb) {
         return _MessagePanel(
-          title: 'Enter barcode',
-          message:
-              'On web, type the barcode. Camera scanning is available in the Android app.',
+          title: isWebDesktopLayout(context)
+              ? 'Enter barcode'
+              : 'Camera access needed',
+          message: isWebDesktopLayout(context)
+              ? 'Type the barcode, or try the device camera if available.'
+              : 'Allow camera access to scan barcodes and QR codes, or enter the code manually.',
           actionLabel: 'Enter code',
           onAction: () => unawaited(_enterManually()),
-          secondaryLabel: 'Close',
+          secondaryLabel: 'Use camera',
           onSecondary: () async {
-            if (context.mounted) context.pop();
+            setState(() {
+              _permissionChecked = false;
+              _permissionDenied = false;
+            });
+            await _requestPermissionAndAttach();
           },
         );
       }

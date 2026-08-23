@@ -14,11 +14,31 @@ class JoinHomeScreen extends ConsumerStatefulWidget {
 class _JoinHomeScreenState extends ConsumerState<JoinHomeScreen> {
   final _controller = TextEditingController();
   bool _busy = false;
+  bool _autoJoinAttempted = false;
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_autoJoinAttempted) return;
+    final code = GoRouterState.of(context).uri.queryParameters['code'] ??
+        GoRouterState.of(context).uri.queryParameters['token'];
+    if (code == null || code.trim().isEmpty) return;
+    _autoJoinAttempted = true;
+    _controller.text = code.trim();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaitedJoin();
+    });
+  }
+
+  void unawaitedJoin() {
+    // ignore: discarded_futures
+    _join();
   }
 
   Future<void> _join() async {
@@ -50,7 +70,7 @@ class _JoinHomeScreenState extends ConsumerState<JoinHomeScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           Text(
-            'Paste an invite token or short code from a home owner or admin.',
+            'Paste an invite link code, short code, or token from a home owner or admin.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 16),
@@ -63,6 +83,7 @@ class _JoinHomeScreenState extends ConsumerState<JoinHomeScreen> {
             minLines: 1,
             maxLines: 4,
             textCapitalization: TextCapitalization.characters,
+            enabled: !_busy,
           ),
           const SizedBox(height: 24),
           FilledButton(

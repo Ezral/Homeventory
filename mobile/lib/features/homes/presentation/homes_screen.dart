@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/providers/supabase_provider.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../../shared/widgets/user_menu_button.dart';
@@ -11,11 +12,33 @@ import '../../auth/presentation/auth_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 import 'homes_providers.dart';
 
-class HomesScreen extends ConsumerWidget {
+class HomesScreen extends ConsumerStatefulWidget {
   const HomesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomesScreen> createState() => _HomesScreenState();
+}
+
+class _HomesScreenState extends ConsumerState<HomesScreen> {
+  bool _checkedPendingNav = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_checkedPendingNav) return;
+    _checkedPendingNav = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final pending =
+          await ref.read(localSessionStoreProvider).readPendingNav();
+      if (!mounted || pending == null || !pending.startsWith('/')) return;
+      await ref.read(localSessionStoreProvider).clearPendingNav();
+      if (mounted) context.go(pending);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final homes = ref.watch(homesListProvider);
     final profile = ref.watch(currentProfileProvider);
     final desktop = isWebDesktopLayout(context);
