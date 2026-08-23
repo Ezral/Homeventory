@@ -448,7 +448,7 @@ class _InventoryListPane extends ConsumerWidget {
   }
 }
 
-class _DesktopDetailPane extends ConsumerWidget {
+class _DesktopDetailPane extends ConsumerStatefulWidget {
   const _DesktopDetailPane({
     required this.homeId,
     required this.roomId,
@@ -464,27 +464,314 @@ class _DesktopDetailPane extends ConsumerWidget {
   final bool canEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (selectedId == null) {
+  ConsumerState<_DesktopDetailPane> createState() => _DesktopDetailPaneState();
+}
+
+class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
+  /// When set, show this item's details while a container stays selected.
+  String? _nestedItemId;
+
+  @override
+  void didUpdateWidget(covariant _DesktopDetailPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedId != widget.selectedId) {
+      _nestedItemId = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.selectedId == null) {
       return const EmptyState(
         icon: Icons.view_sidebar_outlined,
-        title: 'Select an item',
+        title: 'Select an object',
         message:
-            'Pick something from the list to inspect it here. Containers can be opened in place.',
+            'Pick something from the list. Containers show their contents here; '
+            'items open their details here.',
       );
     }
 
-    final nodeAsync = ref.watch(inventoryNodeProvider(selectedId!));
+    final focusId = _nestedItemId ?? widget.selectedId!;
+    final nodeAsync = ref.watch(inventoryNodeProvider(focusId));
+
     return nodeAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => ErrorView(message: e.toString()),
       data: (node) {
-        return Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        final showingNestedItem = _nestedItemId != null;
+        final showContents = node.isContainer && !showingNestedItem;
+
+        if (showContents) {
+          return _DesktopContainerContents(
+            homeId: widget.homeId,
+            roomId: widget.roomId,
+            container: node,
+            canEdit: widget.canEdit,
+            listScope: widget.scope,
+            onOpenItem: (item) => setState(() => _nestedItemId = item.id),
+            onOpenNestedContainer: (child) {
+              context.push(
+                '/homes/${widget.homeId}/rooms/${widget.roomId}/nodes/${child.id}',
+              );
+            },
+          );
+        }
+
+        return _DesktopItemDetails(
+          homeId: widget.homeId,
+          roomId: widget.roomId,
+          node: node,
+          canEdit: widget.canEdit,
+          listScope: widget.scope,
+          onBack: showingNestedItem
+              ? () => setState(() => _nestedItemId = null)
+              : null,
+        );
+      },
+    );
+  }
+}
+
+class _DesktopContainerContents extends ConsumerWidget {
+  const _DesktopContainerContents({
+    required this.homeId,
+    required this.roomId,
+    required this.container,
+    required this.canEdit,
+    required this.listScope,
+    required this.onOpenItem,
+    required this.onOpenNestedContainer,
+  });
+
+  final String homeId;
+  final String roomId;
+  final InventoryNode container;
+  final bool canEdit;
+  final InventoryScope listScope;
+  final ValueChanged<InventoryNode> onOpenItem;
+  final ValueChanged<InventoryNode> onOpenNestedContainer;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final childScope = InventoryScope(
+      homeId: homeId,
+      roomId: roomId,
+      parentNodeId: container.id,
+    );
+    final childrenAsync = ref.watch(inventoryChildrenProvider(childScope));
+    final packedMap = ref.watch(homePackedNodesProvider(homeId)).maybeWhen(
+          data: (m) => m,
+          orElse: () => const <String, PackedNodeInfo>{},
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
+          child: Row(
             children: [
-              Text(node.name, style: Theme.of(context).textTheme.headlineSmall),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      container.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        container.kindLabel,
+                        'Contents',
+                      ].join(' · '),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              if (canEdit)
+                IconButton(
+                  tooltip: 'Edit',
+                  onPressed: () async {
+                    await context.push(
+                      '/homes/$homeId/rooms/$roomId/nodes/${container.id}/edit',
+                    );
+                    ref.invalidate(inventoryNodeProvider(container.id));
+                    ref.invalidate(inventoryChildrenProvider(listScope));
+                    ref.invalidate(inventoryChildrenProvider(childScope));
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: AppColors.line),
+        Expanded(
+          child: childrenAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => ErrorView(
+              message: e.toString(),
+              onRetry: () =>
+                  ref.invalidate(inventoryChildrenProvider(childScope)),
+            ),
+            data: (nodes) {
+              final idsKey = nodes.map((n) => n.id).join(',');
+              final thumbs = ref
+                  .watch(
+                    entityThumbnailsProvider(
+                      (
+                        homeId: homeId,
+                        entityType: 'INVENTORY_NODE',
+                        idsKey: idsKey,
+                      ),
+                    ),
+                  )
+                  .maybeWhen(
+                    data: (m) => m,
+                    orElse: () => const <String, String>{},
+                  );
+
+              if (nodes.isEmpty) {
+                return EmptyState(
+                  icon: Icons.inventory_2_outlined,
+                  title: 'Empty container',
+                  message: canEdit
+                      ? 'Add objects inside ${container.name}.'
+                      : 'Nothing stored here yet.',
+                  actionLabel: canEdit ? 'Add object' : null,
+                  onAction: canEdit
+                      ? () async {
+                          await context.push(
+                            '/homes/$homeId/rooms/$roomId/nodes/new?parent=${container.id}',
+                          );
+                          ref.invalidate(
+                            inventoryChildrenProvider(childScope),
+                          );
+                        }
+                      : null,
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                itemCount: nodes.length + (canEdit ? 1 : 0),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  if (canEdit && index == nodes.length) {
+                    return OutlinedButton.icon(
+                      onPressed: () async {
+                        await context.push(
+                          '/homes/$homeId/rooms/$roomId/nodes/new?parent=${container.id}',
+                        );
+                        ref.invalidate(inventoryChildrenProvider(childScope));
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add object inside'),
+                    );
+                  }
+                  final node = nodes[index];
+                  final packed = packedMap[node.id];
+                  return SoftTile(
+                    leading: EntityThumbnail(
+                      imageUrl: thumbs[node.id],
+                      fallback: _nodeIcon(node),
+                    ),
+                    title: node.name,
+                    subtitle: _subtitle(node, packed),
+                    dimmed: packed != null,
+                    trailing: Icon(
+                      node.isContainer
+                          ? Icons.chevron_right
+                          : Icons.info_outline,
+                      color: AppColors.inkMuted,
+                    ),
+                    onTap: () {
+                      if (node.isContainer) {
+                        onOpenNestedContainer(node);
+                      } else {
+                        onOpenItem(node);
+                      }
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopItemDetails extends ConsumerWidget {
+  const _DesktopItemDetails({
+    required this.homeId,
+    required this.roomId,
+    required this.node,
+    required this.canEdit,
+    required this.listScope,
+    this.onBack,
+  });
+
+  final String homeId;
+  final String roomId;
+  final InventoryNode node;
+  final bool canEdit;
+  final InventoryScope listScope;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final imagesAsync = ref.watch(
+      nodeImagesProvider((homeId: homeId, nodeId: node.id)),
+    );
+    final barcodesAsync = ref.watch(nodeBarcodesProvider(node.id));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (onBack != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back, size: 18),
+                label: const Text('Back to contents'),
+              ),
+            ),
+          ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      node.name,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                  if (canEdit)
+                    IconButton(
+                      tooltip: 'Edit',
+                      onPressed: () async {
+                        await context.push(
+                          '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
+                        );
+                        ref.invalidate(inventoryNodeProvider(node.id));
+                        ref.invalidate(inventoryChildrenProvider(listScope));
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                ],
+              ),
               const SizedBox(height: 8),
               Text(
                 [
@@ -497,55 +784,191 @@ class _DesktopDetailPane extends ConsumerWidget {
               ),
               if (node.description != null &&
                   node.description!.trim().isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   node.description!,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
+              const SizedBox(height: 20),
+              const SectionLabel('Photos'),
+              const SizedBox(height: 8),
+              imagesAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => Text(e.toString()),
+                data: (images) {
+                  if (images.isEmpty) {
+                    return Text(
+                      'No photos yet.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    );
+                  }
+                  return SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: images.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final image = images[index];
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: image.signedUrl == null
+                              ? Container(
+                                  width: 120,
+                                  height: 120,
+                                  color: AppColors.mossSoft,
+                                  child: const Icon(Icons.broken_image),
+                                )
+                              : Image.network(
+                                  image.signedUrl!,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              const SectionLabel('Details'),
+              const SizedBox(height: 10),
+              _PaneDetailRow(
+                label: 'Quantity',
+                value: node.quantity == null
+                    ? '—'
+                    : [
+                        _formatQty(node.quantity!),
+                        if (node.quantityUnit != null) node.quantityUnit!,
+                      ].join(' '),
+              ),
+              _PaneDetailRow(
+                label: 'Brand',
+                value: node.brand ?? '—',
+              ),
+              _PaneDetailRow(
+                label: 'Purchase price',
+                value: node.purchasePrice == null
+                    ? '—'
+                    : '${node.currency ?? ''} ${_formatQty(node.purchasePrice!)}'
+                        .trim(),
+              ),
+              _PaneDetailRow(
+                label: 'Weight',
+                value: node.weight == null
+                    ? '—'
+                    : [
+                        _formatQty(node.weight!),
+                        if (node.weightUnit != null) node.weightUnit!,
+                      ].join(' '),
+              ),
+              const SizedBox(height: 20),
+              const SectionLabel('Barcodes'),
+              const SizedBox(height: 8),
+              barcodesAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (e, _) => Text(e.toString()),
+                data: (codes) {
+                  if (codes.isEmpty) {
+                    return Text(
+                      'No barcodes.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    );
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final code in codes)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            code.barcodeValue,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
               const SizedBox(height: 24),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  if (node.isContainer)
-                    FilledButton.icon(
-                      onPressed: () => context.push(
-                        '/homes/$homeId/rooms/$roomId/nodes/${node.id}',
-                      ),
-                      icon: const Icon(Icons.folder_open),
-                      label: const Text('Open contents'),
-                    ),
-                  FilledButton.tonalIcon(
-                    onPressed: () => context.push(
-                      '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
-                    ),
-                    icon: const Icon(Icons.info_outline),
-                    label: const Text('Full details'),
-                  ),
                   if (canEdit)
                     OutlinedButton.icon(
                       onPressed: () async {
                         await context.push(
                           '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
                         );
-                        ref.invalidate(inventoryChildrenProvider(scope));
                         ref.invalidate(inventoryNodeProvider(node.id));
+                        ref.invalidate(inventoryChildrenProvider(listScope));
                       },
                       icon: const Icon(Icons.edit_outlined),
                       label: const Text('Edit'),
                     ),
+                  if (canEdit)
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final moved = await context.push<bool>(
+                          '/homes/$homeId/rooms/$roomId/nodes/${node.id}/move',
+                        );
+                        if (moved == true) {
+                          ref.invalidate(inventoryNodeProvider(node.id));
+                          ref.invalidate(inventoryChildrenProvider(listScope));
+                        }
+                      },
+                      icon: const Icon(Icons.drive_file_move_outlined),
+                      label: const Text('Move'),
+                    ),
+                  TextButton(
+                    onPressed: () => context.push(
+                      '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
+                    ),
+                    child: const Text('Open full page'),
+                  ),
                 ],
-              ),
-              const Spacer(),
-              Text(
-                'Tip: turn an item into a container from Edit → “Also a container”.',
-                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
-        );
-      },
+        ),
+      ],
+    );
+  }
+}
+
+class _PaneDetailRow extends StatelessWidget {
+  const _PaneDetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.inkMuted,
+                  ),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -137,7 +137,7 @@ class HomeDetailScreen extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverToBoxAdapter(
-                  child: _FacebookStyleHomeHeader(
+                  child: _HomeOverviewHeader(
                     home: home,
                     homeId: homeId,
                     duration: duration,
@@ -372,8 +372,8 @@ class _RoomCard extends StatelessWidget {
   }
 }
 
-class _FacebookStyleHomeHeader extends ConsumerWidget {
-  const _FacebookStyleHomeHeader({
+class _HomeOverviewHeader extends ConsumerWidget {
+  const _HomeOverviewHeader({
     required this.home,
     required this.homeId,
     required this.duration,
@@ -397,158 +397,109 @@ class _FacebookStyleHomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final coverUrl = homeImagesAsync.maybeWhen(
+    final imageUrl = homeImagesAsync.maybeWhen(
       data: (images) => images.isNotEmpty ? images.first.signedUrl : null,
       orElse: () => null,
     );
-    final coverHeight = desktop ? 180.0 : 140.0;
-    final avatarSize = desktop ? 88.0 : 72.0;
+    final imageSize = desktop ? 112.0 : 88.0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            SizedBox(
-              height: coverHeight,
-              width: double.infinity,
-              child: coverUrl == null
-                  ? const ColoredBox(color: AppColors.mossSoft)
-                  : Image.network(
-                      coverUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: coverHeight,
-                      errorBuilder: (_, _, _) =>
-                          const ColoredBox(color: AppColors.mossSoft),
-                    ),
-            ),
-            Positioned(
-              left: 16,
-              bottom: -(avatarSize / 2),
-              child: Container(
-                width: avatarSize,
-                height: avatarSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.paperElevated, width: 4),
-                  color: AppColors.mossSoft,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: coverUrl == null
-                    ? Icon(
-                        Icons.home,
-                        size: avatarSize * 0.45,
-                        color: AppColors.mossDeep,
-                      )
-                    : Image.network(
-                        coverUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Icon(
-                          Icons.home,
-                          size: avatarSize * 0.45,
-                          color: AppColors.mossDeep,
-                        ),
-                      ),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: avatarSize / 2 + 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _HomeImageThumb(imageUrl: imageUrl, size: imageSize),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       home.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 6),
                     membersAsync.when(
                       loading: () => const SizedBox.shrink(),
                       error: (_, _) => const SizedBox.shrink(),
-                      data: (members) => Row(
-                        children: [
-                          Flexible(
-                            child: _MemberAvatarRow(members: members),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${members.length} member${members.length == 1 ? '' : 's'}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
+                      data: (members) => Text(
+                        '${members.length} member${members.length == 1 ? '' : 's'}'
+                        '${home.myRole != null ? ' · ${home.myRole!.label}' : ''}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                     if (duration != null) ...[
                       const SizedBox(height: 4),
-                      Text(duration!, style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        duration!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
                     if (home.addressText != null &&
                         home.addressText!.trim().isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         home.addressText!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (canInvite)
+                          FilledButton.icon(
+                            onPressed: () => showHomeInviteSheet(
+                              context: context,
+                              ref: ref,
+                              homeId: homeId,
+                            ),
+                            icon: const Icon(Icons.person_add_alt_1, size: 18),
+                            label: const Text('Invite'),
+                          ),
+                        if (canEditHome)
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              await context.push('/homes/$homeId/edit');
+                              ref.invalidate(homeProvider(homeId));
+                              ref.invalidate(homeImagesProvider(homeId));
+                              ref.invalidate(
+                                homeDashboardStatsProvider(homeId),
+                              );
+                              ref.invalidate(homesListProvider);
+                            },
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edit'),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.end,
-                children: [
-                  if (canInvite)
-                    FilledButton.icon(
-                      onPressed: () => showHomeInviteSheet(
-                        context: context,
-                        ref: ref,
-                        homeId: homeId,
-                      ),
-                      icon: const Icon(Icons.person_add_alt_1, size: 18),
-                      label: const Text('Invite'),
-                    ),
-                  if (canEditHome)
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        await context.push('/homes/$homeId/edit');
-                        ref.invalidate(homeProvider(homeId));
-                        ref.invalidate(homeImagesProvider(homeId));
-                        ref.invalidate(homeDashboardStatsProvider(homeId));
-                        ref.invalidate(homesListProvider);
-                      },
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Edit'),
-                    ),
-                ],
-              ),
             ],
           ),
-        ),
-        if (home.description != null &&
-            home.description!.trim().isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
+          if (home.description != null &&
+              home.description!.trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
               home.description!,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-          ),
-        ],
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: statsAsync.when(
+          ],
+          const SizedBox(height: 16),
+          statsAsync.when(
             loading: () => const SizedBox(
               height: 48,
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -559,51 +510,39 @@ class _FacebookStyleHomeHeader extends ConsumerWidget {
             ),
             data: (stats) => _DashboardStrip(stats: stats, desktop: desktop),
           ),
-        ),
-        const SizedBox(height: 8),
-        const Divider(height: 1, color: AppColors.line),
-      ],
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }
 
-class _MemberAvatarRow extends StatelessWidget {
-  const _MemberAvatarRow({required this.members});
+class _HomeImageThumb extends StatelessWidget {
+  const _HomeImageThumb({required this.imageUrl, required this.size});
 
-  final List<HomeMember> members;
+  final String? imageUrl;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    if (members.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: members.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final member = members[index];
-          final url = member.avatarUrl;
-          return Tooltip(
-            message: member.label,
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.mossSoft,
-              foregroundColor: AppColors.mossDeep,
-              backgroundImage:
-                  url != null && url.isNotEmpty ? NetworkImage(url) : null,
-              child: url == null || url.isEmpty
-                  ? Text(
-                      member.initials,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    )
-                  : null,
-            ),
-          );
-        },
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: imageUrl == null
+            ? const ColoredBox(
+                color: AppColors.mossSoft,
+                child: Icon(Icons.home, color: AppColors.mossDeep, size: 36),
+              )
+            : Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const ColoredBox(
+                  color: AppColors.mossSoft,
+                  child: Icon(Icons.home, color: AppColors.mossDeep, size: 36),
+                ),
+              ),
       ),
     );
   }
