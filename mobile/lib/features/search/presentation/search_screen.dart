@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/utils/inventory_labels.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
@@ -119,6 +120,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           message: 'Try a different name, spelling, or barcode.',
                         );
                       }
+                      final idsKey = nodes.map((n) => n.id).join(',');
+                      final locationPaths = ref
+                          .watch(nodeLocationPathsProvider(idsKey))
+                          .maybeWhen(
+                            data: (m) => m,
+                            orElse: () => const <String, String>{},
+                          );
                       return ListView.separated(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                         itemCount: nodes.length,
@@ -139,7 +147,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               ),
                             ),
                             title: node.name,
-                            subtitle: node.kindLabel,
+                            subtitle: inventoryNodeSubtitle(
+                              node,
+                              locationPath: locationPaths[node.id],
+                            ),
                             onTap: () {
                               if (node.isContainer) {
                                 context.push(

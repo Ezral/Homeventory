@@ -122,6 +122,20 @@ final inventorySearchProvider = FutureProvider.autoDispose
           .search(homeId: args.homeId, query: args.query);
     });
 
+/// Batch location paths keyed by node id. [idsKey] is comma-joined ids.
+final nodeLocationPathsProvider = FutureProvider.autoDispose
+    .family<Map<String, String>, String>((ref, idsKey) {
+  final ids = idsKey.isEmpty
+      ? <String>[]
+      : idsKey.split(',').where((e) => e.isNotEmpty).toList();
+  return ref.watch(inventoryRepositoryProvider).locationPaths(ids);
+});
+
+final nodeLocationPathProvider =
+    FutureProvider.autoDispose.family<String?, String>((ref, nodeId) {
+  return ref.watch(inventoryRepositoryProvider).locationPath(nodeId);
+});
+
 final dispenserAssignmentsProvider = FutureProvider.autoDispose
     .family<List<DispenserProductAssignment>, String>((ref, dispenserItemId) {
       return ref

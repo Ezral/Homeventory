@@ -179,6 +179,17 @@ class NodeDetailScreen extends ConsumerWidget {
                     Chip(label: Text(node.itemCategory!.label)),
                 ],
               ),
+              const SizedBox(height: 12),
+              ref.watch(nodeLocationPathProvider(nodeId)).when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                    data: (path) {
+                      if (path == null || path.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return _DetailRow(label: 'Location', value: path);
+                    },
+                  ),
               if (node.description != null && node.description!.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text(

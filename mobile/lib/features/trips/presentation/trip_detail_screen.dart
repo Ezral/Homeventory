@@ -148,6 +148,12 @@ class TripDetailScreen extends ConsumerWidget {
                           data: (m) => m,
                           orElse: () => const <String, String>{},
                         );
+                    final locationPaths = ref
+                        .watch(nodeLocationPathsProvider(idsKey))
+                        .maybeWhen(
+                          data: (m) => m,
+                          orElse: () => const <String, String>{},
+                        );
                     return Column(
                       children: [
                         for (final container in containers) ...[
@@ -158,6 +164,9 @@ class TripDetailScreen extends ConsumerWidget {
                             ),
                             title: container.node?.name ?? 'Container',
                             subtitle: [
+                              if (locationPaths[container.inventoryNodeId] !=
+                                  null)
+                                locationPaths[container.inventoryNodeId]!,
                               if (container.node?.kindLabel != null)
                                 container.node!.kindLabel,
                               if (inventoryWeightKg(container.node) != null)
@@ -241,6 +250,12 @@ class TripDetailScreen extends ConsumerWidget {
                           data: (m) => m,
                           orElse: () => const <String, String>{},
                         );
+                    final locationPaths = ref
+                        .watch(nodeLocationPathsProvider(idsKey))
+                        .maybeWhen(
+                          data: (m) => m,
+                          orElse: () => const <String, String>{},
+                        );
                     return Column(
                       children: [
                         for (final item in plan) ...[
@@ -251,6 +266,8 @@ class TripDetailScreen extends ConsumerWidget {
                             ),
                             title: item.node?.name ?? 'Item',
                             subtitle: [
+                              if (locationPaths[item.inventoryNodeId] != null)
+                                locationPaths[item.inventoryNodeId]!,
                               if (item.packedIntoNode != null)
                                 'Bag: ${item.packedIntoNode!.name}',
                               if (inventoryWeightKg(item.node) != null)
@@ -522,6 +539,12 @@ class TripDetailScreen extends ConsumerWidget {
                             data: (m) => m,
                             orElse: () => const <String, String>{},
                           );
+                      final locationPaths = ref
+                          .watch(nodeLocationPathsProvider(idsKey))
+                          .maybeWhen(
+                            data: (m) => m,
+                            orElse: () => const <String, String>{},
+                          );
                       return ListView.separated(
                         shrinkWrap: true,
                         itemCount: available.length,
@@ -534,7 +557,11 @@ class TripDetailScreen extends ConsumerWidget {
                               fallback: Icons.luggage_outlined,
                             ),
                             title: container.name,
-                            subtitle: container.kindLabel,
+                            subtitle: [
+                              if (locationPaths[container.id] != null)
+                                locationPaths[container.id]!,
+                              container.kindLabel,
+                            ].join(' · '),
                             onTap: () => Navigator.pop(context, container),
                           );
                         },

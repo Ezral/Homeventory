@@ -11,6 +11,7 @@ import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
+import '../../../shared/utils/inventory_labels.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../../trips/presentation/trips_providers.dart';
@@ -203,6 +204,12 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
                 data: (m) => m,
                 orElse: () => const <String, String>{},
               );
+          final locationPaths = ref
+              .watch(nodeLocationPathsProvider(idsKey))
+              .maybeWhen(
+                data: (m) => m,
+                orElse: () => const <String, String>{},
+              );
           final packedMap = ref
               .watch(homePackedNodesProvider(homeId))
               .maybeWhen(
@@ -217,6 +224,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
             scope: scope,
             nodes: nodes,
             thumbs: thumbs,
+            locationPaths: locationPaths,
             packedMap: packedMap,
             canEdit: canEdit,
             roomImagesAsync: roomImagesAsync,
@@ -280,6 +288,7 @@ class _InventoryListPane extends ConsumerWidget {
     required this.scope,
     required this.nodes,
     required this.thumbs,
+    required this.locationPaths,
     required this.packedMap,
     required this.canEdit,
     required this.roomImagesAsync,
@@ -294,6 +303,7 @@ class _InventoryListPane extends ConsumerWidget {
   final InventoryScope scope;
   final List<InventoryNode> nodes;
   final Map<String, String> thumbs;
+  final Map<String, String> locationPaths;
   final Map<String, PackedNodeInfo> packedMap;
   final bool canEdit;
   final AsyncValue<List<EntityImage>>? roomImagesAsync;
@@ -371,7 +381,11 @@ class _InventoryListPane extends ConsumerWidget {
                         fallback: _nodeIcon(node),
                       ),
                       title: node.name,
-                      subtitle: _subtitle(node, packed),
+                      subtitle: inventoryNodeSubtitle(
+                        node,
+                        locationPath: locationPaths[node.id],
+                        packed: packed,
+                      ),
                       dimmed: packed != null,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -634,6 +648,13 @@ class _DesktopContainerContents extends ConsumerWidget {
                     orElse: () => const <String, String>{},
                   );
 
+              final locationPaths = ref
+                  .watch(nodeLocationPathsProvider(idsKey))
+                  .maybeWhen(
+                    data: (m) => m,
+                    orElse: () => const <String, String>{},
+                  );
+
               if (nodes.isEmpty) {
                 return EmptyState(
                   icon: Icons.inventory_2_outlined,
@@ -680,7 +701,11 @@ class _DesktopContainerContents extends ConsumerWidget {
                       fallback: _nodeIcon(node),
                     ),
                     title: node.name,
-                    subtitle: _subtitle(node, packed),
+                    subtitle: inventoryNodeSubtitle(
+                      node,
+                      locationPath: locationPaths[node.id],
+                      packed: packed,
+                    ),
                     dimmed: packed != null,
                     trailing: Icon(
                       node.isContainer
@@ -782,6 +807,22 @@ class _DesktopItemDetails extends ConsumerWidget {
                 ].join(' · '),
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
+              const SizedBox(height: 8),
+              ref.watch(nodeLocationPathProvider(node.id)).when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                    data: (path) {
+                      if (path == null || path.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Text(
+                        path,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.inkMuted,
+                            ),
+                      );
+                    },
+                  ),
               if (node.description != null &&
                   node.description!.trim().isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -838,6 +879,16 @@ class _DesktopItemDetails extends ConsumerWidget {
               const SizedBox(height: 20),
               const SectionLabel('Details'),
               const SizedBox(height: 10),
+              ref.watch(nodeLocationPathProvider(node.id)).when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                    data: (path) {
+                      if (path == null || path.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return _PaneDetailRow(label: 'Location', value: path);
+                    },
+                  ),
               _PaneDetailRow(
                 label: 'Quantity',
                 value: node.quantity == null
@@ -971,31 +1022,6 @@ class _PaneDetailRow extends StatelessWidget {
       ),
     );
   }
-}
-
-String _subtitle(InventoryNode node, PackedNodeInfo? packed) {
-  final parts = <String>[node.kindLabel];
-  if (node.itemCategory != null) parts.add(node.itemCategory!.label);
-  if (node.quantity != null) {
-    parts.add(
-      [
-        _formatQty(node.quantity!),
-        if (node.quantityUnit != null) node.quantityUnit!,
-      ].join(' '),
-    );
-  }
-  if (node.purchasePrice != null) {
-    parts.add(
-      '${node.currency ?? ''} ${_formatQty(node.purchasePrice!)}'.trim(),
-    );
-  }
-  if (packed != null) {
-    parts.add(
-      'Packed · ${packed.tripName}'
-      '${packed.packedIntoName != null ? ' (${packed.packedIntoName})' : ''}',
-    );
-  }
-  return parts.join(' · ');
 }
 
 String _formatQty(double value) {

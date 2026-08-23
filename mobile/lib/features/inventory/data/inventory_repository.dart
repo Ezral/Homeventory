@@ -516,6 +516,30 @@ class InventoryRepository {
     return path;
   }
 
+  /// Room › furniture › storage … for each node (excludes the node’s own name).
+  Future<Map<String, String>> locationPaths(List<String> nodeIds) async {
+    if (nodeIds.isEmpty) return const {};
+    final rows = await _client.rpc(
+      'get_node_location_paths',
+      params: {'p_node_ids': nodeIds},
+    );
+    final map = <String, String>{};
+    for (final row in (rows as List)) {
+      final m = Map<String, dynamic>.from(row as Map);
+      final id = m['node_id'] as String?;
+      final path = m['location_path'] as String?;
+      if (id != null && path != null && path.isNotEmpty) {
+        map[id] = path;
+      }
+    }
+    return map;
+  }
+
+  Future<String?> locationPath(String nodeId) async {
+    final map = await locationPaths([nodeId]);
+    return map[nodeId];
+  }
+
   Future<List<ItemBarcode>> listBarcodes(String nodeId) async {
     final rows = await _client
         .from('item_barcodes')
