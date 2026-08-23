@@ -13,6 +13,7 @@ import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
+import '../../../shared/providers/supabase_provider.dart';
 import '../../inventory/data/inventory_repository.dart';
 import 'homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
@@ -279,6 +280,7 @@ class HomeDetailScreen extends ConsumerWidget {
                     child: _MembersManageSection(
                       homeId: homeId,
                       canManage: canInvite,
+                      isOwner: canEditHome,
                       myRole: home.myRole,
                     ),
                   ),
@@ -613,16 +615,21 @@ class _MembersManageSection extends ConsumerWidget {
   const _MembersManageSection({
     required this.homeId,
     required this.canManage,
+    required this.isOwner,
     required this.myRole,
   });
 
   final String homeId;
   final bool canManage;
+  final bool isOwner;
   final HomeRole? myRole;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(homeMembersProvider(homeId));
+    final myUserId =
+        ref.watch(supabaseClientProvider).auth.currentUser?.id;
+
     return membersAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
@@ -656,14 +663,12 @@ class _MembersManageSection extends ConsumerWidget {
                     ),
                     title: member.label,
                     subtitle: member.role.label,
-                    trailing: canManage && member.role != HomeRole.owner
-                        ? IconButton(
-                            tooltip: 'Remove member',
-                            icon: const Icon(Icons.person_remove_outlined),
-                            onPressed: () =>
-                                _confirmRemove(context, ref, member),
-                          )
-                        : const SizedBox.shrink(),
+                    trailing: _memberActions(
+                      context,
+                      ref,
+                      member,
+                      myUserId: myUserId,
+                    ),
                   ),
                 ),
             if (myRole != null && myRole != HomeRole.owner) ...[
@@ -677,6 +682,166 @@ class _MembersManageSection extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Widget _memberActions(
+    BuildContext context,
+    WidgetRef ref,
+    HomeMember member, {
+    required String? myUserId,
+  }) {
+    final isSelf = myUserId != null && member.userId == myUserId;
+    if (isSelf || member.role == HomeRole.owner) {
+      return const SizedBox.shrink();
+    }
+
+    final canChangeRole = isOwner;
+    final canTransfer = isOwner;
+    final canRemove = canManage;
+
+    if (!canChangeRole && !canTransfer && !canRemove) {
+      return const SizedBox.shrink();
+    }
+
+    return PopupMenuButton<_MemberAction>(
+      tooltip: 'Manage member',
+      onSelected: (action) async {
+        switch (action) {
+          case _MemberAction.changeRole:
+            await _pickRole(context, ref, member);
+          case _MemberAction.transferOwnership:
+            await _confirmTransfer(context, ref, member);
+          case _MemberAction.remove:
+            await _confirmRemove(context, ref, member);
+        }
+      },
+      itemBuilder: (context) => [
+        if (canChangeRole)
+          const PopupMenuItem(
+            value: _MemberAction.changeRole,
+            child: Text('Change role'),
+          ),
+        if (canTransfer)
+          const PopupMenuItem(
+            value: _MemberAction.transferOwnership,
+            child: Text('Transfer ownership'),
+          ),
+        if (canRemove)
+          const PopupMenuItem(
+            value: _MemberAction.remove,
+            child: Text('Remove'),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _pickRole(
+    BuildContext context,
+    WidgetRef ref,
+    HomeMember member,
+  ) async {
+    final roles = [
+      HomeRole.admin,
+      HomeRole.editor,
+      HomeRole.viewer,
+    ];
+    final chosen = await showDialog<HomeRole>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text('Role for ${member.label}'),
+        children: [
+          for (final role in roles)
+            ListTile(
+              title: Text(role.label),
+              subtitle: Text(_roleHint(role)),
+              selected: member.role == role,
+              trailing: member.role == role
+                  ? const Icon(Icons.check, color: AppColors.moss)
+                  : null,
+              onTap: () => Navigator.pop(context, role),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || chosen == member.role || !context.mounted) return;
+    try {
+      await ref.read(homesRepositoryProvider).setMemberRole(
+            homeId: homeId,
+            userId: member.userId,
+            role: chosen,
+          );
+      ref.invalidate(homeMembersProvider(homeId));
+      ref.invalidate(homeProvider(homeId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${member.label} is now ${chosen.label}')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
+
+  String _roleHint(HomeRole role) => switch (role) {
+        HomeRole.admin => 'Invite members and manage access',
+        HomeRole.editor => 'Add and edit inventory',
+        HomeRole.viewer => 'View only',
+        HomeRole.owner => 'Full control',
+      };
+
+  Future<void> _confirmTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    HomeMember member,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Transfer ownership?'),
+        content: Text(
+          '${member.label} will become the Owner. '
+          'You will become an Admin and can no longer transfer ownership '
+          'unless they transfer it back.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Transfer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    try {
+      await ref.read(homesRepositoryProvider).transferOwnership(
+            homeId: homeId,
+            userId: member.userId,
+          );
+      ref.invalidate(homeMembersProvider(homeId));
+      ref.invalidate(homeProvider(homeId));
+      ref.invalidate(homesListProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ownership transferred to ${member.label}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
   }
 
   Future<void> _confirmRemove(
@@ -751,3 +916,5 @@ class _MembersManageSection extends ConsumerWidget {
     }
   }
 }
+
+enum _MemberAction { changeRole, transferOwnership, remove }

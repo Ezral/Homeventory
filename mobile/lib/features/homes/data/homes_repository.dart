@@ -223,6 +223,39 @@ class HomesRepository {
     );
   }
 
+  /// Owner-only: set another member's role to ADMIN / EDITOR / VIEWER.
+  Future<void> setMemberRole({
+    required String homeId,
+    required String userId,
+    required HomeRole role,
+  }) async {
+    if (role == HomeRole.owner) {
+      throw ArgumentError('Use transferOwnership to grant OWNER.');
+    }
+    await client.rpc(
+      'set_home_member_role',
+      params: {
+        'p_home_id': homeId,
+        'p_user_id': userId,
+        'p_role': role.dbValue,
+      },
+    );
+  }
+
+  /// Owner-only: make [userId] the OWNER; current owner becomes ADMIN.
+  Future<void> transferOwnership({
+    required String homeId,
+    required String userId,
+  }) async {
+    await client.rpc(
+      'transfer_home_ownership',
+      params: {
+        'p_home_id': homeId,
+        'p_new_owner_user_id': userId,
+      },
+    );
+  }
+
   Future<void> leaveHome(String homeId) async {
     await client.rpc('leave_home', params: {'p_home_id': homeId});
     final active = await localSessionStore.readActiveHomeId();
