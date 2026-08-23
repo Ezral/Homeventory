@@ -14,7 +14,11 @@ final homesRepositoryProvider = Provider<HomesRepository>((ref) {
 });
 
 final homesListProvider = FutureProvider.autoDispose<List<Home>>((ref) {
-  return ref.watch(homesRepositoryProvider).listMyHomes();
+  return ref.watch(homesRepositoryProvider).listVisibleHomes();
+});
+
+final hiddenHomesListProvider = FutureProvider.autoDispose<List<Home>>((ref) {
+  return ref.watch(homesRepositoryProvider).listHiddenHomes();
 });
 
 final homeProvider =

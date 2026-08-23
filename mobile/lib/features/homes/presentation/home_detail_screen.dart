@@ -63,6 +63,17 @@ class HomeDetailScreen extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.edit_outlined),
                 ),
+              if (canEditHome)
+                IconButton(
+                  tooltip: 'Hide home',
+                  onPressed: () => _confirmHideHome(
+                    context: context,
+                    ref: ref,
+                    homeId: homeId,
+                    homeName: home.name,
+                  ),
+                  icon: const Icon(Icons.visibility_off_outlined),
+                ),
               if (!desktop) const UserMenuButton(),
             ],
           ),
@@ -261,6 +272,54 @@ class HomeDetailScreen extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+Future<void> _confirmHideHome({
+  required BuildContext context,
+  required WidgetRef ref,
+  required String homeId,
+  required String homeName,
+}) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('Hide $homeName?'),
+      content: const Text(
+        'It will leave your homes list. Inventory stays saved — '
+        'open Settings → Hidden homes to show it again.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Hide'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+
+  try {
+    await ref.read(homesRepositoryProvider).hideHome(homeId);
+    ref.invalidate(homesListProvider);
+    ref.invalidate(hiddenHomesListProvider);
+    ref.invalidate(activeHomeIdProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$homeName is now hidden')),
+      );
+      context.go('/');
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 }
 
