@@ -237,16 +237,69 @@ class RoomDetailScreen extends ConsumerWidget {
                             title: node.name,
                             subtitle: _subtitle(node, packed),
                             dimmed: packed != null,
-                            trailing: node.isContainer
-                                ? IconButton(
-                                    tooltip: 'Details',
-                                    icon: const Icon(Icons.info_outline),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (canEdit)
+                                  IconButton(
+                                    tooltip: 'Edit',
+                                    icon: const Icon(Icons.edit_outlined),
                                     color: AppColors.inkMuted,
-                                    onPressed: () => context.push(
-                                      '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
+                                    onPressed: () async {
+                                      await context.push(
+                                        '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
+                                      );
+                                      ref.invalidate(
+                                        inventoryChildrenProvider(scope),
+                                      );
+                                      ref.invalidate(
+                                        inventoryNodeProvider(node.id),
+                                      );
+                                    },
+                                  ),
+                                PopupMenuButton<String>(
+                                  tooltip: 'More',
+                                  onSelected: (value) async {
+                                    switch (value) {
+                                      case 'details':
+                                        await context.push(
+                                          '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
+                                        );
+                                      case 'open':
+                                        await context.push(
+                                          '/homes/$homeId/rooms/$roomId/nodes/${node.id}',
+                                        );
+                                      case 'edit':
+                                        await context.push(
+                                          '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
+                                        );
+                                        ref.invalidate(
+                                          inventoryChildrenProvider(scope),
+                                        );
+                                        ref.invalidate(
+                                          inventoryNodeProvider(node.id),
+                                        );
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    if (canEdit)
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Edit'),
+                                      ),
+                                    const PopupMenuItem(
+                                      value: 'details',
+                                      child: Text('Details'),
                                     ),
-                                  )
-                                : null,
+                                    if (node.isContainer)
+                                      const PopupMenuItem(
+                                        value: 'open',
+                                        child: Text('Open contents'),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
                             onTap: () {
                               if (node.isContainer) {
                                 context.push(

@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -16,26 +15,32 @@ class PickedImageBytes {
 }
 
 Future<PickedImageBytes?> pickEntityImage(BuildContext context) async {
-  final source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera),
-            title: const Text('Take photo'),
-            onTap: () => Navigator.pop(context, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library),
-            title: const Text('Choose from gallery'),
-            onTap: () => Navigator.pop(context, ImageSource.gallery),
-          ),
-        ],
+  ImageSource? source;
+  if (kIsWeb) {
+    // Camera capture is unreliable across desktop browsers; gallery/file works.
+    source = ImageSource.gallery;
+  } else {
+    source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
   if (source == null) return null;
 
   final file = await ImagePicker().pickImage(

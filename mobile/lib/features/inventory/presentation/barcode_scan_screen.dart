@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -37,7 +38,13 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    unawaited(_requestPermissionAndAttach());
+    if (kIsWeb) {
+      // Prefer typed entry on web; camera scanning varies by browser.
+      _permissionChecked = true;
+      _permissionDenied = true;
+    } else {
+      unawaited(_requestPermissionAndAttach());
+    }
   }
 
   Future<void> _requestPermissionAndAttach() async {
@@ -274,6 +281,19 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen>
     }
 
     if (_permissionDenied) {
+      if (kIsWeb) {
+        return _MessagePanel(
+          title: 'Enter barcode',
+          message:
+              'On web, type the barcode. Camera scanning is available in the Android app.',
+          actionLabel: 'Enter code',
+          onAction: () => unawaited(_enterManually()),
+          secondaryLabel: 'Close',
+          onSecondary: () async {
+            if (context.mounted) context.pop();
+          },
+        );
+      }
       return _MessagePanel(
         title: 'Camera permission needed',
         message:
