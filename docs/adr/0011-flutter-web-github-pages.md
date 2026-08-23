@@ -25,7 +25,7 @@ Ship the existing Flutter client to **web** and host it on **GitHub Pages**:
 | Concern | Choice |
 | --- | --- |
 | App | Same `mobile/` Flutter codebase (Android + web) |
-| Host | GitHub Pages via Actions (`deploy-web.yml`) |
+| Host | GitHub Pages via Actions pushing the `gh-pages` branch (`deploy-web.yml`) |
 | URL | `https://ezral.github.io/Homeventory/` (`--base-href /Homeventory/`) |
 | Auth | Google SSO only via Supabase OAuth (PKCE); web redirect is the Pages origin |
 | SPA routing | Copy `index.html` → `404.html` so path URLs work on Pages |
@@ -91,7 +91,10 @@ None (same Supabase project).
 
 ## Architecture Notes
 
-After first deploy, set GitHub repo **Settings → Pages → Source** to **GitHub Actions** if not already.
+After first deploy of the `gh-pages` branch, set GitHub repo **Settings → Pages**:
+
+- **Source:** Deploy from a branch
+- **Branch:** `gh-pages` / `/ (root)`
 
 Supabase Dashboard → Authentication → URL configuration — add:
 

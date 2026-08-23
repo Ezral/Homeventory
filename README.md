@@ -68,7 +68,9 @@ https://ezral.github.io/Homeventory/
 
 One-time setup:
 
-1. Repo **Settings → Pages → Source**: **GitHub Actions**.
+1. After the first successful **Deploy Web** workflow, open repo **Settings → Pages**:
+   - Source: **Deploy from a branch**
+   - Branch: **`gh-pages`** / `/ (root)`
 2. Supabase → Authentication → URL configuration — add redirect:
    - `https://ezral.github.io/Homeventory/**`
 3. Google Cloud → OAuth Web client — Authorized JavaScript origins:
