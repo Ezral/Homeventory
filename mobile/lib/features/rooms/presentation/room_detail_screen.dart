@@ -329,7 +329,7 @@ class _InventoryListPane extends ConsumerWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: AspectRatio(
-                      aspectRatio: 16 / 9,
+                      aspectRatio: desktop ? 2.4 : 2.0,
                       child: Image.network(
                         cover.signedUrl!,
                         fit: BoxFit.cover,

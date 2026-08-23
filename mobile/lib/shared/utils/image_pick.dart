@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/layout/web_layout.dart';
+
 class PickedImageBytes {
   const PickedImageBytes({
     required this.bytes,
@@ -15,32 +17,30 @@ class PickedImageBytes {
 }
 
 Future<PickedImageBytes?> pickEntityImage(BuildContext context) async {
-  ImageSource? source;
-  if (kIsWeb) {
-    // Camera capture is unreliable across desktop browsers; gallery/file works.
-    source = ImageSource.gallery;
-  } else {
-    source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Take photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
+  // Native + mobile web: offer camera. Desktop web: gallery/file is primary,
+  // but webcam is still available if the browser supports it.
+  final desktopWeb = kIsWeb && isWebDesktopLayout(context);
+
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_camera),
+            title: Text(desktopWeb ? 'Use webcam' : 'Take photo'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: Text(desktopWeb ? 'Choose file' : 'Choose from gallery'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
   if (source == null) return null;
 
   final file = await ImagePicker().pickImage(

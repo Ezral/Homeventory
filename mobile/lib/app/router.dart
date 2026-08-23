@@ -46,9 +46,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       final session = ref.read(authRepositoryProvider).currentSession;
       final loggingIn = state.matchedLocation == '/sign-in';
       final isSetup = state.matchedLocation == '/setup';
+      final next = state.uri.queryParameters['next'];
 
-      if (session == null && !loggingIn) return '/sign-in';
-      if (session != null && (loggingIn || isSetup)) return '/';
+      if (session == null && !loggingIn) {
+        // Preserve invite join links across Google SSO.
+        if (state.matchedLocation == '/homes/join') {
+          final q = state.uri.query.isEmpty ? '' : '?${state.uri.query}';
+          final dest = '/homes/join$q';
+          return Uri(
+            path: '/sign-in',
+            queryParameters: {'next': dest},
+          ).toString();
+        }
+        return '/sign-in';
+      }
+      if (session != null && (loggingIn || isSetup)) {
+        if (next != null && next.isNotEmpty && next.startsWith('/')) {
+          return next;
+        }
+        return '/';
+      }
       return null;
     },
     routes: [
