@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/home.dart';
+import '../../../shared/models/room.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
@@ -42,10 +44,11 @@ class HomeDetailScreen extends ConsumerWidget {
         final canEditHome = home.myRole?.isOwner ?? false;
         final homeImagesAsync = ref.watch(homeImagesProvider(homeId));
         final duration = home.residenceDurationLabel();
+        final desktop = isWebDesktopLayout(context);
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Home'),
+            title: Text(desktop ? home.name : 'Home'),
             actions: [
               if (canEditHome)
                 IconButton(
@@ -59,52 +62,68 @@ class HomeDetailScreen extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.edit_outlined),
                 ),
-              const UserMenuButton(),
+              if (!desktop) const UserMenuButton(),
             ],
           ),
-          floatingActionButton: null,
-          bottomNavigationBar: HomeShellBottomNav(
-            selectedIndex: 2,
-            addLabel: 'Add room',
-            onSelect: (index) async {
-              switch (index) {
-                case 0:
-                  await context.push('/homes/$homeId/search');
-                case 1:
-                  await context.push('/homes/$homeId/trips');
-                case 2:
-                  break;
-                case 3:
-                  if (canInvite) {
-                    await showHomeInviteSheet(
-                      context: context,
-                      ref: ref,
-                      homeId: homeId,
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Only owners and admins can invite members.',
-                        ),
-                      ),
-                    );
-                  }
-                case 4:
-                  if (!canEdit) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('You do not have permission to add rooms.'),
-                      ),
-                    );
-                    return;
-                  }
-                  await context.push('/homes/$homeId/rooms/new');
-                  ref.invalidate(roomsListProvider(homeId));
-                  ref.invalidate(homeDashboardStatsProvider(homeId));
-              }
-            },
-          ),
+          floatingActionButton: desktop && canEdit
+              ? FloatingActionButton.extended(
+                  onPressed: () async {
+                    await context.push('/homes/$homeId/rooms/new');
+                    ref.invalidate(roomsListProvider(homeId));
+                    ref.invalidate(homeDashboardStatsProvider(homeId));
+                  },
+                  backgroundColor: AppColors.moss,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add room'),
+                )
+              : null,
+          bottomNavigationBar: desktop
+              ? null
+              : HomeShellBottomNav(
+                  selectedIndex: 2,
+                  addLabel: 'Add room',
+                  onSelect: (index) async {
+                    switch (index) {
+                      case 0:
+                        await context.push('/homes/$homeId/search');
+                      case 1:
+                        await context.push('/homes/$homeId/trips');
+                      case 2:
+                        break;
+                      case 3:
+                        if (canInvite) {
+                          await showHomeInviteSheet(
+                            context: context,
+                            ref: ref,
+                            homeId: homeId,
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Only owners and admins can invite members.',
+                              ),
+                            ),
+                          );
+                        }
+                      case 4:
+                        if (!canEdit) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'You do not have permission to add rooms.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        await context.push('/homes/$homeId/rooms/new');
+                        ref.invalidate(roomsListProvider(homeId));
+                        ref.invalidate(homeDashboardStatsProvider(homeId));
+                    }
+                  },
+                ),
           body: RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(homeProvider(homeId));
@@ -256,53 +275,78 @@ class HomeDetailScreen extends ConsumerWidget {
                       orElse: () => const <String, String>{},
                     );
                     return SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                      sliver: SliverList.separated(
-                        itemCount: rooms.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final room = rooms[index];
-                          return SoftTile(
-                            leading: EntityThumbnail(
-                              imageUrl: thumbs[room.id],
-                              fallback: Icons.meeting_room_outlined,
-                            ),
-                            title: room.name,
-                            subtitle: room.description,
-                            trailing: canEdit
-                                ? IconButton(
-                                    tooltip: 'Edit room',
-                                    icon: const Icon(Icons.edit_outlined),
-                                    color: AppColors.inkMuted,
-                                    onPressed: () async {
-                                      await context.push(
-                                        '/homes/$homeId/rooms/${room.id}/edit',
-                                      );
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, desktop ? 32 : 100),
+                      sliver: desktop
+                          ? SliverGrid(
+                              gridDelegate:
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 280,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 1.55,
+                              ),
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final room = rooms[index];
+                                  return _RoomCard(
+                                    homeId: homeId,
+                                    room: room,
+                                    imageUrl: thumbs[room.id],
+                                    canEdit: canEdit,
+                                    onEdited: () {
                                       ref.invalidate(roomsListProvider(homeId));
                                       ref.invalidate(
                                         homeDashboardStatsProvider(homeId),
                                       );
-                                      ref.invalidate(
-                                        entityThumbnailsProvider((
-                                          homeId: homeId,
-                                          entityType: 'ROOM',
-                                          idsKey: idsKey,
-                                        )),
-                                      );
                                     },
-                                  )
-                                : null,
-                            onTap: () =>
-                                context.push('/homes/$homeId/rooms/${room.id}'),
-                          );
-                        },
-                      ),
+                                  );
+                                },
+                                childCount: rooms.length,
+                              ),
+                            )
+                          : SliverList.separated(
+                              itemCount: rooms.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final room = rooms[index];
+                                return SoftTile(
+                                  leading: EntityThumbnail(
+                                    imageUrl: thumbs[room.id],
+                                    fallback: Icons.meeting_room_outlined,
+                                  ),
+                                  title: room.name,
+                                  subtitle: room.description,
+                                  trailing: canEdit
+                                      ? IconButton(
+                                          tooltip: 'Edit room',
+                                          icon: const Icon(Icons.edit_outlined),
+                                          color: AppColors.inkMuted,
+                                          onPressed: () async {
+                                            await context.push(
+                                              '/homes/$homeId/rooms/${room.id}/edit',
+                                            );
+                                            ref.invalidate(
+                                              roomsListProvider(homeId),
+                                            );
+                                            ref.invalidate(
+                                              homeDashboardStatsProvider(homeId),
+                                            );
+                                          },
+                                        )
+                                      : null,
+                                  onTap: () => context.push(
+                                    '/homes/$homeId/rooms/${room.id}',
+                                  ),
+                                );
+                              },
+                            ),
                     );
                   },
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                    padding: EdgeInsets.fromLTRB(20, 8, 20, desktop ? 40 : 120),
                     child: _MembersManageSection(
                       homeId: homeId,
                       canManage: canInvite,
@@ -315,6 +359,86 @@ class HomeDetailScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _RoomCard extends StatelessWidget {
+  const _RoomCard({
+    required this.homeId,
+    required this.room,
+    required this.imageUrl,
+    required this.canEdit,
+    required this.onEdited,
+  });
+
+  final String homeId;
+  final Room room;
+  final String? imageUrl;
+  final bool canEdit;
+  final VoidCallback onEdited;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.paper,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => context.push('/homes/$homeId/rooms/${room.id}'),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    EntityThumbnail(
+                      imageUrl: imageUrl,
+                      fallback: Icons.meeting_room_outlined,
+                    ),
+                    const Spacer(),
+                    if (canEdit)
+                      IconButton(
+                        tooltip: 'Edit room',
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        color: AppColors.inkMuted,
+                        onPressed: () async {
+                          await context.push(
+                            '/homes/$homeId/rooms/${room.id}/edit',
+                          );
+                          onEdited();
+                        },
+                      ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  room.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                if (room.description != null &&
+                    room.description!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    room.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

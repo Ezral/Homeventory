@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_thumbnail.dart';
@@ -17,12 +18,13 @@ class HomesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final homes = ref.watch(homesListProvider);
     final profile = ref.watch(currentProfileProvider);
+    final desktop = isWebDesktopLayout(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your homes'),
-        actions: const [
-          UserMenuButton(),
+        actions: [
+          if (!desktop) const UserMenuButton(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -81,6 +83,95 @@ class HomesScreen extends ConsumerWidget {
                       title: 'No homes yet',
                       message:
                           'Create your first Home, or join one with an invite link, QR, or short code.',
+                    ),
+                  )
+                else if (desktop)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 320,
+                        mainAxisSpacing: 14,
+                        crossAxisSpacing: 14,
+                        childAspectRatio: 1.4,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final home = list[index];
+                          final thumbsAsync = ref.watch(
+                            entityThumbnailsProvider(
+                              (
+                                homeId: home.id,
+                                entityType: 'HOME',
+                                idsKey: home.id,
+                              ),
+                            ),
+                          );
+                          final thumbUrl = thumbsAsync.maybeWhen(
+                            data: (m) => m[home.id],
+                            orElse: () => null,
+                          );
+                          return Material(
+                            color: AppColors.paper,
+                            borderRadius: BorderRadius.circular(14),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () async {
+                                await ref
+                                    .read(activeHomeIdProvider.notifier)
+                                    .setActive(home.id);
+                                if (context.mounted) {
+                                  context.push('/homes/${home.id}');
+                                }
+                              },
+                              child: Ink(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.line),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      EntityThumbnail(
+                                        imageUrl: thumbUrl,
+                                        fallback: Icons.home_outlined,
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        home.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        [
+                                          if (home.myRole != null)
+                                            home.myRole!.label,
+                                          if (home.addressText != null)
+                                            home.addressText!,
+                                        ].join(' · '),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        childCount: list.length,
+                      ),
                     ),
                   )
                 else

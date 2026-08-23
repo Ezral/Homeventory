@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/layout/web_layout.dart';
 import '../features/auth/presentation/auth_providers.dart';
 import '../features/auth/presentation/sign_in_screen.dart';
 import '../features/homes/presentation/create_home_screen.dart';
@@ -19,8 +20,10 @@ import '../features/search/presentation/search_screen.dart';
 import '../features/trips/presentation/trip_detail_screen.dart';
 import '../features/trips/presentation/trips_list_screen.dart';
 import '../shared/providers/supabase_provider.dart';
+import '../shared/widgets/web_app_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authRefresh = ValueNotifier<int>(0);
@@ -57,109 +60,122 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/sign-in',
         builder: (context, state) => const SignInScreen(),
       ),
-      GoRoute(path: '/', builder: (context, state) => const HomesScreen()),
-      GoRoute(
-        path: '/preferences',
-        builder: (context, state) => const PreferencesScreen(),
-      ),
-      GoRoute(
-        path: '/homes/new',
-        builder: (context, state) => const CreateHomeScreen(),
-      ),
-      GoRoute(
-        path: '/homes/join',
-        builder: (context, state) => const JoinHomeScreen(),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/edit',
-        builder: (context, state) => CreateHomeScreen(
-          existingHomeId: state.pathParameters['homeId'],
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId',
-        builder: (context, state) =>
-            HomeDetailScreen(homeId: state.pathParameters['homeId']!),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/search',
-        builder: (context, state) =>
-            SearchScreen(homeId: state.pathParameters['homeId']!),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/trips',
-        builder: (context, state) =>
-            TripsListScreen(homeId: state.pathParameters['homeId']!),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/trips/:tripId',
-        builder: (context, state) => TripDetailScreen(
-          homeId: state.pathParameters['homeId']!,
-          tripId: state.pathParameters['tripId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/new',
-        builder: (context, state) =>
-            CreateRoomScreen(homeId: state.pathParameters['homeId']!),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/:roomId/edit',
-        builder: (context, state) => CreateRoomScreen(
-          homeId: state.pathParameters['homeId']!,
-          existingRoomId: state.pathParameters['roomId'],
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/:roomId',
-        builder: (context, state) => RoomDetailScreen(
-          homeId: state.pathParameters['homeId']!,
-          roomId: state.pathParameters['roomId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/:roomId/nodes/new',
-        builder: (context, state) => CreateNodeScreen(
-          homeId: state.pathParameters['homeId']!,
-          roomId: state.pathParameters['roomId']!,
-          parentNodeId: state.uri.queryParameters['parent'],
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/edit',
-        builder: (context, state) => CreateNodeScreen(
-          homeId: state.pathParameters['homeId']!,
-          roomId: state.pathParameters['roomId']!,
-          existingNodeId: state.pathParameters['nodeId'],
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/move',
-        builder: (context, state) => MoveNodeScreen(
-          homeId: state.pathParameters['homeId']!,
-          roomId: state.pathParameters['roomId']!,
-          nodeId: state.pathParameters['nodeId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId',
-        builder: (context, state) => RoomDetailScreen(
-          homeId: state.pathParameters['homeId']!,
-          roomId: state.pathParameters['roomId']!,
-          parentNodeId: state.pathParameters['nodeId'],
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/details',
-        builder: (context, state) => NodeDetailScreen(
-          homeId: state.pathParameters['homeId']!,
-          roomId: state.pathParameters['roomId']!,
-          nodeId: state.pathParameters['nodeId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/homes/:homeId/scan-barcode',
-        builder: (context, state) => const BarcodeScanScreen(),
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) {
+          // Narrow web + Android: no desktop chrome.
+          if (!isWebDesktopLayout(context)) return child;
+          return WebAppShell(
+            location: state.uri.path,
+            child: child,
+          );
+        },
+        routes: [
+          GoRoute(path: '/', builder: (context, state) => const HomesScreen()),
+          GoRoute(
+            path: '/preferences',
+            builder: (context, state) => const PreferencesScreen(),
+          ),
+          GoRoute(
+            path: '/homes/new',
+            builder: (context, state) => const CreateHomeScreen(),
+          ),
+          GoRoute(
+            path: '/homes/join',
+            builder: (context, state) => const JoinHomeScreen(),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/edit',
+            builder: (context, state) => CreateHomeScreen(
+              existingHomeId: state.pathParameters['homeId'],
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId',
+            builder: (context, state) =>
+                HomeDetailScreen(homeId: state.pathParameters['homeId']!),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/search',
+            builder: (context, state) =>
+                SearchScreen(homeId: state.pathParameters['homeId']!),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/trips',
+            builder: (context, state) =>
+                TripsListScreen(homeId: state.pathParameters['homeId']!),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/trips/:tripId',
+            builder: (context, state) => TripDetailScreen(
+              homeId: state.pathParameters['homeId']!,
+              tripId: state.pathParameters['tripId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/new',
+            builder: (context, state) =>
+                CreateRoomScreen(homeId: state.pathParameters['homeId']!),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/:roomId/edit',
+            builder: (context, state) => CreateRoomScreen(
+              homeId: state.pathParameters['homeId']!,
+              existingRoomId: state.pathParameters['roomId'],
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/:roomId',
+            builder: (context, state) => RoomDetailScreen(
+              homeId: state.pathParameters['homeId']!,
+              roomId: state.pathParameters['roomId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/:roomId/nodes/new',
+            builder: (context, state) => CreateNodeScreen(
+              homeId: state.pathParameters['homeId']!,
+              roomId: state.pathParameters['roomId']!,
+              parentNodeId: state.uri.queryParameters['parent'],
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/edit',
+            builder: (context, state) => CreateNodeScreen(
+              homeId: state.pathParameters['homeId']!,
+              roomId: state.pathParameters['roomId']!,
+              existingNodeId: state.pathParameters['nodeId'],
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/move',
+            builder: (context, state) => MoveNodeScreen(
+              homeId: state.pathParameters['homeId']!,
+              roomId: state.pathParameters['roomId']!,
+              nodeId: state.pathParameters['nodeId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId',
+            builder: (context, state) => RoomDetailScreen(
+              homeId: state.pathParameters['homeId']!,
+              roomId: state.pathParameters['roomId']!,
+              parentNodeId: state.pathParameters['nodeId'],
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/rooms/:roomId/nodes/:nodeId/details',
+            builder: (context, state) => NodeDetailScreen(
+              homeId: state.pathParameters['homeId']!,
+              roomId: state.pathParameters['roomId']!,
+              nodeId: state.pathParameters['nodeId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/scan-barcode',
+            builder: (context, state) => const BarcodeScanScreen(),
+          ),
+        ],
       ),
     ],
   );

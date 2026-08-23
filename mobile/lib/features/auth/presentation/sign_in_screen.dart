@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/providers/supabase_provider.dart';
 import 'auth_providers.dart';
@@ -50,6 +51,84 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
+    final desktop = isWebDesktopLayout(context);
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: desktop ? MainAxisSize.min : MainAxisSize.max,
+      children: [
+        if (!desktop) const Spacer(flex: 2),
+        Text(
+          'Homeventory',
+          style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                color: AppColors.mossDeep,
+                fontSize: desktop ? 48 : 42,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'A searchable digital map of everything in your home.',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppColors.ink,
+                fontWeight: FontWeight.w500,
+                height: 1.25,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Find it. Track it. Use it. Refill it. Pack it. Put it back.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppColors.inkMuted,
+              ),
+        ),
+        if (!desktop) const Spacer(flex: 3) else const SizedBox(height: 36),
+        if (!config.isConfigured)
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4E5),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE6C88A)),
+            ),
+            child: Text(
+              'Supabase is not configured. Launch with '
+              '--dart-define=SUPABASE_URL=... and '
+              '--dart-define=SUPABASE_ANON_KEY=...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.ink,
+                  ),
+            ),
+          ),
+        if (_error != null) ...[
+          Text(
+            _error!,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.danger,
+                ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        FilledButton.icon(
+          onPressed: (_busy || !config.isConfigured) ? null : _signIn,
+          icon: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.login),
+          label: Text(_busy ? 'Signing in…' : 'Continue with Google'),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Google SSO only. Profiles are created automatically on first sign-in.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        if (!desktop) const SizedBox(height: 28),
+      ],
+    );
 
     return Scaffold(
       body: DecoratedBox(
@@ -65,84 +144,25 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Spacer(flex: 2),
-                Text(
-                  'Homeventory',
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        color: AppColors.mossDeep,
-                        fontSize: 42,
+          child: desktop
+              ? Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Material(
+                      color: AppColors.paperElevated,
+                      elevation: 0,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(36, 40, 36, 36),
+                        child: content,
                       ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'A searchable digital map of everything in your home.',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppColors.ink,
-                        fontWeight: FontWeight.w500,
-                        height: 1.25,
-                      ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Find it. Track it. Use it. Refill it. Pack it. Put it back.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.inkMuted,
-                      ),
-                ),
-                const Spacer(flex: 3),
-                if (!config.isConfigured)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF4E5),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE6C88A)),
-                    ),
-                    child: Text(
-                      'Supabase is not configured. Launch with '
-                      '--dart-define=SUPABASE_URL=... and '
-                      '--dart-define=SUPABASE_ANON_KEY=...',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.ink,
-                          ),
                     ),
                   ),
-                if (_error != null) ...[
-                  Text(
-                    _error!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.danger,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                FilledButton.icon(
-                  onPressed: (_busy || !config.isConfigured) ? null : _signIn,
-                  icon: _busy
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.login),
-                  label: Text(_busy ? 'Signing in…' : 'Continue with Google'),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: content,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Google SSO only. Profiles are created automatically on first sign-in.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 28),
-              ],
-            ),
-          ),
         ),
       ),
     );
