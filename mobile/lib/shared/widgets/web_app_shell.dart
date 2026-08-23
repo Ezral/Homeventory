@@ -43,6 +43,7 @@ class WebAppShell extends ConsumerWidget {
         );
 
     final onHomes = location == '/';
+    final onJoin = location.startsWith('/homes/join');
     final onHomeOverview =
         homeId != null && location == '/homes/$homeId';
     final onSearch =
@@ -60,6 +61,7 @@ class WebAppShell extends ConsumerWidget {
             canEdit: canEdit,
             canInvite: canInvite,
             onHomes: onHomes,
+            onJoin: onJoin,
             onHomeOverview: onHomeOverview,
             onSearch: onSearch,
             onTrips: onTrips,
@@ -93,6 +95,7 @@ class _Sidebar extends ConsumerWidget {
     required this.canEdit,
     required this.canInvite,
     required this.onHomes,
+    required this.onJoin,
     required this.onHomeOverview,
     required this.onSearch,
     required this.onTrips,
@@ -103,6 +106,7 @@ class _Sidebar extends ConsumerWidget {
   final bool canEdit;
   final bool canInvite;
   final bool onHomes;
+  final bool onJoin;
   final bool onHomeOverview;
   final bool onSearch;
   final bool onTrips;
@@ -144,6 +148,13 @@ class _Sidebar extends ConsumerWidget {
             label: 'All homes',
             selected: onHomes,
             onTap: () => context.go('/'),
+          ),
+          _NavTile(
+            icon: Icons.qr_code_2_outlined,
+            selectedIcon: Icons.qr_code_2,
+            label: 'Join with invite',
+            selected: onJoin,
+            onTap: () => context.push('/homes/join'),
           ),
           if (homeId != null) ...[
             Padding(
