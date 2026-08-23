@@ -8,7 +8,7 @@ Find it. Track it. Use it. Refill it. Pack it. Put it back.
 
 ## Product
 
-Homeventory is a collaborative household inventory app for Android (Flutter) with a Supabase backend.
+Homeventory is a collaborative household inventory app for **Android and web** (Flutter) with a Supabase backend.
 
 It models physical containment:
 
@@ -30,11 +30,12 @@ Phase 6–8 prep (**6-super** = stock + Trips MVP → predictions after UAT): [`
 
 | Layer | Choice |
 | --- | --- |
-| Client | Flutter (Android-first) |
-| Auth | Google SSO via Supabase Auth |
+| Client | Flutter (Android + web) |
+| Auth | Google SSO only via Supabase Auth |
 | Backend | Supabase (Postgres, RLS, Storage, Edge Functions) |
 | Push | Firebase Cloud Messaging (later) |
 | State | Riverpod |
+| Web host | GitHub Pages (`https://ezral.github.io/Homeventory/`) |
 
 ## Repository layout
 
@@ -45,16 +46,36 @@ supabase/
   migrations/         Schema, RLS helpers, trusted functions
   tests/              Cross-Home authorization SQL tests
 scripts/              Migration validation + hosted project link/push
-mobile/               Flutter app (Android client)
+mobile/               Flutter app (Android + web clients)
 ```
 
 ## Current status
 
 - **Backend:** profiles, Homes, membership, invitations (token + short code), rooms, recursive inventory, RLS helpers, invite/move/remove/leave RPCs
-- **Flutter client:** Google sign-in, homes, invites, members, rooms, nested inventory browse/create, search
+- **Flutter client:** Google sign-in, homes, invites, members, rooms, nested inventory browse/create/edit, search, trips packing
+- **Web:** GitHub Pages deploy from Actions (same feature set as Android; Google SSO only)
 - **Tooling:** `npm` Supabase CLI, `scripts/validate-migrations.sh`, `scripts/link-and-push.sh`
 
-Still needed for a live device build: your hosted Supabase project credentials + Google OAuth client IDs (and later FCM).
+Still needed for a live device/web build: your hosted Supabase project credentials + Google OAuth client IDs (and later FCM).
+
+## Web (GitHub Pages)
+
+After merge to `main`, Actions builds Flutter web and deploys to:
+
+```text
+https://ezral.github.io/Homeventory/
+```
+
+One-time setup:
+
+1. Repo **Settings → Pages → Source**: **GitHub Actions**.
+2. Supabase → Authentication → URL configuration — add redirect:
+   - `https://ezral.github.io/Homeventory/**`
+3. Google Cloud → OAuth Web client — Authorized JavaScript origins:
+   - `https://ezral.github.io`
+4. Ensure Actions secrets `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_WEB_CLIENT_ID` are set (same as APK builds).
+
+Workflow: [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml) · ADR: [`docs/adr/0011-flutter-web-github-pages.md`](docs/adr/0011-flutter-web-github-pages.md)
 
 ## Connect Supabase (hosted)
 

@@ -25,6 +25,7 @@ The source code remains the source of truth for **how**.
 | [0008](0008-inventory-transactions.md) | Inventory transactions and dispose | Accepted |
 | [0009](0009-trips-packing.md) | Trips packing and unpacking | Accepted |
 | [0010](0010-home-currency-fx-cache.md) | Home-currency FX cache via Frankfurter | Accepted |
+| [0011](0011-flutter-web-github-pages.md) | Flutter web client on GitHub Pages | Accepted |
 
 ## Not yet documented (not implemented)
 

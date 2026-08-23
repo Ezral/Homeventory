@@ -26,11 +26,12 @@ Homeventory uses:
 
 | Layer | Choice in repo today |
 | --- | --- |
-| Mobile client | Flutter under `mobile/` (Android primary) |
+| Mobile / web client | Flutter under `mobile/` (Android + GitHub Pages web) |
 | Backend | Hosted Supabase (Postgres + Auth + Storage) |
 | Schema delivery | SQL migrations in `supabase/migrations/`, deployed by merging to `main` (GitHub ↔ Supabase integration) |
 | Client config | Compile-time `--dart-define` for `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_WEB_CLIENT_ID` |
 | APK builds | GitHub Actions workflow `.github/workflows/build-apk.yml` with a stable CI keystore |
+| Web builds | GitHub Actions workflow `.github/workflows/deploy-web.yml` → GitHub Pages |
 
 The client ships only the **anon / publishable** key. The service-role key is never embedded in the APK.
 

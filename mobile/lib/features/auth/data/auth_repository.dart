@@ -48,11 +48,12 @@ class AuthRepository {
     return Profile.fromJson(Map<String, dynamic>.from(row));
   }
 
-  /// Browser OAuth via Supabase (recommended on Android; uses Web client ID/secret).
+  /// Browser OAuth via Supabase (Google SSO only).
+  ///
+  /// On web, redirect back to the current origin+base path (GitHub Pages).
+  /// On Android, deep-link into the app.
   Future<bool> signInWithGoogleOAuth() {
-    const redirectTo = kIsWeb
-        ? null
-        : 'com.homeventory.homeventory://login-callback/';
+    final redirectTo = kIsWeb ? _webOAuthRedirectTo() : _androidOAuthRedirectTo;
     return client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: redirectTo,
@@ -60,6 +61,21 @@ class AuthRepository {
           ? LaunchMode.platformDefault
           : LaunchMode.externalApplication,
     );
+  }
+
+  static const _androidOAuthRedirectTo =
+      'com.homeventory.homeventory://login-callback/';
+
+  /// e.g. `https://ezral.github.io/Homeventory/` when hosted on project Pages.
+  static String _webOAuthRedirectTo() {
+    final base = Uri.base;
+    final path = base.path.endsWith('/') ? base.path : '${base.path}/';
+    return Uri(
+      scheme: base.scheme,
+      host: base.host,
+      port: base.hasPort ? base.port : null,
+      path: path,
+    ).toString();
   }
 
   Future<AuthResponse> signInWithGoogle() async {

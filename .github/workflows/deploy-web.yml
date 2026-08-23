@@ -1,0 +1,84 @@
+name: Deploy Web (GitHub Pages)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/deploy-web.yml"
+
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Flutter Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Unit tests
+        run: flutter test
+
+      - name: Build web release
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          # Project Pages URL: https://<owner>.github.io/Homeventory/
+          BASE_HREF="/Homeventory/"
+          args=(build web --release --base-href "$BASE_HREF")
+          if [ -n "${SUPABASE_URL:-}" ]; then
+            args+=(--dart-define=SUPABASE_URL="$SUPABASE_URL")
+          fi
+          if [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+            args+=(--dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
+          fi
+          if [ -n "${GOOGLE_WEB_CLIENT_ID:-}" ]; then
+            args+=(--dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID")
+          fi
+          flutter "${args[@]}"
+          # SPA fallback for go_router path URLs on GitHub Pages
+          cp build/web/index.html build/web/404.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: mobile/build/web
+
+  deploy:
+    name: Deploy Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

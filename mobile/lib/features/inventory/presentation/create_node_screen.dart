@@ -326,7 +326,11 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                     )
                   else
                     InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Type'),
+                      decoration: const InputDecoration(
+                        labelText: 'Type',
+                        helperText:
+                            'Type is fixed after create. Items can still become containers below.',
+                      ),
                       child: Text(_kind.label),
                     ),
                   const SizedBox(height: 14),

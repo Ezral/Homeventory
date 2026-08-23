@@ -20,12 +20,13 @@ Users must sign in with Google. Native `google_sign_in` on Android proved fragil
 
 ## Decision
 
-Primary sign-in path on Android is **Supabase browser OAuth** for Google:
+Primary sign-in path is **Supabase browser OAuth** for Google (SSO only — no email/password):
 
 - `AuthRepository.signInWithGoogleOAuth()` calls `client.auth.signInWithOAuth(OAuthProvider.google, …)`.
-- Deep link return URL: `com.homeventory.homeventory://login-callback/` (trailing slash required in Supabase Redirect URLs).
+- Android deep link return URL: `com.homeventory.homeventory://login-callback/` (trailing slash required in Supabase Redirect URLs).
+- Web return URL: current origin + base path (e.g. `https://ezral.github.io/Homeventory/` on GitHub Pages).
 - Auth flow: **PKCE** (`AuthFlowType.pkce` in `main.dart`).
-- Sign-in UI prefers OAuth; native ID-token exchange remains as a secondary path (`signInWithGoogle()`).
+- Sign-in UI prefers OAuth; native ID-token exchange remains as a secondary path on Android only (`signInWithGoogle()`).
 
 Supporting choices that exist in the repo:
 
