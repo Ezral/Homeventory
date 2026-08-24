@@ -122,8 +122,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loadingExisting = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -170,7 +171,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     setState(() => _pendingImage = picked);
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({bool addAnother = false}) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
@@ -282,12 +283,26 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       }
 
       if (!mounted) return;
+      if (addAnother && !widget.isEditing) {
+        _name.clear();
+        _description.clear();
+        setState(() {
+          _pendingImage = null;
+          _imagesToDelete.clear();
+          _existingImages = const [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Added ${node.name}. Add another.')),
+        );
+        return;
+      }
       // Always pop so the previous page remains on the stack.
       context.pop(node);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -340,7 +355,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                     InputDecorator(
                       decoration: const InputDecoration(
                         labelText: 'Type',
-                        helperText: 'Type is fixed after create. Items can still become containers below.',
+                        helperText:
+                            'Type is fixed after create. Items can still become containers below.',
                       ),
                       child: Text(_kind.label),
                     ),
@@ -741,13 +757,20 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                   ),
                   const SizedBox(height: 28),
                   FilledButton(
-                    onPressed: _busy ? null : _submit,
+                    onPressed: _busy ? null : () => _submit(),
                     child: Text(
                       _busy
                           ? 'Saving…'
                           : (widget.isEditing ? 'Save changes' : 'Save'),
                     ),
                   ),
+                  if (!widget.isEditing) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: _busy ? null : () => _submit(addAnother: true),
+                      child: const Text('Save & add another'),
+                    ),
+                  ],
                 ],
               ),
             ),

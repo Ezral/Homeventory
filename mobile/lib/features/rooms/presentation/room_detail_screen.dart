@@ -6,10 +6,13 @@ import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/bulk_add_items_sheet.dart';
+import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/inventory_row_card.dart';
+import '../../../shared/widgets/selection_action_bar.dart';
 import '../../../shared/widgets/user_menu_button.dart';
 import '../../../shared/utils/image_pick.dart';
 import '../../../shared/utils/inventory_labels.dart';
@@ -36,6 +39,7 @@ class RoomDetailScreen extends ConsumerStatefulWidget {
 
 class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
   String? _selectedId;
+  final Map<String, InventoryNode> _bulkSelected = {};
 
   String get homeId => widget.homeId;
   String get roomId => widget.roomId;
@@ -47,6 +51,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
     if (oldWidget.parentNodeId != widget.parentNodeId ||
         oldWidget.roomId != widget.roomId) {
       _selectedId = null;
+      _bulkSelected.clear();
     }
   }
 
@@ -65,6 +70,129 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
           : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
     );
     ref.invalidate(inventoryChildrenProvider(scope));
+  }
+
+  void _toggleBulk(InventoryNode node) {
+    setState(() {
+      if (_bulkSelected.containsKey(node.id)) {
+        _bulkSelected.remove(node.id);
+      } else {
+        _bulkSelected[node.id] = node;
+      }
+    });
+  }
+
+  Future<void> _addSeveral(InventoryScope scope) async {
+    final count = await showBulkAddItemsSheet(
+      context: context,
+      ref: ref,
+      homeId: homeId,
+      roomId: roomId,
+      parentNodeId: parentNodeId,
+    );
+    if (count == null || count <= 0) return;
+    ref.invalidate(inventoryChildrenProvider(scope));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added $count item${count == 1 ? '' : 's'}')),
+    );
+  }
+
+  Future<void> _bulkMove() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final first = selected.first;
+    final moved = await context.push<bool>(
+      '/homes/$homeId/rooms/${first.roomId}/nodes/${first.id}/move',
+      extra: selected.map((n) => n.id).toList(),
+    );
+    if (moved == true) {
+      ref.invalidate(
+        inventoryChildrenProvider(
+          InventoryScope(
+            homeId: homeId,
+            roomId: roomId,
+            parentNodeId: parentNodeId,
+          ),
+        ),
+      );
+      setState(_bulkSelected.clear);
+    }
+  }
+
+  Future<void> _bulkDispose() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Dispose ${selected.length} item${selected.length == 1 ? '' : 's'}?',
+        ),
+        content: const Text(
+          'Disposed items are hidden from inventory lists and search.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Dispose'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      final count = await ref
+          .read(inventoryRepositoryProvider)
+          .disposeNodes(selected.map((n) => n.id).toList());
+      ref.invalidate(
+        inventoryChildrenProvider(
+          InventoryScope(
+            homeId: homeId,
+            roomId: roomId,
+            parentNodeId: parentNodeId,
+          ),
+        ),
+      );
+      setState(_bulkSelected.clear);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Disposed $count')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _bulkPack() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final count = await showBulkPackSheet(
+      context: context,
+      ref: ref,
+      homeId: homeId,
+      nodes: selected,
+    );
+    if (count == null) return;
+    ref.invalidate(homePackedNodesProvider(homeId));
+    setState(_bulkSelected.clear);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count == 0
+              ? 'Nothing added — items may already be packed.'
+              : 'Added $count to the packing plan',
+        ),
+      ),
+    );
   }
 
   @override
@@ -135,10 +263,16 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
               ),
               icon: const Icon(Icons.info_outline),
             ),
+          if (canEdit)
+            IconButton(
+              tooltip: 'Add several names',
+              onPressed: () => _addSeveral(scope),
+              icon: const Icon(Icons.playlist_add),
+            ),
           if (!desktop) const UserMenuButton(),
         ],
       ),
-      floatingActionButton: desktop && canEdit
+      floatingActionButton: desktop && canEdit && _bulkSelected.isEmpty
           ? FloatingActionButton.extended(
               onPressed: () => _addObject(scope, canEdit),
               backgroundColor: AppColors.moss,
@@ -147,7 +281,15 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
               label: const Text('Add object'),
             )
           : null,
-      bottomNavigationBar: desktop
+      bottomNavigationBar: _bulkSelected.isNotEmpty
+          ? SelectionActionBar(
+              count: _bulkSelected.length,
+              onClear: () => setState(_bulkSelected.clear),
+              onMove: _bulkMove,
+              onDispose: _bulkDispose,
+              onPack: _bulkPack,
+            )
+          : desktop
           ? null
           : HomeShellBottomNav(
               selectedIndex: 2,
@@ -227,6 +369,8 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
             roomImagesAsync: roomImagesAsync,
             selectedId: desktop ? _selectedId : null,
             desktop: desktop,
+            bulkSelected: _bulkSelected,
+            onToggleBulk: _toggleBulk,
             onSelect: (node) {
               if (!desktop) {
                 if (node.isContainer) {
@@ -264,6 +408,8 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
                   scope: scope,
                   selectedId: _selectedId,
                   canEdit: canEdit,
+                  bulkSelected: _bulkSelected,
+                  onToggleBulk: _toggleBulk,
                 ),
               ),
             ],
@@ -289,6 +435,8 @@ class _InventoryListPane extends ConsumerWidget {
     required this.selectedId,
     required this.desktop,
     required this.onSelect,
+    required this.bulkSelected,
+    required this.onToggleBulk,
   });
 
   final String homeId;
@@ -304,6 +452,8 @@ class _InventoryListPane extends ConsumerWidget {
   final String? selectedId;
   final bool desktop;
   final ValueChanged<InventoryNode> onSelect;
+  final Map<String, InventoryNode> bulkSelected;
+  final ValueChanged<InventoryNode> onToggleBulk;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -367,7 +517,12 @@ class _InventoryListPane extends ConsumerWidget {
                       packed: packed,
                     ),
                     dimmed: packed != null,
-                    selected: selected,
+                    selected: selected || bulkSelected.containsKey(node.id),
+                    showCheckbox:
+                        canEdit && (desktop || bulkSelected.isNotEmpty),
+                    checked: bulkSelected.containsKey(node.id),
+                    onToggleChecked: canEdit ? () => onToggleBulk(node) : null,
+                    onLongPress: canEdit ? () => onToggleBulk(node) : null,
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -389,6 +544,8 @@ class _InventoryListPane extends ConsumerWidget {
                           tooltip: 'More',
                           onSelected: (value) async {
                             switch (value) {
+                              case 'select':
+                                onToggleBulk(node);
                               case 'details':
                                 await context.push(
                                   '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
@@ -410,6 +567,11 @@ class _InventoryListPane extends ConsumerWidget {
                           itemBuilder: (context) => [
                             if (canEdit)
                               const PopupMenuItem(
+                                value: 'select',
+                                child: Text('Select'),
+                              ),
+                            if (canEdit)
+                              const PopupMenuItem(
                                 value: 'edit',
                                 child: Text('Edit'),
                               ),
@@ -426,7 +588,13 @@ class _InventoryListPane extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    onTap: () => onSelect(node),
+                    onTap: () {
+                      if (bulkSelected.isNotEmpty) {
+                        onToggleBulk(node);
+                        return;
+                      }
+                      onSelect(node);
+                    },
                   );
                 },
               ),
@@ -444,6 +612,8 @@ class _DesktopDetailPane extends ConsumerStatefulWidget {
     required this.scope,
     required this.selectedId,
     required this.canEdit,
+    required this.bulkSelected,
+    required this.onToggleBulk,
   });
 
   final String homeId;
@@ -451,6 +621,8 @@ class _DesktopDetailPane extends ConsumerStatefulWidget {
   final InventoryScope scope;
   final String? selectedId;
   final bool canEdit;
+  final Map<String, InventoryNode> bulkSelected;
+  final ValueChanged<InventoryNode> onToggleBulk;
 
   @override
   ConsumerState<_DesktopDetailPane> createState() => _DesktopDetailPaneState();
@@ -531,6 +703,8 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
             roomId: widget.roomId,
             nodeId: _nestedItemId!,
             canEdit: widget.canEdit,
+            bulkSelected: widget.bulkSelected,
+            onToggleBulk: widget.onToggleBulk,
             listScope: widget.scope,
             forceItemDetails: true,
             onBack: _backFromItem,
@@ -544,6 +718,8 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
             roomId: widget.roomId,
             nodeId: _rightContainerId,
             canEdit: widget.canEdit,
+            bulkSelected: widget.bulkSelected,
+            onToggleBulk: widget.onToggleBulk,
             listScope: widget.scope,
             onBack: showMiddle ? _popDrill : null,
             onBackLabel: 'Back',
@@ -559,6 +735,8 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
             roomId: widget.roomId,
             nodeId: middleId,
             canEdit: widget.canEdit,
+            bulkSelected: widget.bulkSelected,
+            onToggleBulk: widget.onToggleBulk,
             listScope: widget.scope,
             onOpenItem: _openItem,
             onOpenNestedContainer: _openNestedContainer,
@@ -691,6 +869,8 @@ class _DesktopPaneNode extends ConsumerWidget {
     required this.listScope,
     required this.onOpenItem,
     required this.onOpenNestedContainer,
+    required this.bulkSelected,
+    required this.onToggleBulk,
     this.forceItemDetails = false,
     this.onBack,
     this.onBackLabel,
@@ -703,6 +883,8 @@ class _DesktopPaneNode extends ConsumerWidget {
   final InventoryScope listScope;
   final ValueChanged<InventoryNode> onOpenItem;
   final ValueChanged<InventoryNode> onOpenNestedContainer;
+  final Map<String, InventoryNode> bulkSelected;
+  final ValueChanged<InventoryNode> onToggleBulk;
   final bool forceItemDetails;
   final VoidCallback? onBack;
   final String? onBackLabel;
@@ -733,6 +915,8 @@ class _DesktopPaneNode extends ConsumerWidget {
           listScope: listScope,
           onOpenItem: onOpenItem,
           onOpenNestedContainer: onOpenNestedContainer,
+          bulkSelected: bulkSelected,
+          onToggleBulk: onToggleBulk,
           onBack: onBack,
           onBackLabel: onBackLabel,
         );
@@ -750,6 +934,8 @@ class _DesktopContainerContents extends ConsumerWidget {
     required this.listScope,
     required this.onOpenItem,
     required this.onOpenNestedContainer,
+    required this.bulkSelected,
+    required this.onToggleBulk,
     this.onBack,
     this.onBackLabel,
   });
@@ -761,6 +947,8 @@ class _DesktopContainerContents extends ConsumerWidget {
   final InventoryScope listScope;
   final ValueChanged<InventoryNode> onOpenItem;
   final ValueChanged<InventoryNode> onOpenNestedContainer;
+  final Map<String, InventoryNode> bulkSelected;
+  final ValueChanged<InventoryNode> onToggleBulk;
   final VoidCallback? onBack;
   final String? onBackLabel;
 
@@ -911,6 +1099,11 @@ class _DesktopContainerContents extends ConsumerWidget {
                       packed: packed,
                     ),
                     dimmed: packed != null,
+                    selected: bulkSelected.containsKey(node.id),
+                    showCheckbox: canEdit,
+                    checked: bulkSelected.containsKey(node.id),
+                    onToggleChecked: canEdit ? () => onToggleBulk(node) : null,
+                    onLongPress: canEdit ? () => onToggleBulk(node) : null,
                     trailing: Padding(
                       padding: const EdgeInsets.only(right: 8, top: 4),
                       child: Icon(
@@ -921,6 +1114,10 @@ class _DesktopContainerContents extends ConsumerWidget {
                       ),
                     ),
                     onTap: () {
+                      if (bulkSelected.isNotEmpty) {
+                        onToggleBulk(node);
+                        return;
+                      }
                       if (node.isContainer) {
                         onOpenNestedContainer(node);
                       } else {
