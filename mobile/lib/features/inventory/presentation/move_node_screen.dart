@@ -16,11 +16,18 @@ class MoveNodeScreen extends ConsumerStatefulWidget {
     required this.homeId,
     required this.roomId,
     required this.nodeId,
+    this.extraNodeIds,
   });
 
   final String homeId;
   final String roomId;
   final String nodeId;
+  final List<String>? extraNodeIds;
+
+  List<String> get nodeIds {
+    final ids = <String>{nodeId, ...?extraNodeIds};
+    return ids.toList();
+  }
 
   @override
   ConsumerState<MoveNodeScreen> createState() => _MoveNodeScreenState();
@@ -40,10 +47,10 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
   }
 
   InventoryScope get _scope => InventoryScope(
-        homeId: widget.homeId,
-        roomId: _selectedRoomId!,
-        parentNodeId: _browseParentId,
-      );
+    homeId: widget.homeId,
+    roomId: _selectedRoomId!,
+    parentNodeId: _browseParentId,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +59,11 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Move item'),
+        title: Text(
+          widget.nodeIds.length > 1
+              ? 'Move ${widget.nodeIds.length} items'
+              : 'Move item',
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -75,17 +86,16 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
           final childrenAsync = ref.watch(inventoryChildrenProvider(_scope));
           final thumbsAsync = childrenAsync.maybeWhen(
             data: (nodes) => ref.watch(
-              entityThumbnailsProvider(
-                (
-                  homeId: widget.homeId,
-                  entityType: 'INVENTORY_NODE',
-                  idsKey: nodes.map((n) => n.id).join(','),
-                ),
-              ),
+              entityThumbnailsProvider((
+                homeId: widget.homeId,
+                entityType: 'INVENTORY_NODE',
+                idsKey: nodes.map((n) => n.id).join(','),
+              )),
             ),
             orElse: () => null,
           );
-          final thumbs = thumbsAsync?.maybeWhen(
+          final thumbs =
+              thumbsAsync?.maybeWhen(
                 data: (m) => m,
                 orElse: () => const <String, String>{},
               ) ??
@@ -151,9 +161,9 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
                               onPressed: _busy
                                   ? null
                                   : () => setState(() {
-                                        _browseParentId = null;
-                                        _crumbs.clear();
-                                      }),
+                                      _browseParentId = null;
+                                      _crumbs.clear();
+                                    }),
                               child: const Text('Room root'),
                             ),
                             for (var i = 0; i < _crumbs.length; i++) ...[
@@ -166,12 +176,12 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
                                 onPressed: _busy
                                     ? null
                                     : () => setState(() {
-                                          _crumbs.removeRange(
-                                            i + 1,
-                                            _crumbs.length,
-                                          );
-                                          _browseParentId = _crumbs[i].id;
-                                        }),
+                                        _crumbs.removeRange(
+                                          i + 1,
+                                          _crumbs.length,
+                                        );
+                                        _browseParentId = _crumbs[i].id;
+                                      }),
                                 child: Text(_crumbs[i].name),
                               ),
                             ],
@@ -185,15 +195,15 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
                           onPressed: _busy
                               ? null
                               : () => setState(() {
-                                    if (_crumbs.isEmpty) {
-                                      _browseParentId = null;
-                                    } else {
-                                      _crumbs.removeLast();
-                                      _browseParentId = _crumbs.isEmpty
-                                          ? null
-                                          : _crumbs.last.id;
-                                    }
-                                  }),
+                                  if (_crumbs.isEmpty) {
+                                    _browseParentId = null;
+                                  } else {
+                                    _crumbs.removeLast();
+                                    _browseParentId = _crumbs.isEmpty
+                                        ? null
+                                        : _crumbs.last.id;
+                                  }
+                                }),
                           icon: const Icon(Icons.arrow_upward),
                           label: const Text('Go up one level'),
                         ),
@@ -203,10 +213,10 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
                           const Center(child: CircularProgressIndicator()),
                       error: (e, _) => ErrorView(message: e.toString()),
                       data: (nodes) {
+                        final moving = widget.nodeIds.toSet();
                         final containers = nodes
                             .where(
-                              (n) =>
-                                  n.isContainer && n.id != widget.nodeId,
+                              (n) => n.isContainer && !moving.contains(n.id),
                             )
                             .toList();
                         if (containers.isEmpty) {
@@ -230,14 +240,12 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
                                 onTap: _busy
                                     ? null
                                     : () => setState(() {
-                                          _crumbs.add(
-                                            (
-                                              id: container.id,
-                                              name: container.name,
-                                            ),
-                                          );
-                                          _browseParentId = container.id;
-                                        }),
+                                        _crumbs.add((
+                                          id: container.id,
+                                          name: container.name,
+                                        ));
+                                        _browseParentId = container.id;
+                                      }),
                               ),
                               const SizedBox(height: 10),
                             ],
@@ -260,8 +268,8 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
                       _busy
                           ? 'Moving...'
                           : _browseParentId == null
-                              ? 'Move to room root'
-                              : 'Move here',
+                          ? 'Move to room root'
+                          : 'Move here',
                     ),
                   ),
                 ),
@@ -277,8 +285,16 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Move this item?'),
-        content: const Text('The item and any contents will move together.'),
+        title: Text(
+          widget.nodeIds.length > 1
+              ? 'Move ${widget.nodeIds.length} items?'
+              : 'Move this item?',
+        ),
+        content: Text(
+          widget.nodeIds.length > 1
+              ? 'Each item and any contents will move together.'
+              : 'The item and any contents will move together.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -295,12 +311,16 @@ class _MoveNodeScreenState extends ConsumerState<MoveNodeScreen> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(inventoryRepositoryProvider).moveNode(
-            nodeId: widget.nodeId,
+      await ref
+          .read(inventoryRepositoryProvider)
+          .moveNodes(
+            nodeIds: widget.nodeIds,
             destinationRoomId: _selectedRoomId!,
             destinationParentId: _browseParentId,
           );
-      ref.invalidate(inventoryNodeProvider(widget.nodeId));
+      for (final id in widget.nodeIds) {
+        ref.invalidate(inventoryNodeProvider(id));
+      }
       ref.invalidate(
         inventoryChildrenProvider(
           InventoryScope(

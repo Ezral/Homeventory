@@ -82,10 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) {
           // Narrow web + Android: no desktop chrome.
           if (!isWebDesktopLayout(context)) return child;
-          return WebAppShell(
-            location: state.uri.path,
-            child: child,
-          );
+          return WebAppShell(location: state.uri.path, child: child);
         },
         routes: [
           GoRoute(path: '/', builder: (context, state) => const HomesScreen()),
@@ -170,6 +167,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               homeId: state.pathParameters['homeId']!,
               roomId: state.pathParameters['roomId']!,
               nodeId: state.pathParameters['nodeId']!,
+              extraNodeIds: _extraNodeIds(state.extra),
             ),
           ),
           GoRoute(
@@ -197,6 +195,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+List<String>? _extraNodeIds(Object? extra) {
+  if (extra is List) {
+    final ids = extra.whereType<String>().toList();
+    if (ids.isNotEmpty) return ids;
+  }
+  return null;
+}
 
 class SetupRequiredScreen extends ConsumerWidget {
   const SetupRequiredScreen({super.key});

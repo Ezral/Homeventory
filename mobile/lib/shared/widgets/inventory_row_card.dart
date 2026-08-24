@@ -14,9 +14,13 @@ class InventoryRowCard extends StatelessWidget {
     required this.fallbackIcon,
     this.trailing,
     this.onTap,
+    this.onLongPress,
     this.selected = false,
     this.dimmed = false,
     this.height = 112,
+    this.showCheckbox = false,
+    this.checked = false,
+    this.onToggleChecked,
   });
 
   final String title;
@@ -25,9 +29,13 @@ class InventoryRowCard extends StatelessWidget {
   final IconData fallbackIcon;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool selected;
   final bool dimmed;
   final double height;
+  final bool showCheckbox;
+  final bool checked;
+  final VoidCallback? onToggleChecked;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +47,7 @@ class InventoryRowCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: radius,
         child: SizedBox(
           height: height,
@@ -53,6 +62,9 @@ class InventoryRowCard extends StatelessWidget {
                     child: _RowImage(
                       imageUrl: imageUrl,
                       fallbackIcon: fallbackIcon,
+                      showCheckbox: showCheckbox,
+                      checked: checked,
+                      onToggleChecked: onToggleChecked,
                     ),
                   ),
                   Expanded(
@@ -70,9 +82,7 @@ class InventoryRowCard extends StatelessWidget {
                                   title,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
+                                  style: Theme.of(context).textTheme.titleMedium
                                       ?.copyWith(
                                         color: dimmed
                                             ? AppColors.inkMuted
@@ -132,10 +142,16 @@ class _RowImage extends StatelessWidget {
   const _RowImage({
     required this.imageUrl,
     required this.fallbackIcon,
+    this.showCheckbox = false,
+    this.checked = false,
+    this.onToggleChecked,
   });
 
   final String? imageUrl;
   final IconData fallbackIcon;
+  final bool showCheckbox;
+  final bool checked;
+  final VoidCallback? onToggleChecked;
 
   static const _previewSize = 280.0;
 
@@ -161,50 +177,83 @@ class _RowImage extends StatelessWidget {
             ),
           );
 
-    if (imageUrl == null) return image;
-
-    // Hover (web/desktop) shows a larger preview of the same photo.
-    return Tooltip(
-      waitDuration: const Duration(milliseconds: 280),
-      showDuration: const Duration(seconds: 12),
-      preferBelow: true,
-      verticalOffset: 12,
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: AppColors.paperElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      richMessage: WidgetSpan(
-        alignment: PlaceholderAlignment.middle,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: SizedBox(
-            width: _previewSize,
-            height: _previewSize,
-            child: Image.network(
-              imageUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => ColoredBox(
-                color: AppColors.mossSoft,
-                child: Icon(
-                  fallbackIcon,
-                  color: AppColors.mossDeep,
-                  size: 48,
+    Widget content = image;
+    if (imageUrl != null) {
+      // Hover (web/desktop) shows a larger preview of the same photo.
+      content = Tooltip(
+        waitDuration: const Duration(milliseconds: 280),
+        showDuration: const Duration(seconds: 12),
+        preferBelow: true,
+        verticalOffset: 12,
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: AppColors.paperElevated,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 16,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        richMessage: WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: _previewSize,
+              height: _previewSize,
+              child: Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => ColoredBox(
+                  color: AppColors.mossSoft,
+                  child: Icon(
+                    fallbackIcon,
+                    color: AppColors.mossDeep,
+                    size: 48,
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-      child: image,
+        child: image,
+      );
+    }
+
+    if (!showCheckbox) return content;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        content,
+        Positioned(
+          top: 6,
+          left: 6,
+          child: Material(
+            color: Colors.white,
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: Checkbox(
+                value: checked,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: onToggleChecked == null
+                    ? null
+                    : (_) => onToggleChecked!(),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -228,7 +228,9 @@ class InventoryRepository {
       params: {'p_root_node_id': rootNodeId},
     );
     return (rows as List)
-        .map((r) => DescendantNode.fromJson(Map<String, dynamic>.from(r as Map)))
+        .map(
+          (r) => DescendantNode.fromJson(Map<String, dynamic>.from(r as Map)),
+        )
         .toList();
   }
 
@@ -239,7 +241,9 @@ class InventoryRepository {
       params: {'p_room_id': roomId},
     );
     return (rows as List)
-        .map((r) => DescendantNode.fromJson(Map<String, dynamic>.from(r as Map)))
+        .map(
+          (r) => DescendantNode.fromJson(Map<String, dynamic>.from(r as Map)),
+        )
         .toList();
   }
 
@@ -374,6 +378,91 @@ class InventoryRepository {
     return InventoryNode.fromJson(Map<String, dynamic>.from(inserted));
   }
 
+  Future<int> createItemsFromNames({
+    required String homeId,
+    required String roomId,
+    String? parentNodeId,
+    required List<String> names,
+  }) async {
+    var created = 0;
+    for (final name in names) {
+      await createNode(
+        homeId: homeId,
+        roomId: roomId,
+        parentNodeId: parentNodeId,
+        nodeKind: InventoryNodeKind.item,
+        name: name,
+        itemCategory: ItemCategory.misc,
+      );
+      created += 1;
+    }
+    return created;
+  }
+
+  /// Drop nodes whose ancestor is also in [nodeIds], so a parent move
+  /// is not followed by a redundant child move.
+  Future<List<String>> topmostNodeIds(Iterable<String> nodeIds) async {
+    final ids = nodeIds.toSet().toList();
+    if (ids.length <= 1) return ids;
+    final nodes = <String, InventoryNode>{};
+    for (final id in ids) {
+      try {
+        nodes[id] = await getNode(id);
+      } catch (_) {}
+    }
+    final idSet = nodes.keys.toSet();
+    final top = <String>[];
+    for (final node in nodes.values) {
+      var parentId = node.parentNodeId;
+      var nested = false;
+      while (parentId != null) {
+        if (idSet.contains(parentId)) {
+          nested = true;
+          break;
+        }
+        try {
+          parentId = (await getNode(parentId)).parentNodeId;
+        } catch (_) {
+          break;
+        }
+      }
+      if (!nested) top.add(node.id);
+    }
+    return top;
+  }
+
+  Future<int> moveNodes({
+    required List<String> nodeIds,
+    required String destinationRoomId,
+    String? destinationParentId,
+  }) async {
+    final ids = await topmostNodeIds(nodeIds);
+    var moved = 0;
+    for (final id in ids) {
+      if (id == destinationParentId) continue;
+      await moveNode(
+        nodeId: id,
+        destinationRoomId: destinationRoomId,
+        destinationParentId: destinationParentId,
+      );
+      moved += 1;
+    }
+    return moved;
+  }
+
+  Future<int> disposeNodes(List<String> nodeIds) async {
+    var count = 0;
+    for (final id in nodeIds) {
+      await applyTransaction(
+        nodeId: id,
+        transactionType: InventoryTransactionType.dispose,
+        reason: 'Bulk dispose',
+      );
+      count += 1;
+    }
+    return count;
+  }
+
   Future<InventoryNode> updateNode({
     required String nodeId,
     required String name,
@@ -438,7 +527,8 @@ class InventoryRepository {
         capacity != null) {
       await _client
           .from('dispenser_product_assignments')
-          .update({'capacity': capacity}).eq('dispenser_item_id', nodeId);
+          .update({'capacity': capacity})
+          .eq('dispenser_item_id', nodeId);
     }
     return node;
   }
@@ -743,7 +833,8 @@ class InventoryRepository {
     );
     await _client
         .from('homes')
-        .update({'cover_image_id': image.id}).eq('id', homeId);
+        .update({'cover_image_id': image.id})
+        .eq('id', homeId);
     return image;
   }
 
@@ -826,7 +917,8 @@ class InventoryRepository {
   }) async {
     await _client
         .from('homes')
-        .update({'cover_image_id': null}).eq('id', homeId);
+        .update({'cover_image_id': null})
+        .eq('id', homeId);
     if (image != null) {
       await deleteImage(image);
     }

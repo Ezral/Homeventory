@@ -53,3 +53,12 @@ String _formatQty(double value) {
       ? value.toInt().toString()
       : value.toString();
 }
+
+/// One name per line, or comma/semicolon separated. Trims blanks.
+List<String> parseBulkItemNames(String raw) {
+  return raw
+      .split(RegExp(r'[\n,;]+'))
+      .map((part) => part.trim())
+      .where((part) => part.isNotEmpty)
+      .toList();
+}

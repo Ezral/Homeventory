@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/web_layout.dart';
+import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/inventory_labels.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/inventory_row_card.dart';
+import '../../../shared/widgets/selection_action_bar.dart';
+import '../../homes/presentation/homes_providers.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 import '../../trips/presentation/trips_providers.dart';
@@ -22,6 +26,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   String _query = '';
+  final Map<String, InventoryNode> _bulkSelected = {};
 
   @override
   void dispose() {
@@ -69,9 +74,105 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
+  void _toggleBulk(InventoryNode node) {
+    setState(() {
+      if (_bulkSelected.containsKey(node.id)) {
+        _bulkSelected.remove(node.id);
+      } else {
+        _bulkSelected[node.id] = node;
+      }
+    });
+  }
+
+  Future<void> _bulkMove() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final first = selected.first;
+    final moved = await context.push<bool>(
+      '/homes/${widget.homeId}/rooms/${first.roomId}/nodes/${first.id}/move',
+      extra: selected.map((n) => n.id).toList(),
+    );
+    if (moved == true) setState(_bulkSelected.clear);
+  }
+
+  Future<void> _bulkDispose() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Dispose ${selected.length} item${selected.length == 1 ? '' : 's'}?',
+        ),
+        content: const Text(
+          'Disposed items are hidden from inventory lists and search.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Dispose'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      final count = await ref
+          .read(inventoryRepositoryProvider)
+          .disposeNodes(selected.map((n) => n.id).toList());
+      ref.invalidate(
+        inventorySearchProvider((homeId: widget.homeId, query: _query)),
+      );
+      setState(_bulkSelected.clear);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Disposed $count')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _bulkPack() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final count = await showBulkPackSheet(
+      context: context,
+      ref: ref,
+      homeId: widget.homeId,
+      nodes: selected,
+    );
+    if (count == null) return;
+    ref.invalidate(homePackedNodesProvider(widget.homeId));
+    setState(_bulkSelected.clear);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count == 0
+              ? 'Nothing added — items may already be packed.'
+              : 'Added $count to the packing plan',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final desktop = isWebDesktopLayout(context);
+    final canEdit = ref
+        .watch(homeProvider(widget.homeId))
+        .maybeWhen(
+          data: (h) => h.myRole?.canEditInventory ?? false,
+          orElse: () => false,
+        );
     final results = _query.trim().isEmpty
         ? null
         : ref.watch(
@@ -89,6 +190,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: _bulkSelected.isEmpty
+          ? null
+          : SelectionActionBar(
+              count: _bulkSelected.length,
+              onClear: () => setState(_bulkSelected.clear),
+              onMove: _bulkMove,
+              onDispose: _bulkDispose,
+              onPack: _bulkPack,
+            ),
       body: Column(
         children: [
           Padding(
@@ -184,11 +294,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   packed: packed,
                                 ),
                                 dimmed: packed != null,
-                                onTap: () => _openNode(
-                                  node.roomId,
-                                  node.id,
-                                  node.isContainer,
-                                ),
+                                selected: _bulkSelected.containsKey(node.id),
+                                showCheckbox:
+                                    canEdit &&
+                                    (desktop || _bulkSelected.isNotEmpty),
+                                checked: _bulkSelected.containsKey(node.id),
+                                onToggleChecked: canEdit
+                                    ? () => _toggleBulk(node)
+                                    : null,
+                                onLongPress: canEdit
+                                    ? () => _toggleBulk(node)
+                                    : null,
+                                onTap: () {
+                                  if (_bulkSelected.isNotEmpty) {
+                                    _toggleBulk(node);
+                                    return;
+                                  }
+                                  _openNode(
+                                    node.roomId,
+                                    node.id,
+                                    node.isContainer,
+                                  );
+                                },
                               );
                             },
                           );

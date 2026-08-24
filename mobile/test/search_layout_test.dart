@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeventory/core/layout/web_layout.dart';
+import 'package:homeventory/shared/utils/inventory_labels.dart';
+import 'package:homeventory/shared/widgets/inventory_row_card.dart';
 
 void main() {
   test('a single match stays one column wide', () {
@@ -21,5 +24,34 @@ void main() {
   test('medium width grows to two or three columns', () {
     expect(searchResultColumnCount(availableWidth: 500, resultCount: 8), 2);
     expect(searchResultColumnCount(availableWidth: 750, resultCount: 8), 3);
+  });
+
+  test('bulk names split on lines, commas, and semicolons', () {
+    expect(
+      parseBulkItemNames('USB-C charger\nPassport, Sunscreen; Umbrella\n'),
+      ['USB-C charger', 'Passport', 'Sunscreen', 'Umbrella'],
+    );
+    expect(parseBulkItemNames('  \n  '), isEmpty);
+  });
+
+  testWidgets('editors see a checkbox on selectable cards', (tester) async {
+    var checked = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InventoryRowCard(
+            title: 'Passport',
+            fallbackIcon: Icons.inventory_2_outlined,
+            showCheckbox: true,
+            checked: checked,
+            onToggleChecked: () => checked = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(Checkbox), findsOneWidget);
+    await tester.tap(find.byType(Checkbox));
+    expect(checked, isTrue);
   });
 }
