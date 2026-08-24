@@ -253,7 +253,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                flex: 5,
+                flex: 4,
                 child: DecoratedBox(
                   decoration: const BoxDecoration(
                     border: Border(
@@ -264,7 +264,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
                 ),
               ),
               Expanded(
-                flex: 4,
+                flex: 5,
                 child: _DesktopDetailPane(
                   homeId: homeId,
                   roomId: roomId,
