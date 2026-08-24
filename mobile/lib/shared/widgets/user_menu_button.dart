@@ -87,8 +87,8 @@ class UserMenuButton extends ConsumerWidget {
           value: 'preferences',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.tune),
-            title: Text('Preferences'),
+            leading: Icon(Icons.settings_outlined),
+            title: Text('Settings'),
           ),
         ),
         const PopupMenuItem(

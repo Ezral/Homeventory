@@ -21,7 +21,7 @@ class HomesRepository {
     return id;
   }
 
-  Future<List<Home>> listMyHomes() async {
+  Future<List<Home>> listMyHomes({bool includeHidden = false}) async {
     final memberships = await client
         .from('home_members')
         .select('home_id, role, status, homes(*)')
@@ -32,7 +32,9 @@ class HomesRepository {
     for (final row in memberships as List) {
       final map = Map<String, dynamic>.from(row as Map);
       final homeJson = Map<String, dynamic>.from(map['homes'] as Map);
-      if (homeJson['archived_at'] != null) continue;
+      final archived = homeJson['archived_at'] != null;
+      if (!includeHidden && archived) continue;
+      if (includeHidden && !archived) continue;
       homes.add(
         Home.fromJson(
           homeJson,
@@ -43,6 +45,12 @@ class HomesRepository {
     homes.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return homes;
   }
+
+  /// Visible (non-hidden) homes only.
+  Future<List<Home>> listVisibleHomes() => listMyHomes();
+
+  /// Soft-hidden homes (`archived_at` set).
+  Future<List<Home>> listHiddenHomes() => listMyHomes(includeHidden: true);
 
   Future<Home> createHome({
     required String name,
@@ -155,11 +163,26 @@ class HomesRepository {
     );
   }
 
-  Future<void> archiveHome(String homeId) async {
+  /// Soft-hide a home from lists (owners/admins). Data is retained.
+  Future<void> hideHome(String homeId) async {
     await client.from('homes').update({
       'archived_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', homeId);
+    final active = await localSessionStore.readActiveHomeId();
+    if (active == homeId) {
+      await localSessionStore.clearActiveHomeId();
+    }
   }
+
+  /// Restore a previously hidden home.
+  Future<void> unhideHome(String homeId) async {
+    await client.from('homes').update({
+      'archived_at': null,
+    }).eq('id', homeId);
+  }
+
+  @Deprecated('Use hideHome')
+  Future<void> archiveHome(String homeId) => hideHome(homeId);
 
   String? _nullIfBlank(String? value) {
     if (value == null) return null;

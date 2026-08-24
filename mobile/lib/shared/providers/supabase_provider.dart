@@ -38,6 +38,8 @@ class LocalSessionStore {
 
   Future<void> clearPendingNav() => _storage.delete(key: _pendingNavKey);
 
+  Future<void> clearActiveHomeId() => _storage.delete(key: _activeHomeKey);
+
   Future<void> clearPrivateState() async {
     await _storage.delete(key: _activeHomeKey);
     await _storage.delete(key: _pendingNavKey);
