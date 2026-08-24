@@ -9,6 +9,7 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/image_pick.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../homes/presentation/homes_providers.dart';
@@ -124,7 +125,8 @@ class NodeDetailScreen extends ConsumerWidget {
                       return;
                     }
                     final node = nodeAsync.asData?.value;
-                    final parent = node != null &&
+                    final parent =
+                        node != null &&
                             (node.isContainer || node.isMobileContainer)
                         ? nodeId
                         : null;
@@ -173,14 +175,17 @@ class NodeDetailScreen extends ConsumerWidget {
                         'Dispenser · ${node.effectiveDispenserMode.label}',
                       ),
                     ),
-                  if (node.isDispensable) const Chip(label: Text('Dispensable')),
+                  if (node.isDispensable)
+                    const Chip(label: Text('Dispensable')),
                   if (node.isDisposed) const Chip(label: Text('Disposed')),
                   if (node.itemCategory != null)
                     Chip(label: Text(node.itemCategory!.label)),
                 ],
               ),
               const SizedBox(height: 12),
-              ref.watch(nodeLocationPathProvider(nodeId)).when(
+              ref
+                  .watch(nodeLocationPathProvider(nodeId))
+                  .when(
                     loading: () => const SizedBox.shrink(),
                     error: (_, _) => const SizedBox.shrink(),
                     data: (path) {
@@ -217,60 +222,19 @@ class NodeDetailScreen extends ConsumerWidget {
                 ),
                 error: (e, _) => Text(e.toString()),
                 data: (images) {
-                  if (images.isEmpty) {
-                    return Text(
-                      'No photos yet.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    );
-                  }
-                  return SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: images.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        final image = images[index];
-                        return Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: image.signedUrl == null
-                                  ? Container(
-                                      width: 120,
-                                      height: 120,
-                                      color: AppColors.mossSoft,
-                                      child: const Icon(Icons.broken_image),
-                                    )
-                                  : Image.network(
-                                      image.signedUrl!,
-                                      width: 120,
-                                      height: 120,
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
-                            if (canEdit)
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: Material(
-                                  color: Colors.black54,
-                                  shape: const CircleBorder(),
-                                  child: IconButton(
-                                    iconSize: 18,
-                                    padding: const EdgeInsets.all(4),
-                                    constraints: const BoxConstraints(),
-                                    color: Colors.white,
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () =>
-                                        _deleteImage(context, ref, image),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                  return EntityPhotoGallery(
+                    images: [
+                      for (final image in images)
+                        GalleryPhoto(id: image.id, url: image.signedUrl),
+                    ],
+                    canEdit: canEdit,
+                    onDelete: canEdit
+                        ? (id) => _deleteImage(
+                            context,
+                            ref,
+                            images.firstWhere((image) => image.id == id),
+                          )
+                        : null,
                   );
                 },
               ),
@@ -279,17 +243,18 @@ class NodeDetailScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               _DetailRow(
                 label: 'Quantity',
-                value: node.isDispenser &&
+                value:
+                    node.isDispenser &&
                         node.effectiveDispenserMode == DispenserMode.multi
                     ? 'Per chamber (below)'
                     : node.quantity == null
-                        ? '—'
-                        : [
-                            node.quantity == node.quantity!.roundToDouble()
-                                ? node.quantity!.toInt().toString()
-                                : node.quantity.toString(),
-                            if (node.quantityUnit != null) node.quantityUnit!,
-                          ].join(' '),
+                    ? '—'
+                    : [
+                        node.quantity == node.quantity!.roundToDouble()
+                            ? node.quantity!.toInt().toString()
+                            : node.quantity.toString(),
+                        if (node.quantityUnit != null) node.quantityUnit!,
+                      ].join(' '),
               ),
               _DetailRow(
                 label: 'Min quantity',
@@ -330,12 +295,11 @@ class NodeDetailScreen extends ConsumerWidget {
                 Text(
                   node.effectiveDispenserMode == DispenserMode.multi
                       ? node.capacity == null
-                          ? 'Each slot is an independent chamber. Set capacity on edit, then use/refill per product.'
-                          : 'Each linked product fills its own ${_formatQty(node.capacity!)}${node.quantityUnit != null ? ' ${node.quantityUnit}' : ' CC'} chamber. Use and refill per slot.'
+                            ? 'Each slot is an independent chamber. Set capacity on edit, then use/refill per product.'
+                            : 'Each linked product fills its own ${_formatQty(node.capacity!)}${node.quantityUnit != null ? ' ${node.quantityUnit}' : ' CC'} chamber. Use and refill per slot.'
                       : 'Link one dispensable product to this dispenser.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.inkMuted,
-                      ),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: AppColors.inkMuted),
                 ),
                 const SizedBox(height: 12),
                 _DispenserSlotsSection(
@@ -385,9 +349,8 @@ class NodeDetailScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       'Use and refill each chamber under Dispenser products.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.inkMuted,
-                          ),
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: AppColors.inkMuted),
                     ),
                   ),
                 Wrap(
@@ -395,7 +358,8 @@ class NodeDetailScreen extends ConsumerWidget {
                   runSpacing: 10,
                   children: [
                     if (!(node.isDispenser &&
-                        node.effectiveDispenserMode == DispenserMode.multi)) ...[
+                        node.effectiveDispenserMode ==
+                            DispenserMode.multi)) ...[
                       FilledButton.tonalIcon(
                         onPressed: () => _quantityAction(
                           context,
@@ -637,9 +601,8 @@ class NodeDetailScreen extends ConsumerWidget {
       _invalidateNode(ref, node);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -682,9 +645,8 @@ class NodeDetailScreen extends ConsumerWidget {
       if (context.mounted) context.pop(true);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -716,12 +678,11 @@ class NodeDetailScreen extends ConsumerWidget {
             mimeType: picked.mimeType,
             extension: picked.extension,
           );
-      ref.invalidate(nodeImagesProvider((homeId: homeId, nodeId: nodeId)));
+      invalidateNodeImageCaches(ref, homeId: homeId, nodeId: nodeId);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -733,12 +694,11 @@ class NodeDetailScreen extends ConsumerWidget {
   ) async {
     try {
       await ref.read(inventoryRepositoryProvider).deleteImage(image);
-      ref.invalidate(nodeImagesProvider((homeId: homeId, nodeId: nodeId)));
+      invalidateNodeImageCaches(ref, homeId: homeId, nodeId: nodeId);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -766,9 +726,8 @@ class NodeDetailScreen extends ConsumerWidget {
       ref.invalidate(nodeBarcodesProvider(nodeId));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -819,9 +778,8 @@ class _DetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.inkMuted),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.inkMuted),
             ),
           ),
           Expanded(
@@ -859,12 +817,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
       ),
       error: (e, _) => Text(e.toString()),
       data: (assignments) {
-        final bySlot = {
-          for (final a in assignments) a.slotNumber: a,
-        };
+        final bySlot = {for (final a in assignments) a.slotNumber: a};
         final maxSlots = dispenser.effectiveDispenserMode.maxSlots;
-        final isMulti =
-            dispenser.effectiveDispenserMode == DispenserMode.multi;
+        final isMulti = dispenser.effectiveDispenserMode == DispenserMode.multi;
         return Column(
           children: [
             for (var slot = 1; slot <= maxSlots; slot++) ...[
@@ -942,11 +897,10 @@ class _DispenserSlotsSection extends ConsumerWidget {
                       empty
                           ? 'No product linked'
                           : isMulti
-                              ? 'Chamber ${assignment.fillLabel}'
-                              : 'Linked product',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.inkMuted,
-                          ),
+                          ? 'Chamber ${assignment.fillLabel}'
+                          : 'Linked product',
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: AppColors.inkMuted),
                     ),
                   ],
                 ),
@@ -956,21 +910,15 @@ class _DispenserSlotsSection extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextButton(
-                      onPressed: () => _assignSlot(
-                        context,
-                        ref,
-                        slotNumber: slotNumber,
-                      ),
+                      onPressed: () =>
+                          _assignSlot(context, ref, slotNumber: slotNumber),
                       child: Text(empty ? 'Assign' : 'Change'),
                     ),
                     if (!empty)
                       IconButton(
                         tooltip: 'Clear slot',
-                        onPressed: () => _clearSlot(
-                          context,
-                          ref,
-                          slotNumber: slotNumber,
-                        ),
+                        onPressed: () =>
+                            _clearSlot(context, ref, slotNumber: slotNumber),
                         icon: const Icon(Icons.close),
                       ),
                   ],
@@ -1049,7 +997,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text('${type == InventoryTransactionType.restock ? 'Refill' : type.label} · $label'),
+              title: Text(
+                '${type == InventoryTransactionType.restock ? 'Refill' : type.label} · $label',
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1085,7 +1035,8 @@ class _DispenserSlotsSection extends ConsumerWidget {
                 FilledButton(
                   onPressed: () {
                     final value = double.tryParse(controller.text.trim());
-                    final valid = value != null &&
+                    final valid =
+                        value != null &&
                         (type == InventoryTransactionType.adjustment
                             ? value >= 0
                             : value > 0);
@@ -1114,7 +1065,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
         ? quantity - current
         : quantity;
     try {
-      await ref.read(inventoryRepositoryProvider).applyTransaction(
+      await ref
+          .read(inventoryRepositoryProvider)
+          .applyTransaction(
             nodeId: dispenser.id,
             transactionType: type,
             quantityDelta: delta,
@@ -1126,9 +1079,8 @@ class _DispenserSlotsSection extends ConsumerWidget {
       ref.invalidate(inventoryTransactionsProvider(dispenser.id));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -1139,19 +1091,16 @@ class _DispenserSlotsSection extends ConsumerWidget {
     required int slotNumber,
   }) async {
     final productsAsync = ref.read(
-      dispensableProductsProvider((
-        homeId: homeId,
-        excludeNodeId: dispenser.id,
-      )).future,
+      dispensableProductsProvider((homeId: homeId, excludeNodeId: dispenser.id))
+          .future,
     );
     List<InventoryNode> products;
     try {
       products = await productsAsync;
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
       return;
     }
@@ -1192,8 +1141,7 @@ class _DispenserSlotsSection extends ConsumerWidget {
                         product.consumableForm!.label,
                       if (product.quantity != null)
                         [
-                          product.quantity ==
-                                  product.quantity!.roundToDouble()
+                          product.quantity == product.quantity!.roundToDouble()
                               ? product.quantity!.toInt().toString()
                               : product.quantity.toString(),
                           if (product.quantityUnit != null)
@@ -1211,7 +1159,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
     if (selected == null) return;
 
     try {
-      await ref.read(inventoryRepositoryProvider).assignProductToDispenser(
+      await ref
+          .read(inventoryRepositoryProvider)
+          .assignProductToDispenser(
             dispenserItemId: dispenser.id,
             productItemId: selected.id,
             slotNumber: slotNumber,
@@ -1219,9 +1169,8 @@ class _DispenserSlotsSection extends ConsumerWidget {
       ref.invalidate(dispenserAssignmentsProvider(dispenser.id));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -1232,16 +1181,17 @@ class _DispenserSlotsSection extends ConsumerWidget {
     required int slotNumber,
   }) async {
     try {
-      await ref.read(inventoryRepositoryProvider).clearDispenserSlot(
+      await ref
+          .read(inventoryRepositoryProvider)
+          .clearDispenserSlot(
             dispenserItemId: dispenser.id,
             slotNumber: slotNumber,
           );
       ref.invalidate(dispenserAssignmentsProvider(dispenser.id));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }

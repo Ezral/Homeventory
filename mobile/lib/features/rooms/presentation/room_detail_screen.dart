@@ -7,10 +7,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../../../shared/widgets/inventory_row_card.dart';
+import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
+import '../../../shared/widgets/inventory_row_card.dart';
 import '../../../shared/widgets/user_menu_button.dart';
+import '../../../shared/utils/image_pick.dart';
 import '../../../shared/utils/inventory_labels.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../inventory/data/inventory_repository.dart';
@@ -93,10 +95,8 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
     );
     final desktop = isWebDesktopLayout(context);
 
-    final title = parentAsync?.maybeWhen(
-          data: (n) => n.name,
-          orElse: () => null,
-        ) ??
+    final title =
+        parentAsync?.maybeWhen(data: (n) => n.name, orElse: () => null) ??
         roomAsync.maybeWhen(data: (r) => r.name, orElse: () => 'Room');
 
     return Scaffold(
@@ -192,13 +192,11 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
           final idsKey = nodes.map((n) => n.id).join(',');
           final thumbs = ref
               .watch(
-                entityThumbnailsProvider(
-                  (
-                    homeId: homeId,
-                    entityType: 'INVENTORY_NODE',
-                    idsKey: idsKey,
-                  ),
-                ),
+                entityThumbnailsProvider((
+                  homeId: homeId,
+                  entityType: 'INVENTORY_NODE',
+                  idsKey: idsKey,
+                )),
               )
               .maybeWhen(
                 data: (m) => m,
@@ -233,9 +231,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
             onSelect: (node) {
               if (!desktop) {
                 if (node.isContainer) {
-                  context.push(
-                    '/homes/$homeId/rooms/$roomId/nodes/${node.id}',
-                  );
+                  context.push('/homes/$homeId/rooms/$roomId/nodes/${node.id}');
                 } else {
                   context.push(
                     '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
@@ -256,9 +252,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
                 flex: 4,
                 child: DecoratedBox(
                   decoration: const BoxDecoration(
-                    border: Border(
-                      right: BorderSide(color: AppColors.line),
-                    ),
+                    border: Border(right: BorderSide(color: AppColors.line)),
                   ),
                   child: listPane,
                 ),
@@ -319,9 +313,7 @@ class _InventoryListPane extends ConsumerWidget {
         ref.invalidate(inventoryChildrenProvider(scope));
         ref.invalidate(homePackedNodesProvider(homeId));
         if (parentNodeId == null) {
-          ref.invalidate(
-            roomImagesProvider((homeId: homeId, roomId: roomId)),
-          );
+          ref.invalidate(roomImagesProvider((homeId: homeId, roomId: roomId)));
         }
       },
       child: ListView(
@@ -341,10 +333,7 @@ class _InventoryListPane extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                     child: AspectRatio(
                       aspectRatio: desktop ? 2.4 : 2.0,
-                      child: Image.network(
-                        cover.signedUrl!,
-                        fit: BoxFit.cover,
-                      ),
+                      child: Image.network(cover.signedUrl!, fit: BoxFit.cover),
                     ),
                   ),
                 );
@@ -393,12 +382,8 @@ class _InventoryListPane extends ConsumerWidget {
                               await context.push(
                                 '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
                               );
-                              ref.invalidate(
-                                inventoryChildrenProvider(scope),
-                              );
-                              ref.invalidate(
-                                inventoryNodeProvider(node.id),
-                              );
+                              ref.invalidate(inventoryChildrenProvider(scope));
+                              ref.invalidate(inventoryNodeProvider(node.id));
                             },
                           ),
                         PopupMenuButton<String>(
@@ -420,9 +405,7 @@ class _InventoryListPane extends ConsumerWidget {
                                 ref.invalidate(
                                   inventoryChildrenProvider(scope),
                                 );
-                                ref.invalidate(
-                                  inventoryNodeProvider(node.id),
-                                );
+                                ref.invalidate(inventoryNodeProvider(node.id));
                             }
                           },
                           itemBuilder: (context) => [
@@ -790,7 +773,9 @@ class _DesktopContainerContents extends ConsumerWidget {
       parentNodeId: container.id,
     );
     final childrenAsync = ref.watch(inventoryChildrenProvider(childScope));
-    final packedMap = ref.watch(homePackedNodesProvider(homeId)).maybeWhen(
+    final packedMap = ref
+        .watch(homePackedNodesProvider(homeId))
+        .maybeWhen(
           data: (m) => m,
           orElse: () => const <String, PackedNodeInfo>{},
         );
@@ -826,10 +811,7 @@ class _DesktopContainerContents extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      [
-                        container.kindLabel,
-                        'Contents',
-                      ].join(' · '),
+                      [container.kindLabel, 'Contents'].join(' · '),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -864,13 +846,11 @@ class _DesktopContainerContents extends ConsumerWidget {
               final idsKey = nodes.map((n) => n.id).join(',');
               final thumbs = ref
                   .watch(
-                    entityThumbnailsProvider(
-                      (
-                        homeId: homeId,
-                        entityType: 'INVENTORY_NODE',
-                        idsKey: idsKey,
-                      ),
-                    ),
+                    entityThumbnailsProvider((
+                      homeId: homeId,
+                      entityType: 'INVENTORY_NODE',
+                      idsKey: idsKey,
+                    )),
                   )
                   .maybeWhen(
                     data: (m) => m,
@@ -897,9 +877,7 @@ class _DesktopContainerContents extends ConsumerWidget {
                           await context.push(
                             '/homes/$homeId/rooms/$roomId/nodes/new?parent=${container.id}',
                           );
-                          ref.invalidate(
-                            inventoryChildrenProvider(childScope),
-                          );
+                          ref.invalidate(inventoryChildrenProvider(childScope));
                         }
                       : null,
                 );
@@ -1040,7 +1018,9 @@ class _DesktopItemDetails extends ConsumerWidget {
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 8),
-              ref.watch(nodeLocationPathProvider(node.id)).when(
+              ref
+                  .watch(nodeLocationPathProvider(node.id))
+                  .when(
                     loading: () => const SizedBox.shrink(),
                     error: (_, _) => const SizedBox.shrink(),
                     data: (path) {
@@ -1049,9 +1029,8 @@ class _DesktopItemDetails extends ConsumerWidget {
                       }
                       return Text(
                         path,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.inkMuted,
-                            ),
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: AppColors.inkMuted),
                       );
                     },
                   ),
@@ -1064,7 +1043,17 @@ class _DesktopItemDetails extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 20),
-              const SectionLabel('Photos'),
+              Row(
+                children: [
+                  const Expanded(child: SectionLabel('Photos')),
+                  if (canEdit)
+                    TextButton.icon(
+                      onPressed: () => _addPhoto(context, ref),
+                      icon: const Icon(Icons.add_a_photo_outlined),
+                      label: const Text('Add'),
+                    ),
+                ],
+              ),
               const SizedBox(height: 8),
               imagesAsync.when(
                 loading: () => const Padding(
@@ -1073,45 +1062,28 @@ class _DesktopItemDetails extends ConsumerWidget {
                 ),
                 error: (e, _) => Text(e.toString()),
                 data: (images) {
-                  if (images.isEmpty) {
-                    return Text(
-                      'No photos yet.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    );
-                  }
-                  return SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: images.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        final image = images[index];
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: image.signedUrl == null
-                              ? Container(
-                                  width: 120,
-                                  height: 120,
-                                  color: AppColors.mossSoft,
-                                  child: const Icon(Icons.broken_image),
-                                )
-                              : Image.network(
-                                  image.signedUrl!,
-                                  width: 120,
-                                  height: 120,
-                                  fit: BoxFit.cover,
-                                ),
-                        );
-                      },
-                    ),
+                  return EntityPhotoGallery(
+                    images: [
+                      for (final image in images)
+                        GalleryPhoto(id: image.id, url: image.signedUrl),
+                    ],
+                    canEdit: canEdit,
+                    onDelete: canEdit
+                        ? (id) => _deletePhoto(
+                            context,
+                            ref,
+                            images.firstWhere((image) => image.id == id),
+                          )
+                        : null,
                   );
                 },
               ),
               const SizedBox(height: 20),
               const SectionLabel('Details'),
               const SizedBox(height: 10),
-              ref.watch(nodeLocationPathProvider(node.id)).when(
+              ref
+                  .watch(nodeLocationPathProvider(node.id))
+                  .when(
                     loading: () => const SizedBox.shrink(),
                     error: (_, _) => const SizedBox.shrink(),
                     data: (path) {
@@ -1130,16 +1102,13 @@ class _DesktopItemDetails extends ConsumerWidget {
                         if (node.quantityUnit != null) node.quantityUnit!,
                       ].join(' '),
               ),
-              _PaneDetailRow(
-                label: 'Brand',
-                value: node.brand ?? '—',
-              ),
+              _PaneDetailRow(label: 'Brand', value: node.brand ?? '—'),
               _PaneDetailRow(
                 label: 'Purchase price',
                 value: node.purchasePrice == null
                     ? '—'
                     : '${node.currency ?? ''} ${_formatQty(node.purchasePrice!)}'
-                        .trim(),
+                          .trim(),
               ),
               _PaneDetailRow(
                 label: 'Weight',
@@ -1223,6 +1192,44 @@ class _DesktopItemDetails extends ConsumerWidget {
       ],
     );
   }
+
+  Future<void> _addPhoto(BuildContext context, WidgetRef ref) async {
+    final picked = await pickEntityImage(context);
+    if (picked == null) return;
+    try {
+      await ref
+          .read(inventoryRepositoryProvider)
+          .uploadNodeImage(
+            homeId: homeId,
+            nodeId: node.id,
+            bytes: picked.bytes,
+            mimeType: picked.mimeType,
+            extension: picked.extension,
+          );
+      invalidateNodeImageCaches(ref, homeId: homeId, nodeId: node.id);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _deletePhoto(
+    BuildContext context,
+    WidgetRef ref,
+    EntityImage image,
+  ) async {
+    try {
+      await ref.read(inventoryRepositoryProvider).deleteImage(image);
+      invalidateNodeImageCaches(ref, homeId: homeId, nodeId: node.id);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
 }
 
 class _PaneDetailRow extends StatelessWidget {
@@ -1242,9 +1249,8 @@ class _PaneDetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.inkMuted,
-                  ),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: AppColors.inkMuted),
             ),
           ),
           Expanded(

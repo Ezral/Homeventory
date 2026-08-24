@@ -76,6 +76,15 @@ final nodeImagesProvider = FutureProvider.autoDispose
           );
     });
 
+void invalidateNodeImageCaches(
+  WidgetRef ref, {
+  required String homeId,
+  required String nodeId,
+}) {
+  ref.invalidate(nodeImagesProvider((homeId: homeId, nodeId: nodeId)));
+  ref.invalidate(entityThumbnailsProvider);
+}
+
 final nodeBarcodesProvider = FutureProvider.autoDispose
     .family<List<ItemBarcode>, String>((ref, nodeId) {
       return ref.watch(inventoryRepositoryProvider).listBarcodes(nodeId);
@@ -125,16 +134,16 @@ final inventorySearchProvider = FutureProvider.autoDispose
 /// Batch location paths keyed by node id. [idsKey] is comma-joined ids.
 final nodeLocationPathsProvider = FutureProvider.autoDispose
     .family<Map<String, String>, String>((ref, idsKey) {
-  final ids = idsKey.isEmpty
-      ? <String>[]
-      : idsKey.split(',').where((e) => e.isNotEmpty).toList();
-  return ref.watch(inventoryRepositoryProvider).locationPaths(ids);
-});
+      final ids = idsKey.isEmpty
+          ? <String>[]
+          : idsKey.split(',').where((e) => e.isNotEmpty).toList();
+      return ref.watch(inventoryRepositoryProvider).locationPaths(ids);
+    });
 
-final nodeLocationPathProvider =
-    FutureProvider.autoDispose.family<String?, String>((ref, nodeId) {
-  return ref.watch(inventoryRepositoryProvider).locationPath(nodeId);
-});
+final nodeLocationPathProvider = FutureProvider.autoDispose
+    .family<String?, String>((ref, nodeId) {
+      return ref.watch(inventoryRepositoryProvider).locationPath(nodeId);
+    });
 
 final dispenserAssignmentsProvider = FutureProvider.autoDispose
     .family<List<DispenserProductAssignment>, String>((ref, dispenserItemId) {
