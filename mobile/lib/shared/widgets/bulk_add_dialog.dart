@@ -329,7 +329,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
                       Expanded(
                         child: ListView.separated(
                           itemCount: _rows.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          separatorBuilder: (_, _) => const Divider(height: 1),
                           itemBuilder: (context, index) {
                             return _DataRow(
                               row: _rows[index],
