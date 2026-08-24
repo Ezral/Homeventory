@@ -178,7 +178,8 @@ class NodeDetailScreen extends ConsumerWidget {
                   if (node.isDispensable)
                     const Chip(label: Text('Dispensable')),
                   if (node.isDisposed) const Chip(label: Text('Disposed')),
-                  if (node.itemCategory != null)
+                  if (node.itemCategory != null &&
+                      node.itemCategory != ItemCategory.clothing)
                     Chip(label: Text(node.itemCategory!.label)),
                 ],
               ),

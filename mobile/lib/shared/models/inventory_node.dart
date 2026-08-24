@@ -71,8 +71,11 @@ class InventoryNode {
   String get kindLabel {
     if (isMobileContainer) return 'Mobile container';
     if (isContainer && nodeKind == InventoryNodeKind.item) {
-      return 'Item + container';
+      return itemCategory == ItemCategory.clothing
+          ? 'Clothing + container'
+          : 'Item + container';
     }
+    if (itemCategory == ItemCategory.clothing) return 'Clothing';
     return nodeKind.label;
   }
 

@@ -66,6 +66,59 @@ enum InventoryNodeKind {
   };
 }
 
+/// User-facing type for create, edit, and bulk add.
+///
+/// Clothing is stored as `ITEM` with [ItemCategory.clothing] so packing
+/// and other item rules stay the same. Type can be changed after create
+/// (Item ↔ Furniture ↔ Storage ↔ Clothing). Switching to furniture or
+/// storage clears item category and marks the node as a container.
+enum InventoryTypeChoice {
+  furniture,
+  storage,
+  item,
+  clothing;
+
+  String get label => switch (this) {
+    InventoryTypeChoice.furniture => 'Furniture',
+    InventoryTypeChoice.storage => 'Storage',
+    InventoryTypeChoice.item => 'Item',
+    InventoryTypeChoice.clothing => 'Clothing',
+  };
+
+  InventoryNodeKind get nodeKind => switch (this) {
+    InventoryTypeChoice.furniture => InventoryNodeKind.furniture,
+    InventoryTypeChoice.storage => InventoryNodeKind.storageLocation,
+    InventoryTypeChoice.item ||
+    InventoryTypeChoice.clothing => InventoryNodeKind.item,
+  };
+
+  bool get isItemLike => nodeKind == InventoryNodeKind.item;
+
+  bool get isContainerKind => !isItemLike;
+
+  ItemCategory? get itemCategory => switch (this) {
+    InventoryTypeChoice.item => ItemCategory.misc,
+    InventoryTypeChoice.clothing => ItemCategory.clothing,
+    _ => null,
+  };
+
+  static InventoryTypeChoice fromNode({
+    required InventoryNodeKind nodeKind,
+    ItemCategory? itemCategory,
+  }) {
+    if (nodeKind == InventoryNodeKind.furniture) {
+      return InventoryTypeChoice.furniture;
+    }
+    if (nodeKind == InventoryNodeKind.storageLocation) {
+      return InventoryTypeChoice.storage;
+    }
+    if (itemCategory == ItemCategory.clothing) {
+      return InventoryTypeChoice.clothing;
+    }
+    return InventoryTypeChoice.item;
+  }
+}
+
 enum ItemCategory {
   edible('EDIBLE'),
   consumable('CONSUMABLE'),
@@ -93,6 +146,15 @@ enum ItemCategory {
     ItemCategory.electronics => 'Electronics',
     ItemCategory.misc => 'Misc',
   };
+
+  /// Categories still chosen on the item form. Clothing is a Type instead.
+  static List<ItemCategory> get itemFormValues => [
+    ItemCategory.edible,
+    ItemCategory.consumable,
+    ItemCategory.bagLuggage,
+    ItemCategory.electronics,
+    ItemCategory.misc,
+  ];
 }
 
 enum InventoryTransactionType {

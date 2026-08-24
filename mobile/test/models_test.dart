@@ -68,6 +68,31 @@ void main() {
       expect(TripStatus.fromDb('ACTIVE'), TripStatus.active);
       expect(TripItemStatus.fromDb('UNPACKED'), TripItemStatus.unpacked);
     });
+
+    test('InventoryTypeChoice maps clothing and furniture', () {
+      expect(InventoryTypeChoice.clothing.nodeKind, InventoryNodeKind.item);
+      expect(InventoryTypeChoice.clothing.itemCategory, ItemCategory.clothing);
+      expect(
+        InventoryTypeChoice.furniture.nodeKind,
+        InventoryNodeKind.furniture,
+      );
+      expect(InventoryTypeChoice.furniture.itemCategory, isNull);
+      expect(InventoryTypeChoice.furniture.isContainerKind, isTrue);
+      expect(
+        InventoryTypeChoice.fromNode(
+          nodeKind: InventoryNodeKind.item,
+          itemCategory: ItemCategory.clothing,
+        ),
+        InventoryTypeChoice.clothing,
+      );
+      expect(
+        InventoryTypeChoice.fromNode(
+          nodeKind: InventoryNodeKind.item,
+          itemCategory: ItemCategory.misc,
+        ),
+        InventoryTypeChoice.item,
+      );
+    });
   });
 
   group('models', () {
@@ -160,6 +185,21 @@ void main() {
       expect(node.weightUnit, 'kg');
     });
 
+    test('clothing items use Clothing as the type label', () {
+      final node = InventoryNode.fromJson({
+        'id': 'n2',
+        'home_id': 'h1',
+        'room_id': 'r1',
+        'node_kind': 'ITEM',
+        'name': 'Jeans',
+        'is_container': false,
+        'is_mobile_container': false,
+        'item_category': 'CLOTHING',
+        'created_by_user_id': 'u1',
+      });
+      expect(node.kindLabel, 'Clothing');
+    });
+
     test('DispenserProductAssignment.fillLabel shows chamber fill', () {
       final assignment = DispenserProductAssignment.fromJson({
         'id': 'a1',
@@ -199,8 +239,14 @@ void main() {
     }
 
     test('inventoryWeightKg normalizes units', () {
-      expect(inventoryWeightKg(node(id: '1', name: 'a', weight: 2, unit: 'kg')), 2);
-      expect(inventoryWeightKg(node(id: '2', name: 'b', weight: 500, unit: 'g')), 0.5);
+      expect(
+        inventoryWeightKg(node(id: '1', name: 'a', weight: 2, unit: 'kg')),
+        2,
+      );
+      expect(
+        inventoryWeightKg(node(id: '2', name: 'b', weight: 500, unit: 'g')),
+        0.5,
+      );
       expect(
         inventoryWeightKg(node(id: '3', name: 'c', weight: 10, unit: 'lb'))!,
         closeTo(4.5359, 0.001),

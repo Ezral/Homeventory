@@ -22,7 +22,7 @@ Editors needed a fast way to capture many item names in the current location, an
 
 ### Bulk input
 
-- **Add several names** sheet: paste or type one name per line (commas/semicolons also split). Each line becomes an `ITEM` in the current room or container. Details (photo, qty, barcode) stay on the single-item form.
+- **Add several** dialog (desktop) / fullscreen page (phone): table of **Name**, **Type**, **Qty**, **Price**. Type is furniture / storage / item / **clothing**. Clothing is stored as an `ITEM` with category `CLOTHING`. Check rows and use **Set type of selected** to change several at once (Item → Furniture, Clothing, and the rest); with none checked, that control updates every row. Blank names are skipped. Photos, barcodes, and other details stay on the single-item form. On the create/edit form, Type can be changed after create, including Item → Furniture. Switching to furniture or storage clears item category and marks the node as a container.
 - Create form: **Save & add another** keeps the editor on the form after insert.
 
 CSV import is not in the client.
@@ -40,7 +40,7 @@ Move reuses `move_inventory_node` (top-most selected nodes only, so a parent is 
 
 ## Rationale
 
-- Names-in-place matches how people dump a drawer into the app; a spreadsheet importer would ignore containment.
+- A small table in the current location is enough for mixed furniture/storage/items with qty and price; a spreadsheet importer would still ignore containment.
 - Platform-native selection (checkbox vs long-press) matches the desktop/mobile chrome already in ADR-0011.
 - Existing RPCs keep authorization in Postgres.
 
@@ -81,13 +81,13 @@ None.
 
 ## API Impact
 
-Client loops existing RPCs; `createItemsFromNames` / `moveNodes` / `disposeNodes` are repository helpers only.
+Client loops existing RPCs; `createBulkNodes` / `moveNodes` / `disposeNodes` are repository helpers only.
 
 ---
 
 ## UI Impact
 
-- Room/container app bar: playlist-add for several names.
+- Room/container app bar: playlist-add opens the bulk table.
 - Create object: Save & add another.
 - Inventory cards: checkbox / long-press; bottom selection bar.
 
@@ -95,6 +95,7 @@ Client loops existing RPCs; `createItemsFromNames` / `moveNodes` / `disposeNodes
 
 ## References
 
+- [`mobile/lib/shared/widgets/bulk_add_dialog.dart`](../../mobile/lib/shared/widgets/bulk_add_dialog.dart)
 - [`mobile/lib/shared/widgets/inventory_row_card.dart`](../../mobile/lib/shared/widgets/inventory_row_card.dart)
 - [`mobile/lib/shared/widgets/selection_action_bar.dart`](../../mobile/lib/shared/widgets/selection_action_bar.dart)
 - [ADR-0008](0008-inventory-transactions.md), [ADR-0009](0009-trips-packing.md), [ADR-0011](0011-flutter-web-github-pages.md)
