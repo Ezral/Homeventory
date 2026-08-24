@@ -31,85 +31,96 @@ class InventoryRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(14);
+
     return Material(
       color: AppColors.paperElevated,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: radius,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? AppColors.moss : AppColors.line,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: SizedBox(
-            height: height,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _RowImage(
-                    imageUrl: imageUrl,
-                    fallbackIcon: fallbackIcon,
+        borderRadius: radius,
+        child: SizedBox(
+          height: height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: _RowImage(
+                      imageUrl: imageUrl,
+                      fallbackIcon: fallbackIcon,
+                    ),
                   ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      color: dimmed
-                                          ? AppColors.inkMuted
-                                          : AppColors.ink,
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.25,
-                                    ),
-                              ),
-                              if (subtitle != null) ...[
-                                const SizedBox(height: 4),
-                                Expanded(
-                                  child: Text(
-                                    subtitle!,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: AppColors.inkMuted,
-                                          height: 1.3,
-                                        ),
-                                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: dimmed
+                                            ? AppColors.inkMuted
+                                            : AppColors.ink,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.25,
+                                      ),
                                 ),
+                                if (subtitle != null) ...[
+                                  const SizedBox(height: 4),
+                                  Expanded(
+                                    child: Text(
+                                      subtitle!,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.inkMuted,
+                                            height: 1.3,
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                        ?trailing,
-                      ],
+                          ?trailing,
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Border sits above the image + text so selection frames the full card.
+              IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: selected ? AppColors.moss : AppColors.line,
+                      width: selected ? 2.5 : 1,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
