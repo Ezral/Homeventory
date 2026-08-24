@@ -87,6 +87,7 @@ None (same Supabase project).
 
 - Web build of the Flutter UI with **responsive** chrome: desktop sidebar + inventory split panes; mobile browser keeps the app GUI
 - Furniture/room child rows: overflow menu with Edit / Details / Open
+- Search results use the same inventory cards as browse, in a responsive grid up to **4 columns** on wide viewports
 
 ---
 

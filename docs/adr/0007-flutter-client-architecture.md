@@ -110,7 +110,7 @@ Current primary screens:
 - Sign-in, homes list, create/join home, home detail (members + rooms)
 - Create/edit room, room/container inventory browse
 - Create/edit node, node detail (photos/barcodes)
-- Search + barcode scan
+- Search + barcode scan; result cards match inventory browse (responsive grid, up to 4 columns)
 
 ---
 

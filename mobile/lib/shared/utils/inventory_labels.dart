@@ -1,5 +1,18 @@
+import 'package:flutter/material.dart';
+
 import '../../features/inventory/data/inventory_repository.dart';
+import '../models/enums.dart';
 import '../models/inventory_node.dart';
+
+/// Leading/fallback icon matching inventory browse cards.
+IconData inventoryNodeIcon(InventoryNode node) {
+  return switch (node.nodeKind) {
+    InventoryNodeKind.furniture => Icons.weekend_outlined,
+    InventoryNodeKind.storageLocation => Icons.grid_view_outlined,
+    InventoryNodeKind.item =>
+      node.isContainer ? Icons.work_outline : Icons.inventory_2_outlined,
+  };
+}
 
 /// Builds a list subtitle that always leads with location when available.
 String inventoryNodeSubtitle(
