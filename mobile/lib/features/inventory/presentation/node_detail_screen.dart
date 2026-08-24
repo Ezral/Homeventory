@@ -9,6 +9,7 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/image_pick.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../homes/presentation/homes_providers.dart';
@@ -217,60 +218,19 @@ class NodeDetailScreen extends ConsumerWidget {
                 ),
                 error: (e, _) => Text(e.toString()),
                 data: (images) {
-                  if (images.isEmpty) {
-                    return Text(
-                      'No photos yet.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    );
-                  }
-                  return SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: images.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        final image = images[index];
-                        return Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: image.signedUrl == null
-                                  ? Container(
-                                      width: 120,
-                                      height: 120,
-                                      color: AppColors.mossSoft,
-                                      child: const Icon(Icons.broken_image),
-                                    )
-                                  : Image.network(
-                                      image.signedUrl!,
-                                      width: 120,
-                                      height: 120,
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
-                            if (canEdit)
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: Material(
-                                  color: Colors.black54,
-                                  shape: const CircleBorder(),
-                                  child: IconButton(
-                                    iconSize: 18,
-                                    padding: const EdgeInsets.all(4),
-                                    constraints: const BoxConstraints(),
-                                    color: Colors.white,
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () =>
-                                        _deleteImage(context, ref, image),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                  return EntityPhotoGallery(
+                    images: [
+                      for (final image in images)
+                        GalleryPhoto(id: image.id, url: image.signedUrl),
+                    ],
+                    canEdit: canEdit,
+                    onDelete: canEdit
+                        ? (id) => _deleteImage(
+                              context,
+                              ref,
+                              images.firstWhere((image) => image.id == id),
+                            )
+                        : null,
                   );
                 },
               ),
@@ -716,7 +676,7 @@ class NodeDetailScreen extends ConsumerWidget {
             mimeType: picked.mimeType,
             extension: picked.extension,
           );
-      ref.invalidate(nodeImagesProvider((homeId: homeId, nodeId: nodeId)));
+      invalidateNodeImageCaches(ref, homeId: homeId, nodeId: nodeId);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -733,7 +693,7 @@ class NodeDetailScreen extends ConsumerWidget {
   ) async {
     try {
       await ref.read(inventoryRepositoryProvider).deleteImage(image);
-      ref.invalidate(nodeImagesProvider((homeId: homeId, nodeId: nodeId)));
+      invalidateNodeImageCaches(ref, homeId: homeId, nodeId: nodeId);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(

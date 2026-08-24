@@ -71,7 +71,7 @@ Internal QR label generation and “create item from unknown barcode” flows ar
 
 ### Advantages
 
-- Editors can attach multiple photos and barcodes per node.
+- Editors can attach **and delete** multiple photos and barcodes per node.
 - Search can find items by barcode value without a separate search engine.
 
 ### Disadvantages
@@ -111,10 +111,10 @@ Migration: `20260712000400_images_barcodes.sql`
 
 ## UI Impact
 
-- Node detail: Photos and Barcodes sections.
+- Node detail: Photos and Barcodes sections; editors can **add and delete** photos (confirm, then storage object + `images` row). Desktop item pane has the same add/delete controls.
 - Room create/edit: optional photo; room detail shows cover when present.
 - Home room list and inventory lists: image thumbnails when available.
-- Create/edit inventory: optional photo at save time.
+- Create/edit inventory: optional photo at save time; existing item photos can be removed before save.
 - Search app bar: scan barcode action; query field accepts name or barcode text.
 - Route: `/homes/:homeId/scan-barcode` (runtime camera permission + manual entry fallback).
 

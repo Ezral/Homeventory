@@ -76,6 +76,15 @@ final nodeImagesProvider = FutureProvider.autoDispose
           );
     });
 
+void invalidateNodeImageCaches(
+  WidgetRef ref, {
+  required String homeId,
+  required String nodeId,
+}) {
+  ref.invalidate(nodeImagesProvider((homeId: homeId, nodeId: nodeId)));
+  ref.invalidate(entityThumbnailsProvider);
+}
+
 final nodeBarcodesProvider = FutureProvider.autoDispose
     .family<List<ItemBarcode>, String>((ref, nodeId) {
       return ref.watch(inventoryRepositoryProvider).listBarcodes(nodeId);

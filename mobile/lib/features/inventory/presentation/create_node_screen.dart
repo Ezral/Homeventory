@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/image_pick.dart';
+import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../homes/presentation/homes_providers.dart';
+import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
 class CreateNodeScreen extends ConsumerStatefulWidget {
@@ -57,6 +59,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   bool _loadingExisting = false;
   InventoryNode? _existing;
   PickedImageBytes? _pendingImage;
+  List<EntityImage> _existingImages = const [];
+  final List<EntityImage> _imagesToDelete = [];
 
   @override
   void initState() {
@@ -81,9 +85,13 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
 
   Future<void> _loadExisting() async {
     try {
-      final node = await ref
-          .read(inventoryRepositoryProvider)
-          .getNode(widget.existingNodeId!);
+      final repo = ref.read(inventoryRepositoryProvider);
+      final node = await repo.getNode(widget.existingNodeId!);
+      final images = await repo.listImages(
+        homeId: widget.homeId,
+        entityType: 'INVENTORY_NODE',
+        entityId: widget.existingNodeId!,
+      );
       if (!mounted) return;
       setState(() {
         _existing = node;
@@ -108,6 +116,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
         _weightUnit.text = node.weightUnit ?? 'g';
         _purchaseDate = node.purchaseDate;
         _expirationDate = node.expirationDate;
+        _existingImages = images;
         _loadingExisting = false;
       });
     } catch (e) {
@@ -239,6 +248,12 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
         );
       }
 
+      if (_imagesToDelete.isNotEmpty) {
+        for (final image in _imagesToDelete) {
+          await repo.deleteImage(image);
+        }
+      }
+
       if (_pendingImage != null) {
         await repo.uploadNodeImage(
           homeId: widget.homeId,
@@ -260,11 +275,10 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       );
       if (widget.isEditing) {
         ref.invalidate(inventoryNodeProvider(widget.existingNodeId!));
-        ref.invalidate(
-          nodeImagesProvider((
-            homeId: widget.homeId,
-            nodeId: widget.existingNodeId!,
-          )),
+        invalidateNodeImageCaches(
+          ref,
+          homeId: widget.homeId,
+          nodeId: widget.existingNodeId!,
         );
       }
 
@@ -632,30 +646,101 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                   const SizedBox(height: 20),
                   Text('Photo', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
+                  if (_existingImages.isNotEmpty) ...[
+                    EntityPhotoGallery(
+                      images: [
+                        for (final image in _existingImages)
+                          GalleryPhoto(id: image.id, url: image.signedUrl),
+                      ],
+                      canEdit: true,
+                      confirmBeforeDelete: false,
+                      onDelete: _busy
+                          ? null
+                          : (id) async {
+                              final image = _existingImages.firstWhere(
+                                (item) => item.id == id,
+                              );
+                              setState(() {
+                                _imagesToDelete.add(image);
+                                _existingImages = _existingImages
+                                    .where((item) => item.id != id)
+                                    .toList();
+                              });
+                            },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   if (_pendingImage != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(
-                        _pendingImage!.bytes,
-                        height: 160,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.memory(
+                            _pendingImage!.bytes,
+                            height: 160,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Material(
+                            color: Colors.black54,
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              tooltip: 'Delete photo',
+                              iconSize: 18,
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                              color: Colors.white,
+                              icon: const Icon(Icons.close),
+                              onPressed: _busy
+                                  ? null
+                                  : () => setState(() => _pendingImage = null),
+                            ),
+                          ),
+                        ),
+                      ],
                     )
-                  else
+                  else if (_existingImages.isEmpty)
                     Text(
                       widget.isEditing
-                          ? 'Add another photo from details, or replace here.'
+                          ? 'No photos. Add one here or from details.'
                           : 'Optional photo for this object.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _pickImage,
-                    icon: const Icon(Icons.add_a_photo_outlined),
-                    label: Text(
-                      _pendingImage == null ? 'Add photo' : 'Replace photo',
+                  if (_imagesToDelete.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Removed photos are deleted when you save.',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
+                  ],
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _pickImage,
+                        icon: const Icon(Icons.add_a_photo_outlined),
+                        label: Text(
+                          _pendingImage == null ? 'Add photo' : 'Replace photo',
+                        ),
+                      ),
+                      if (_pendingImage != null)
+                        TextButton.icon(
+                          onPressed: _busy
+                              ? null
+                              : () => setState(() => _pendingImage = null),
+                          icon: const Icon(Icons.hide_image_outlined),
+                          label: const Text('Remove photo'),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 28),
                   FilledButton(
