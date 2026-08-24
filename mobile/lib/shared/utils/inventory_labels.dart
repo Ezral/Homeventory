@@ -10,7 +10,11 @@ IconData inventoryNodeIcon(InventoryNode node) {
     InventoryNodeKind.furniture => Icons.weekend_outlined,
     InventoryNodeKind.storageLocation => Icons.grid_view_outlined,
     InventoryNodeKind.item =>
-      node.isContainer ? Icons.work_outline : Icons.inventory_2_outlined,
+      node.itemCategory == ItemCategory.clothing
+          ? Icons.checkroom_outlined
+          : node.isContainer
+          ? Icons.work_outline
+          : Icons.inventory_2_outlined,
   };
 }
 
@@ -24,7 +28,8 @@ String inventoryNodeSubtitle(
     if (locationPath != null && locationPath.trim().isNotEmpty)
       locationPath.trim(),
     node.kindLabel,
-    if (node.itemCategory != null) node.itemCategory!.label,
+    if (node.itemCategory != null && node.itemCategory != ItemCategory.clothing)
+      node.itemCategory!.label,
   ];
   if (node.quantity != null) {
     parts.add(

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../shared/models/bulk_node_draft.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 
@@ -378,21 +379,27 @@ class InventoryRepository {
     return InventoryNode.fromJson(Map<String, dynamic>.from(inserted));
   }
 
-  Future<int> createItemsFromNames({
+  Future<int> createBulkNodes({
     required String homeId,
     required String roomId,
     String? parentNodeId,
-    required List<String> names,
+    required List<BulkNodeDraft> drafts,
+    String? currency,
   }) async {
+    final toCreate = namedBulkDrafts(drafts);
     var created = 0;
-    for (final name in names) {
+    for (final draft in toCreate) {
       await createNode(
         homeId: homeId,
         roomId: roomId,
         parentNodeId: parentNodeId,
-        nodeKind: InventoryNodeKind.item,
-        name: name,
-        itemCategory: ItemCategory.misc,
+        nodeKind: draft.type.nodeKind,
+        name: draft.name,
+        isContainer: draft.type.isContainerKind,
+        itemCategory: draft.type.itemCategory,
+        quantity: draft.quantity,
+        purchasePrice: draft.purchasePrice,
+        currency: draft.purchasePrice != null ? currency : null,
       );
       created += 1;
     }
@@ -466,6 +473,7 @@ class InventoryRepository {
   Future<InventoryNode> updateNode({
     required String nodeId,
     required String name,
+    InventoryNodeKind? nodeKind,
     String? description,
     bool? isContainer,
     bool? isMobileContainer,
@@ -509,6 +517,7 @@ class InventoryRepository {
       'weight': weight,
       'weight_unit': _nullIfBlank(weightUnit),
     };
+    if (nodeKind != null) payload['node_kind'] = nodeKind.dbValue;
     if (isContainer != null) payload['is_container'] = isContainer;
     if (isMobileContainer != null) {
       payload['is_mobile_container'] = isMobileContainer;

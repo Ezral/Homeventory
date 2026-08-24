@@ -45,7 +45,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   final _weight = TextEditingController();
   final _weightUnit = TextEditingController(text: 'g');
 
-  InventoryNodeKind _kind = InventoryNodeKind.item;
+  InventoryTypeChoice _type = InventoryTypeChoice.item;
   ItemCategory _category = ItemCategory.misc;
   bool _isContainer = false;
   bool _isMobileContainer = false;
@@ -95,7 +95,10 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       if (!mounted) return;
       setState(() {
         _existing = node;
-        _kind = node.nodeKind;
+        _type = InventoryTypeChoice.fromNode(
+          nodeKind: node.nodeKind,
+          itemCategory: node.itemCategory,
+        );
         _category = node.itemCategory ?? ItemCategory.misc;
         _isContainer = node.isContainer;
         _isMobileContainer = node.isMobileContainer;
@@ -171,6 +174,44 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     setState(() => _pendingImage = picked);
   }
 
+  void _setType(InventoryTypeChoice next) {
+    setState(() {
+      _type = next;
+      if (next.isContainerKind) {
+        _isMobileContainer = false;
+        _isContainer = true;
+        _isDispenser = false;
+        _isDispensable = false;
+      }
+      if (next == InventoryTypeChoice.clothing) {
+        _category = ItemCategory.clothing;
+      } else if (next == InventoryTypeChoice.item &&
+          _category == ItemCategory.clothing) {
+        _category = ItemCategory.misc;
+      }
+    });
+  }
+
+  Widget _typeField() {
+    return DropdownButtonFormField<InventoryTypeChoice>(
+      // ignore: deprecated_member_use
+      value: _type,
+      decoration: InputDecoration(
+        labelText: 'Type',
+        helperText: widget.isEditing
+            ? 'You can change type later, including Item to Furniture or Clothing.'
+            : null,
+      ),
+      items: [
+        for (final type in InventoryTypeChoice.values)
+          DropdownMenuItem(value: type, child: Text(type.label)),
+      ],
+      onChanged: (v) {
+        if (v != null) _setType(v);
+      },
+    );
+  }
+
   Future<void> _submit({bool addAnother = false}) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
@@ -191,7 +232,15 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           ? null
           : double.tryParse(_weight.text.trim());
       final treatAsContainer =
-          _kind != InventoryNodeKind.item || _isContainer || _isMobileContainer;
+          !_type.isItemLike || _isContainer || _isMobileContainer;
+      final itemCategory = _type.isItemLike
+          ? (_type == InventoryTypeChoice.clothing
+                ? ItemCategory.clothing
+                : _category)
+          : null;
+      final isMobile = _type.isItemLike && _isMobileContainer;
+      final isDispenser = _type.isItemLike && _isDispenser;
+      final isDispensable = _type.isItemLike && _isDispensable;
 
       final repo = ref.read(inventoryRepositoryProvider);
       late InventoryNode node;
@@ -199,15 +248,16 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
         node = await repo.updateNode(
           nodeId: widget.existingNodeId!,
           name: _name.text,
+          nodeKind: _type.nodeKind,
           description: _description.text,
           isContainer: treatAsContainer,
-          isMobileContainer: _isMobileContainer,
-          isDispenser: _isDispenser,
-          dispenserMode: _isDispenser ? _dispenserMode : null,
-          isDispensable: _isDispensable,
-          consumableForm: _isDispensable ? _consumableForm : null,
+          isMobileContainer: isMobile,
+          isDispenser: isDispenser,
+          dispenserMode: isDispenser ? _dispenserMode : null,
+          isDispensable: isDispensable,
+          consumableForm: isDispensable ? _consumableForm : null,
           capacity: capacity,
-          itemCategory: _kind == InventoryNodeKind.item ? _category : null,
+          itemCategory: itemCategory,
           quantity: qty,
           quantityUnit: _unit.text,
           minimumQuantity: minQty,
@@ -224,17 +274,17 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           homeId: widget.homeId,
           roomId: widget.roomId,
           parentNodeId: widget.parentNodeId,
-          nodeKind: _kind,
+          nodeKind: _type.nodeKind,
           name: _name.text,
           description: _description.text,
           isContainer: treatAsContainer,
-          isMobileContainer: _isMobileContainer,
-          isDispenser: _isDispenser,
-          dispenserMode: _isDispenser ? _dispenserMode : null,
-          isDispensable: _isDispensable,
-          consumableForm: _isDispensable ? _consumableForm : null,
+          isMobileContainer: isMobile,
+          isDispenser: isDispenser,
+          dispenserMode: isDispenser ? _dispenserMode : null,
+          isDispensable: isDispensable,
+          consumableForm: isDispensable ? _consumableForm : null,
           capacity: capacity,
-          itemCategory: _kind == InventoryNodeKind.item ? _category : null,
+          itemCategory: itemCategory,
           quantity: qty,
           quantityUnit: _unit.text,
           minimumQuantity: minQty,
@@ -327,39 +377,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  if (!widget.isEditing)
-                    DropdownButtonFormField<InventoryNodeKind>(
-                      // ignore: deprecated_member_use
-                      value: _kind,
-                      decoration: const InputDecoration(labelText: 'Type'),
-                      items: InventoryNodeKind.values
-                          .map(
-                            (k) => DropdownMenuItem(
-                              value: k,
-                              child: Text(k.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setState(() {
-                          _kind = v;
-                          if (v != InventoryNodeKind.item) {
-                            _isMobileContainer = false;
-                            _isContainer = true;
-                          }
-                        });
-                      },
-                    )
-                  else
-                    InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Type',
-                        helperText:
-                            'Type is fixed after create. Items can still become containers below.',
-                      ),
-                      child: Text(_kind.label),
-                    ),
+                  _typeField(),
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _name,
@@ -377,24 +395,30 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                       labelText: 'Description (optional)',
                     ),
                   ),
-                  if (_kind == InventoryNodeKind.item) ...[
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<ItemCategory>(
-                      // ignore: deprecated_member_use
-                      value: _category,
-                      decoration: const InputDecoration(labelText: 'Category'),
-                      items: ItemCategory.values
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => _category = v);
-                      },
-                    ),
+                  if (_type.isItemLike) ...[
+                    if (_type == InventoryTypeChoice.item) ...[
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<ItemCategory>(
+                        // ignore: deprecated_member_use
+                        value: ItemCategory.itemFormValues.contains(_category)
+                            ? _category
+                            : ItemCategory.misc,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                        ),
+                        items: ItemCategory.itemFormValues
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(c.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _category = v);
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
@@ -631,7 +655,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                       ],
                     ),
                   ),
-                  if (_kind == InventoryNodeKind.item)
+                  if (_type.isItemLike)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Expiration date'),

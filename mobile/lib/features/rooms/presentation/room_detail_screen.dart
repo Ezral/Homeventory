@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../../../shared/widgets/bulk_add_items_sheet.dart';
+import '../../../shared/widgets/bulk_add_dialog.dart';
 import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
@@ -85,7 +86,6 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
   Future<void> _addSeveral(InventoryScope scope) async {
     final count = await showBulkAddItemsSheet(
       context: context,
-      ref: ref,
       homeId: homeId,
       roomId: roomId,
       parentNodeId: parentNodeId,
@@ -94,7 +94,9 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
     ref.invalidate(inventoryChildrenProvider(scope));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Added $count item${count == 1 ? '' : 's'}')),
+      SnackBar(
+        content: Text('Added $count ${count == 1 ? 'entry' : 'entries'}'),
+      ),
     );
   }
 
@@ -265,7 +267,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
             ),
           if (canEdit)
             IconButton(
-              tooltip: 'Add several names',
+              tooltip: 'Add several items',
               onPressed: () => _addSeveral(scope),
               icon: const Icon(Icons.playlist_add),
             ),
@@ -1207,7 +1209,9 @@ class _DesktopItemDetails extends ConsumerWidget {
               Text(
                 [
                   node.kindLabel,
-                  if (node.itemCategory != null) node.itemCategory!.label,
+                  if (node.itemCategory != null &&
+                      node.itemCategory != ItemCategory.clothing)
+                    node.itemCategory!.label,
                   if (node.isContainer) 'Container',
                   if (node.isMobileContainer) 'Mobile',
                 ].join(' · '),
