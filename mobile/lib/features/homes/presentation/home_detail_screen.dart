@@ -9,7 +9,6 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/home.dart';
 import '../../../shared/models/room.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../../../shared/widgets/entity_thumbnail.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
@@ -142,8 +141,6 @@ class HomeDetailScreen extends ConsumerWidget {
                     home: home,
                     homeId: homeId,
                     duration: duration,
-                    canInvite: canInvite,
-                    canEditHome: canEditHome,
                     homeImagesAsync: homeImagesAsync,
                     membersAsync: membersAsync,
                     statsAsync: statsAsync,
@@ -205,30 +202,24 @@ class HomeDetailScreen extends ConsumerWidget {
                       orElse: () => const <String, String>{},
                     );
                     return SliverPadding(
-                      padding: EdgeInsets.fromLTRB(20, 0, 20, desktop ? 32 : 100),
+                      padding:
+                          EdgeInsets.fromLTRB(20, 0, 20, desktop ? 32 : 100),
                       sliver: desktop
                           ? SliverGrid(
                               gridDelegate:
                                   const SliverGridDelegateWithMaxCrossAxisExtent(
                                 maxCrossAxisExtent: 280,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 1.55,
+                                mainAxisSpacing: 14,
+                                crossAxisSpacing: 14,
+                                childAspectRatio: 0.95,
                               ),
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                                   final room = rooms[index];
-                                  return _RoomCard(
+                                  return _RoomCoverCard(
                                     homeId: homeId,
                                     room: room,
                                     imageUrl: thumbs[room.id],
-                                    canEdit: canEdit,
-                                    onEdited: () {
-                                      ref.invalidate(roomsListProvider(homeId));
-                                      ref.invalidate(
-                                        homeDashboardStatsProvider(homeId),
-                                      );
-                                    },
                                   );
                                 },
                                 childCount: rooms.length,
@@ -237,36 +228,15 @@ class HomeDetailScreen extends ConsumerWidget {
                           : SliverList.separated(
                               itemCount: rooms.length,
                               separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final room = rooms[index];
-                                return SoftTile(
-                                  leading: EntityThumbnail(
+                                return SizedBox(
+                                  height: 200,
+                                  child: _RoomCoverCard(
+                                    homeId: homeId,
+                                    room: room,
                                     imageUrl: thumbs[room.id],
-                                    fallback: Icons.meeting_room_outlined,
-                                  ),
-                                  title: room.name,
-                                  subtitle: room.description,
-                                  trailing: canEdit
-                                      ? IconButton(
-                                          tooltip: 'Edit room',
-                                          icon: const Icon(Icons.edit_outlined),
-                                          color: AppColors.inkMuted,
-                                          onPressed: () async {
-                                            await context.push(
-                                              '/homes/$homeId/rooms/${room.id}/edit',
-                                            );
-                                            ref.invalidate(
-                                              roomsListProvider(homeId),
-                                            );
-                                            ref.invalidate(
-                                              homeDashboardStatsProvider(homeId),
-                                            );
-                                          },
-                                        )
-                                      : null,
-                                  onTap: () => context.push(
-                                    '/homes/$homeId/rooms/${room.id}',
                                   ),
                                 );
                               },
@@ -294,79 +264,79 @@ class HomeDetailScreen extends ConsumerWidget {
   }
 }
 
-class _RoomCard extends StatelessWidget {
-  const _RoomCard({
+class _RoomCoverCard extends StatelessWidget {
+  const _RoomCoverCard({
     required this.homeId,
     required this.room,
     required this.imageUrl,
-    required this.canEdit,
-    required this.onEdited,
   });
 
   final String homeId;
   final Room room;
   final String? imageUrl;
-  final bool canEdit;
-  final VoidCallback onEdited;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.paper,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
         onTap: () => context.push('/homes/$homeId/rooms/${room.id}'),
-        child: Ink(
+        child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.line),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    EntityThumbnail(
-                      imageUrl: imageUrl,
-                      fallback: Icons.meeting_room_outlined,
-                    ),
-                    const Spacer(),
-                    if (canEdit)
-                      IconButton(
-                        tooltip: 'Edit room',
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        color: AppColors.inkMuted,
-                        onPressed: () async {
-                          await context.push(
-                            '/homes/$homeId/rooms/${room.id}/edit',
-                          );
-                          onEdited();
-                        },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: imageUrl == null
+                    ? const ColoredBox(
+                        color: AppColors.mossSoft,
+                        child: Center(
+                          child: Icon(
+                            Icons.meeting_room_outlined,
+                            size: 40,
+                            color: AppColors.mossDeep,
+                          ),
+                        ),
+                      )
+                    : Image.network(
+                        imageUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (_, _, _) => const ColoredBox(
+                          color: AppColors.mossSoft,
+                          child: Center(
+                            child: Icon(
+                              Icons.meeting_room_outlined,
+                              size: 40,
+                              color: AppColors.mossDeep,
+                            ),
+                          ),
+                        ),
                       ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  room.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                if (room.description != null &&
-                    room.description!.trim().isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    room.description!,
-                    maxLines: 2,
+              ),
+              ColoredBox(
+                color: AppColors.mossDeep,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Text(
+                    room.name,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
-                ],
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -379,8 +349,6 @@ class _HomeOverviewHeader extends ConsumerWidget {
     required this.home,
     required this.homeId,
     required this.duration,
-    required this.canInvite,
-    required this.canEditHome,
     required this.homeImagesAsync,
     required this.membersAsync,
     required this.statsAsync,
@@ -390,8 +358,6 @@ class _HomeOverviewHeader extends ConsumerWidget {
   final Home home;
   final String homeId;
   final String? duration;
-  final bool canInvite;
-  final bool canEditHome;
   final AsyncValue<List<EntityImage>> homeImagesAsync;
   final AsyncValue<List<HomeMember>> membersAsync;
   final AsyncValue<HomeDashboardStats> statsAsync;
@@ -403,7 +369,7 @@ class _HomeOverviewHeader extends ConsumerWidget {
       data: (images) => images.isNotEmpty ? images.first.signedUrl : null,
       orElse: () => null,
     );
-    final imageSize = desktop ? 112.0 : 88.0;
+    final imageSize = desktop ? 168.0 : 128.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -456,37 +422,6 @@ class _HomeOverviewHeader extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (canInvite)
-                          FilledButton.icon(
-                            onPressed: () => showHomeInviteSheet(
-                              context: context,
-                              ref: ref,
-                              homeId: homeId,
-                            ),
-                            icon: const Icon(Icons.person_add_alt_1, size: 18),
-                            label: const Text('Invite'),
-                          ),
-                        if (canEditHome)
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              await context.push('/homes/$homeId/edit');
-                              ref.invalidate(homeProvider(homeId));
-                              ref.invalidate(homeImagesProvider(homeId));
-                              ref.invalidate(
-                                homeDashboardStatsProvider(homeId),
-                              );
-                              ref.invalidate(homesListProvider);
-                            },
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            label: const Text('Edit'),
-                          ),
-                      ],
-                    ),
                   ],
                 ),
               ),
