@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 
-/// Inventory list row: image takes the left half; details fill the right half.
+/// Inventory list row: image takes the left third; details fill the rest.
 ///
 /// Fixed height keeps rows even; the height is sized for title + detail lines.
 class InventoryRowCard extends StatelessWidget {
@@ -58,7 +58,7 @@ class InventoryRowCard extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  flex: 1,
+                  flex: 2,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
                     child: Row(
