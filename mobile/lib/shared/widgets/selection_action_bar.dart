@@ -10,6 +10,7 @@ class SelectionActionBar extends StatelessWidget {
     required this.onMove,
     required this.onDispose,
     required this.onPack,
+    this.onEdit,
   });
 
   final int count;
@@ -17,6 +18,7 @@ class SelectionActionBar extends StatelessWidget {
   final VoidCallback onMove;
   final VoidCallback onDispose;
   final VoidCallback onPack;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -38,22 +40,43 @@ class SelectionActionBar extends StatelessWidget {
                 '$count selected',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: onMove,
-                icon: const Icon(Icons.drive_file_move_outlined, size: 18),
-                label: const Text('Move'),
-              ),
-              TextButton.icon(
-                onPressed: onPack,
-                icon: const Icon(Icons.luggage_outlined, size: 18),
-                label: const Text('Pack'),
-              ),
-              TextButton.icon(
-                onPressed: onDispose,
-                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('Dispose'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (onEdit != null)
+                        TextButton.icon(
+                          onPressed: onEdit,
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Edit'),
+                        ),
+                      TextButton.icon(
+                        onPressed: onMove,
+                        icon: const Icon(
+                          Icons.drive_file_move_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Move'),
+                      ),
+                      TextButton.icon(
+                        onPressed: onPack,
+                        icon: const Icon(Icons.luggage_outlined, size: 18),
+                        label: const Text('Pack'),
+                      ),
+                      TextButton.icon(
+                        onPressed: onDispose,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.danger,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('Dispose'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

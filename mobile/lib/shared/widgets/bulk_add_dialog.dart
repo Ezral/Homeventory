@@ -7,6 +7,7 @@ import '../../features/homes/presentation/homes_providers.dart';
 import '../../features/rooms/presentation/rooms_providers.dart';
 import '../models/bulk_node_draft.dart';
 import '../models/enums.dart';
+import 'bulk_edit_fields.dart';
 
 Future<int?> showBulkAddItemsSheet({
   required BuildContext context,
@@ -68,7 +69,7 @@ class _BulkAddHost extends ConsumerWidget {
         backgroundColor: AppColors.paperElevated,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(width: 960, height: height, child: table),
+        child: SizedBox(width: 1100, height: height, child: table),
       );
     }
 
@@ -150,13 +151,40 @@ class _BulkAddTableState extends State<BulkAddTable> {
     });
   }
 
-  void _applyType(InventoryTypeChoice type) {
+  void _applyPatch(BulkNodePatch patch) {
+    if (!patch.hasChanges) return;
     setState(() {
       final anyChecked = _rows.any((row) => row.selected);
       for (final row in _rows) {
-        if (!anyChecked || row.selected) row.type = type;
+        if (anyChecked && !row.selected) continue;
+        if (patch.type != null) row.type = patch.type!;
+        if (patch.applyQuantity) {
+          row.quantity.text = formatOptionalNumber(patch.quantity) ?? '';
+        }
+        if (patch.applyPrice) {
+          row.price.text = formatOptionalNumber(patch.purchasePrice) ?? '';
+        }
+        if (patch.applyBrand) {
+          row.brand.text = patch.brand ?? '';
+        }
+        if (patch.applyWeight) {
+          row.weight.text = formatOptionalNumber(patch.weight) ?? '';
+        }
       }
     });
+  }
+
+  List<_BulkRow> get _editTargets {
+    final selected = _rows.where((row) => row.selected).toList();
+    return selected.isEmpty ? _rows : selected;
+  }
+
+  String get _editKey {
+    final selected = [
+      for (var i = 0; i < _rows.length; i++)
+        if (_rows[i].selected) i,
+    ];
+    return selected.isEmpty ? 'all' : selected.join(',');
   }
 
   void _addRow() {
@@ -173,6 +201,8 @@ class _BulkAddTableState extends State<BulkAddTable> {
         _rows.first.name.clear();
         _rows.first.quantity.clear();
         _rows.first.price.clear();
+        _rows.first.brand.clear();
+        _rows.first.weight.clear();
         _rows.first.type = InventoryTypeChoice.item;
         _rows.first.selected = false;
       });
@@ -226,21 +256,19 @@ class _BulkAddTableState extends State<BulkAddTable> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(
-              'Check rows, then Set type to change several at once. '
-              'With none checked, Set type updates every row. '
+              'Check rows, then edit the shared fields and Apply. '
+              'Mixed values stay blank until you type a new one. '
+              'With none checked, Apply updates every row. '
               'Blank names are skipped.',
               style: theme.textTheme.bodyMedium,
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Checkbox(
                       key: const ValueKey('bulk-select-all'),
@@ -254,61 +282,26 @@ class _BulkAddTableState extends State<BulkAddTable> {
                           : '$_selectedCount selected',
                       style: theme.textTheme.bodyMedium,
                     ),
+                    const Spacer(),
+                    TextButton.icon(
+                      key: const ValueKey('bulk-add-row'),
+                      onPressed: _busy ? null : _addRow,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add row'),
+                    ),
                   ],
                 ),
-                Material(
-                  color: AppColors.paperElevated,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: const BorderSide(color: AppColors.line, width: 1.4),
+                BulkEditFields(
+                  key: ValueKey('bulk-edit-$_editKey'),
+                  initial: sharedValuesFromDrafts(
+                    _editTargets.map((row) => row.toDraft()).toList(),
                   ),
-                  child: PopupMenuButton<InventoryTypeChoice>(
-                    key: const ValueKey('bulk-type-apply'),
-                    enabled: !_busy,
-                    tooltip: _selectedCount == 0
-                        ? 'Set type for all rows'
-                        : 'Set type for selected rows',
-                    onSelected: _applyType,
-                    itemBuilder: (context) => [
-                      for (final type in InventoryTypeChoice.values)
-                        PopupMenuItem(value: type, child: Text(type.label)),
-                    ],
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.category_outlined,
-                            size: 18,
-                            color: AppColors.mossDeep,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _selectedCount == 0
-                                ? 'Set type for all'
-                                : 'Set type of selected',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: AppColors.mossDeep,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_drop_down,
-                            color: AppColors.mossDeep,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  key: const ValueKey('bulk-add-row'),
-                  onPressed: _busy ? null : _addRow,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add row'),
+                  enabled: !_busy,
+                  currencyLabel: widget.currencyLabel,
+                  applyLabel: _selectedCount == 0
+                      ? 'Apply to all'
+                      : 'Apply to selected',
+                  onApply: _applyPatch,
                 ),
               ],
             ),
@@ -317,7 +310,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                const minWidth = 700.0;
+                const minWidth = 1020.0;
                 final width = constraints.maxWidth < minWidth
                     ? minWidth
                     : constraints.maxWidth;
@@ -426,6 +419,8 @@ class _HeaderRow extends StatelessWidget {
               width: 96,
               child: Text('Price ($currencyLabel)', style: style),
             ),
+            SizedBox(width: 120, child: Text('Brand', style: style)),
+            SizedBox(width: 84, child: Text('Weight', style: style)),
             const SizedBox(width: 40),
           ],
         ),
@@ -535,6 +530,33 @@ class _DataRow extends StatelessWidget {
               decoration: _cellDecoration(hint: 'Price'),
             ),
           ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 120,
+            child: TextField(
+              key: ValueKey('bulk-brand-$index'),
+              controller: row.brand,
+              enabled: enabled,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: _cellDecoration(hint: 'Brand'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 84,
+            child: TextField(
+              key: ValueKey('bulk-weight-$index'),
+              controller: row.weight,
+              enabled: enabled,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+              ],
+              decoration: _cellDecoration(hint: 'g'),
+            ),
+          ),
           SizedBox(
             width: 40,
             child: IconButton(
@@ -576,11 +598,15 @@ class _BulkRow {
   _BulkRow()
     : name = TextEditingController(),
       quantity = TextEditingController(),
-      price = TextEditingController();
+      price = TextEditingController(),
+      brand = TextEditingController(),
+      weight = TextEditingController();
 
   final TextEditingController name;
   final TextEditingController quantity;
   final TextEditingController price;
+  final TextEditingController brand;
+  final TextEditingController weight;
   InventoryTypeChoice type = InventoryTypeChoice.item;
   bool selected = false;
 
@@ -590,6 +616,9 @@ class _BulkRow {
       type: type,
       quantity: parseOptionalNumber(quantity.text),
       purchasePrice: parseOptionalNumber(price.text),
+      brand: brand.text,
+      weight: parseOptionalNumber(weight.text),
+      weightUnit: parseOptionalNumber(weight.text) == null ? null : 'g',
     );
   }
 
@@ -597,5 +626,7 @@ class _BulkRow {
     name.dispose();
     quantity.dispose();
     price.dispose();
+    brand.dispose();
+    weight.dispose();
   }
 }

@@ -22,7 +22,7 @@ Editors needed a fast way to capture many item names in the current location, an
 
 ### Bulk input
 
-- **Add several** dialog (desktop) / fullscreen page (phone): table of **Name**, **Type**, **Qty**, **Price**. Type is furniture / storage / item / **clothing**. Clothing is stored as an `ITEM` with category `CLOTHING`. Check rows and use **Set type of selected** to change several at once (Item → Furniture, Clothing, and the rest); with none checked, that control updates every row. Blank names are skipped. Photos, barcodes, and other details stay on the single-item form. On the create/edit form, Type can be changed after create, including Item → Furniture. Switching to furniture or storage clears item category and marks the node as a container.
+- **Add several** dialog (desktop) / fullscreen page (phone): table of **Name**, **Type**, **Qty**, **Price**, **Brand**, **Weight**. Type is furniture / storage / item / **clothing**. Clothing is stored as an `ITEM` with category `CLOTHING`. Check rows to bulk-edit shared fields (type, quantity, price, brand, weight); mixed values show as Mixed and stay unchanged if left blank. With none checked, Apply updates every row. Blank names are skipped. Photos, barcodes, and other details stay on the single-item form. On the create/edit form, Type can be changed after create, including Item → Furniture. Switching to furniture or storage clears item category and marks the node as a container.
 - Create form: **Save & add another** keeps the editor on the form after insert.
 
 CSV import is not in the client.
@@ -32,7 +32,7 @@ CSV import is not in the client.
 - **Desktop web:** checkbox on inventory cards for editors.
 - **Phone / mobile web:** long-press a card to enter selection mode; further taps toggle. Checkboxes appear while selecting.
 - Overflow **Select** on browse cards is an extra affordance.
-- Selection bar: **Move**, **Pack**, **Dispose**, clear.
+- Selection bar: **Edit**, **Move**, **Pack**, **Dispose**, clear. Edit opens a form prefilled with shared values of the selection (mixed fields stay blank).
 
 Move reuses `move_inventory_node` (top-most selected nodes only, so a parent is not followed by its already-nested child). Dispose reuses `apply_inventory_transaction` (`DISPOSE`). Pack reuses `add_items_to_packing_plan` for `ITEM` nodes onto a planned/active trip bag.
 
@@ -81,7 +81,7 @@ None.
 
 ## API Impact
 
-Client loops existing RPCs; `createBulkNodes` / `moveNodes` / `disposeNodes` are repository helpers only.
+Client loops existing RPCs; `createBulkNodes` / `updateBulkNodes` / `moveNodes` / `disposeNodes` are repository helpers only.
 
 ---
 
@@ -96,6 +96,7 @@ Client loops existing RPCs; `createBulkNodes` / `moveNodes` / `disposeNodes` are
 ## References
 
 - [`mobile/lib/shared/widgets/bulk_add_dialog.dart`](../../mobile/lib/shared/widgets/bulk_add_dialog.dart)
+- [`mobile/lib/shared/widgets/bulk_edit_dialog.dart`](../../mobile/lib/shared/widgets/bulk_edit_dialog.dart)
 - [`mobile/lib/shared/widgets/inventory_row_card.dart`](../../mobile/lib/shared/widgets/inventory_row_card.dart)
 - [`mobile/lib/shared/widgets/selection_action_bar.dart`](../../mobile/lib/shared/widgets/selection_action_bar.dart)
 - [ADR-0008](0008-inventory-transactions.md), [ADR-0009](0009-trips-packing.md), [ADR-0011](0011-flutter-web-github-pages.md)

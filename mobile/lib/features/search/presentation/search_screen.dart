@@ -6,6 +6,7 @@ import '../../../core/layout/web_layout.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/inventory_labels.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/bulk_edit_dialog.dart';
 import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/inventory_row_card.dart';
 import '../../../shared/widgets/selection_action_bar.dart';
@@ -82,6 +83,30 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         _bulkSelected[node.id] = node;
       }
     });
+  }
+
+  Future<void> _bulkEdit() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final count = await showBulkEditSheet(
+      context: context,
+      homeId: widget.homeId,
+      nodes: selected,
+    );
+    if (count == null || count <= 0) return;
+    ref.invalidate(
+      inventorySearchProvider((homeId: widget.homeId, query: _query)),
+    );
+    for (final node in selected) {
+      ref.invalidate(inventoryNodeProvider(node.id));
+    }
+    setState(_bulkSelected.clear);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Updated $count ${count == 1 ? 'entry' : 'entries'}'),
+      ),
+    );
   }
 
   Future<void> _bulkMove() async {
@@ -195,6 +220,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           : SelectionActionBar(
               count: _bulkSelected.length,
               onClear: () => setState(_bulkSelected.clear),
+              onEdit: _bulkEdit,
               onMove: _bulkMove,
               onDispose: _bulkDispose,
               onPack: _bulkPack,
