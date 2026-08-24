@@ -49,7 +49,7 @@ class HomesRepository {
   /// Visible (non-hidden) homes only.
   Future<List<Home>> listVisibleHomes() => listMyHomes();
 
-  /// Soft-hidden homes (`archived_at` set).
+  /// Soft-archived homes (`archived_at` set).
   Future<List<Home>> listHiddenHomes() => listMyHomes(includeHidden: true);
 
   Future<Home> createHome({
@@ -163,8 +163,8 @@ class HomesRepository {
     );
   }
 
-  /// Soft-hide a home from lists (owners/admins). Data is retained.
-  Future<void> hideHome(String homeId) async {
+  /// Soft-archive a home from lists (owners). Data is retained.
+  Future<void> archiveHome(String homeId) async {
     await client.from('homes').update({
       'archived_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', homeId);
@@ -174,15 +174,18 @@ class HomesRepository {
     }
   }
 
-  /// Restore a previously hidden home.
-  Future<void> unhideHome(String homeId) async {
+  /// Restore a previously archived home.
+  Future<void> unarchiveHome(String homeId) async {
     await client.from('homes').update({
       'archived_at': null,
     }).eq('id', homeId);
   }
 
-  @Deprecated('Use hideHome')
-  Future<void> archiveHome(String homeId) => hideHome(homeId);
+  @Deprecated('Use archiveHome')
+  Future<void> hideHome(String homeId) => archiveHome(homeId);
+
+  @Deprecated('Use unarchiveHome')
+  Future<void> unhideHome(String homeId) => unarchiveHome(homeId);
 
   String? _nullIfBlank(String? value) {
     if (value == null) return null;

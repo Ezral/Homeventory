@@ -66,14 +66,14 @@ class HomeDetailScreen extends ConsumerWidget {
                 ),
               if (canEditHome)
                 IconButton(
-                  tooltip: 'Hide home',
-                  onPressed: () => _confirmHideHome(
+                  tooltip: 'Archive home',
+                  onPressed: () => _confirmArchiveHome(
                     context: context,
                     ref: ref,
                     homeId: homeId,
                     homeName: home.name,
                   ),
-                  icon: const Icon(Icons.visibility_off_outlined),
+                  icon: const Icon(Icons.archive_outlined),
                 ),
               if (!desktop) const UserMenuButton(),
             ],
@@ -259,7 +259,7 @@ class HomeDetailScreen extends ConsumerWidget {
   }
 }
 
-Future<void> _confirmHideHome({
+Future<void> _confirmArchiveHome({
   required BuildContext context,
   required WidgetRef ref,
   required String homeId,
@@ -268,10 +268,10 @@ Future<void> _confirmHideHome({
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text('Hide $homeName?'),
+      title: Text('Archive $homeName?'),
       content: const Text(
         'It will leave your homes list. Inventory stays saved — '
-        'open Settings → Hidden homes to show it again.',
+        'open Settings → Archived homes to restore it.',
       ),
       actions: [
         TextButton(
@@ -280,7 +280,7 @@ Future<void> _confirmHideHome({
         ),
         FilledButton(
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('Hide'),
+          child: const Text('Archive'),
         ),
       ],
     ),
@@ -288,13 +288,13 @@ Future<void> _confirmHideHome({
   if (ok != true || !context.mounted) return;
 
   try {
-    await ref.read(homesRepositoryProvider).hideHome(homeId);
+    await ref.read(homesRepositoryProvider).archiveHome(homeId);
     ref.invalidate(homesListProvider);
     ref.invalidate(hiddenHomesListProvider);
     ref.invalidate(activeHomeIdProvider);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$homeName is now hidden')),
+        SnackBar(content: Text('$homeName is archived')),
       );
       context.go('/');
     }
