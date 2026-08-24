@@ -52,7 +52,7 @@ class InventoryRowCard extends StatelessWidget {
               children: [
                 Expanded(
                   flex: 1,
-                  child: _HalfImage(
+                  child: _RowImage(
                     imageUrl: imageUrl,
                     fallbackIcon: fallbackIcon,
                   ),
@@ -117,8 +117,8 @@ class InventoryRowCard extends StatelessWidget {
   }
 }
 
-class _HalfImage extends StatelessWidget {
-  const _HalfImage({
+class _RowImage extends StatelessWidget {
+  const _RowImage({
     required this.imageUrl,
     required this.fallbackIcon,
   });
@@ -126,27 +126,74 @@ class _HalfImage extends StatelessWidget {
   final String? imageUrl;
   final IconData fallbackIcon;
 
+  static const _previewSize = 280.0;
+
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null) {
-      return ColoredBox(
-        color: AppColors.mossSoft,
-        child: Center(
-          child: Icon(fallbackIcon, color: AppColors.mossDeep, size: 36),
-        ),
-      );
-    }
-    return Image.network(
-      imageUrl!,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      errorBuilder: (_, _, _) => ColoredBox(
-        color: AppColors.mossSoft,
-        child: Center(
-          child: Icon(fallbackIcon, color: AppColors.mossDeep, size: 36),
+    final image = imageUrl == null
+        ? ColoredBox(
+            color: AppColors.mossSoft,
+            child: Center(
+              child: Icon(fallbackIcon, color: AppColors.mossDeep, size: 36),
+            ),
+          )
+        : Image.network(
+            imageUrl!,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, _, _) => ColoredBox(
+              color: AppColors.mossSoft,
+              child: Center(
+                child: Icon(fallbackIcon, color: AppColors.mossDeep, size: 36),
+              ),
+            ),
+          );
+
+    if (imageUrl == null) return image;
+
+    // Hover (web/desktop) shows a larger preview of the same photo.
+    return Tooltip(
+      waitDuration: const Duration(milliseconds: 280),
+      showDuration: const Duration(seconds: 12),
+      preferBelow: true,
+      verticalOffset: 12,
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppColors.paperElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      richMessage: WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: _previewSize,
+            height: _previewSize,
+            child: Image.network(
+              imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => ColoredBox(
+                color: AppColors.mossSoft,
+                child: Icon(
+                  fallbackIcon,
+                  color: AppColors.mossDeep,
+                  size: 48,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
+      child: image,
     );
   }
 }
