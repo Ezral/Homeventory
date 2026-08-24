@@ -31,9 +31,7 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: EntityPhotoGallery(
-            images: [GalleryPhoto(id: 'img-1')],
-          ),
+          body: EntityPhotoGallery(images: [GalleryPhoto(id: 'img-1')]),
         ),
       ),
     );

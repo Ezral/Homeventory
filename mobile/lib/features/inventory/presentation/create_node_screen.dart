@@ -122,9 +122,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loadingExisting = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -287,9 +286,8 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
       context.pop(node);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -342,8 +340,7 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                     InputDecorator(
                       decoration: const InputDecoration(
                         labelText: 'Type',
-                        helperText:
-                            'Type is fixed after create. Items can still become containers below.',
+                        helperText: 'Type is fixed after create. Items can still become containers below.',
                       ),
                       child: Text(_kind.label),
                     ),

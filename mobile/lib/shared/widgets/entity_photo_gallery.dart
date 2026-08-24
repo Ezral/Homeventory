@@ -32,10 +32,7 @@ class EntityPhotoGallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (images.isEmpty) {
-      return Text(
-        emptyLabel,
-        style: Theme.of(context).textTheme.bodyMedium,
-      );
+      return Text(emptyLabel, style: Theme.of(context).textTheme.bodyMedium);
     }
 
     return SizedBox(
@@ -92,8 +89,7 @@ class _PhotoThumb extends StatelessWidget {
                   : Image.network(
                       photo.url!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          const Icon(Icons.broken_image),
+                      errorBuilder: (_, _, _) => const Icon(Icons.broken_image),
                     ),
             ),
           ),
@@ -148,8 +144,9 @@ class _PhotoThumb extends StatelessWidget {
                     if (canEdit && onDelete != null)
                       TextButton.icon(
                         onPressed: () async {
-                          final deleted =
-                              await _confirmAndDelete(dialogContext);
+                          final deleted = await _confirmAndDelete(
+                            dialogContext,
+                          );
                           if (deleted && dialogContext.mounted) {
                             Navigator.of(dialogContext).pop();
                           }
