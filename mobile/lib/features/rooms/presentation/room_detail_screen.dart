@@ -475,15 +475,56 @@ class _DesktopDetailPane extends ConsumerStatefulWidget {
 }
 
 class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
-  /// When set, show this item's details while a container stays selected.
+  /// Nested containers opened under [selectedId] (furniture → storage → …).
+  final List<String> _containerPath = [];
+
+  /// Item details opened inside the rightmost container pane.
   String? _nestedItemId;
 
   @override
   void didUpdateWidget(covariant _DesktopDetailPane oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedId != widget.selectedId) {
+      _containerPath.clear();
       _nestedItemId = null;
     }
+  }
+
+  void _openNestedContainer(InventoryNode child) {
+    setState(() {
+      _nestedItemId = null;
+      _containerPath.add(child.id);
+    });
+  }
+
+  void _openItem(InventoryNode item) {
+    setState(() => _nestedItemId = item.id);
+  }
+
+  void _popDrill() {
+    setState(() {
+      _nestedItemId = null;
+      if (_containerPath.isNotEmpty) {
+        _containerPath.removeLast();
+      }
+    });
+  }
+
+  void _backFromItem() {
+    setState(() => _nestedItemId = null);
+  }
+
+  /// Id whose contents/details occupy the middle column (null = single pane).
+  String? get _middleContainerId {
+    if (_containerPath.isEmpty) return null;
+    if (_containerPath.length == 1) return widget.selectedId;
+    return _containerPath[_containerPath.length - 2];
+  }
+
+  /// Id for the rightmost column's container (before optional item details).
+  String get _rightContainerId {
+    if (_containerPath.isEmpty) return widget.selectedId!;
+    return _containerPath.last;
   }
 
   @override
@@ -498,41 +539,220 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
       );
     }
 
-    final focusId = _nestedItemId ?? widget.selectedId!;
-    final nodeAsync = ref.watch(inventoryNodeProvider(focusId));
+    final middleId = _middleContainerId;
+    final showMiddle = middleId != null;
 
+    final right = _nestedItemId != null
+        ? _DesktopPaneNode(
+            key: ValueKey('item-$_nestedItemId'),
+            homeId: widget.homeId,
+            roomId: widget.roomId,
+            nodeId: _nestedItemId!,
+            canEdit: widget.canEdit,
+            listScope: widget.scope,
+            forceItemDetails: true,
+            onBack: _backFromItem,
+            onBackLabel: 'Back to contents',
+            onOpenItem: _openItem,
+            onOpenNestedContainer: _openNestedContainer,
+          )
+        : _DesktopPaneNode(
+            key: ValueKey('right-$_rightContainerId'),
+            homeId: widget.homeId,
+            roomId: widget.roomId,
+            nodeId: _rightContainerId,
+            canEdit: widget.canEdit,
+            listScope: widget.scope,
+            onBack: showMiddle ? _popDrill : null,
+            onBackLabel: 'Back',
+            onOpenItem: _openItem,
+            onOpenNestedContainer: _openNestedContainer,
+          );
+
+    final middle = middleId == null
+        ? null
+        : _DesktopPaneNode(
+            key: ValueKey('middle-$middleId'),
+            homeId: widget.homeId,
+            roomId: widget.roomId,
+            nodeId: middleId,
+            canEdit: widget.canEdit,
+            listScope: widget.scope,
+            onOpenItem: _openItem,
+            onOpenNestedContainer: _openNestedContainer,
+          );
+
+    return _CascadingDetailColumns(
+      showMiddle: showMiddle,
+      middle: middle,
+      right: right,
+    );
+  }
+}
+
+/// Side-by-side detail columns with a slide when the middle pane appears/leaves.
+///
+/// Technical pattern: column / Miller-column drill-down (push right, shift left).
+class _CascadingDetailColumns extends StatefulWidget {
+  const _CascadingDetailColumns({
+    required this.showMiddle,
+    required this.middle,
+    required this.right,
+  });
+
+  final bool showMiddle;
+  final Widget? middle;
+  final Widget right;
+
+  @override
+  State<_CascadingDetailColumns> createState() =>
+      _CascadingDetailColumnsState();
+}
+
+class _CascadingDetailColumnsState extends State<_CascadingDetailColumns>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _t;
+  Widget? _heldMiddle;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 340),
+    );
+    _t = CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
+    if (widget.showMiddle && widget.middle != null) {
+      _heldMiddle = widget.middle;
+      _controller.value = 1;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _CascadingDetailColumns oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showMiddle && widget.middle != null) {
+      _heldMiddle = widget.middle;
+      if (_controller.status != AnimationStatus.completed &&
+          _controller.status != AnimationStatus.forward) {
+        _controller.forward();
+      }
+    } else if (!widget.showMiddle && oldWidget.showMiddle) {
+      _controller.reverse().whenComplete(() {
+        if (!mounted) return;
+        if (!widget.showMiddle) {
+          setState(() => _heldMiddle = null);
+        }
+      });
+    } else if (widget.middle != null) {
+      _heldMiddle = widget.middle;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _t,
+      builder: (context, _) {
+        final t = _t.value;
+        final middle = _heldMiddle;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (middle != null && t > 0.001)
+              Expanded(
+                flex: (420 * t).round().clamp(1, 420),
+                child: Opacity(
+                  opacity: t.clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: Offset(-28 * (1 - t), 0),
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          right: BorderSide(color: AppColors.line),
+                        ),
+                      ),
+                      child: middle,
+                    ),
+                  ),
+                ),
+              ),
+            Expanded(
+              flex: 500,
+              child: Transform.translate(
+                offset: Offset(36 * (1 - t) * (middle != null ? 1 : 0), 0),
+                child: widget.right,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Loads a node and shows either its contents (container) or item details.
+class _DesktopPaneNode extends ConsumerWidget {
+  const _DesktopPaneNode({
+    super.key,
+    required this.homeId,
+    required this.roomId,
+    required this.nodeId,
+    required this.canEdit,
+    required this.listScope,
+    required this.onOpenItem,
+    required this.onOpenNestedContainer,
+    this.forceItemDetails = false,
+    this.onBack,
+    this.onBackLabel,
+  });
+
+  final String homeId;
+  final String roomId;
+  final String nodeId;
+  final bool canEdit;
+  final InventoryScope listScope;
+  final ValueChanged<InventoryNode> onOpenItem;
+  final ValueChanged<InventoryNode> onOpenNestedContainer;
+  final bool forceItemDetails;
+  final VoidCallback? onBack;
+  final String? onBackLabel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final nodeAsync = ref.watch(inventoryNodeProvider(nodeId));
     return nodeAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => ErrorView(message: e.toString()),
       data: (node) {
-        final showingNestedItem = _nestedItemId != null;
-        final showContents = node.isContainer && !showingNestedItem;
-
-        if (showContents) {
-          return _DesktopContainerContents(
-            homeId: widget.homeId,
-            roomId: widget.roomId,
-            container: node,
-            canEdit: widget.canEdit,
-            listScope: widget.scope,
-            onOpenItem: (item) => setState(() => _nestedItemId = item.id),
-            onOpenNestedContainer: (child) {
-              context.push(
-                '/homes/${widget.homeId}/rooms/${widget.roomId}/nodes/${child.id}',
-              );
-            },
+        if (forceItemDetails || !node.isContainer) {
+          return _DesktopItemDetails(
+            homeId: homeId,
+            roomId: roomId,
+            node: node,
+            canEdit: canEdit,
+            listScope: listScope,
+            onBack: onBack,
+            onBackLabel: onBackLabel,
           );
         }
-
-        return _DesktopItemDetails(
-          homeId: widget.homeId,
-          roomId: widget.roomId,
-          node: node,
-          canEdit: widget.canEdit,
-          listScope: widget.scope,
-          onBack: showingNestedItem
-              ? () => setState(() => _nestedItemId = null)
-              : null,
+        return _DesktopContainerContents(
+          homeId: homeId,
+          roomId: roomId,
+          container: node,
+          canEdit: canEdit,
+          listScope: listScope,
+          onOpenItem: onOpenItem,
+          onOpenNestedContainer: onOpenNestedContainer,
+          onBack: onBack,
+          onBackLabel: onBackLabel,
         );
       },
     );
@@ -548,6 +768,8 @@ class _DesktopContainerContents extends ConsumerWidget {
     required this.listScope,
     required this.onOpenItem,
     required this.onOpenNestedContainer,
+    this.onBack,
+    this.onBackLabel,
   });
 
   final String homeId;
@@ -557,6 +779,8 @@ class _DesktopContainerContents extends ConsumerWidget {
   final InventoryScope listScope;
   final ValueChanged<InventoryNode> onOpenItem;
   final ValueChanged<InventoryNode> onOpenNestedContainer;
+  final VoidCallback? onBack;
+  final String? onBackLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -574,8 +798,20 @@ class _DesktopContainerContents extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (onBack != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back, size: 18),
+                label: Text(onBackLabel ?? 'Back'),
+              ),
+            ),
+          ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
+          padding: EdgeInsets.fromLTRB(24, onBack != null ? 8 : 20, 16, 8),
           child: Row(
             children: [
               Expanded(
@@ -733,6 +969,7 @@ class _DesktopItemDetails extends ConsumerWidget {
     required this.canEdit,
     required this.listScope,
     this.onBack,
+    this.onBackLabel,
   });
 
   final String homeId;
@@ -741,6 +978,7 @@ class _DesktopItemDetails extends ConsumerWidget {
   final bool canEdit;
   final InventoryScope listScope;
   final VoidCallback? onBack;
+  final String? onBackLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -760,7 +998,7 @@ class _DesktopItemDetails extends ConsumerWidget {
               child: TextButton.icon(
                 onPressed: onBack,
                 icon: const Icon(Icons.arrow_back, size: 18),
-                label: const Text('Back to contents'),
+                label: Text(onBackLabel ?? 'Back to contents'),
               ),
             ),
           ),
