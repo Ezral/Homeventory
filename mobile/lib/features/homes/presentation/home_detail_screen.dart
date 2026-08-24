@@ -66,14 +66,14 @@ class HomeDetailScreen extends ConsumerWidget {
                 ),
               if (canEditHome)
                 IconButton(
-                  tooltip: 'Hide home',
-                  onPressed: () => _confirmHideHome(
+                  tooltip: 'Archive home',
+                  onPressed: () => _confirmArchiveHome(
                     context: context,
                     ref: ref,
                     homeId: homeId,
                     homeName: home.name,
                   ),
-                  icon: const Icon(Icons.visibility_off_outlined),
+                  icon: const Icon(Icons.archive_outlined),
                 ),
               if (!desktop) const UserMenuButton(),
             ],
@@ -216,43 +216,26 @@ class HomeDetailScreen extends ConsumerWidget {
                     return SliverPadding(
                       padding:
                           EdgeInsets.fromLTRB(20, 0, 20, desktop ? 32 : 100),
-                      sliver: desktop
-                          ? SliverGrid(
-                              gridDelegate:
-                                  const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 280,
-                                mainAxisSpacing: 14,
-                                crossAxisSpacing: 14,
-                                childAspectRatio: 0.95,
-                              ),
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final room = rooms[index];
-                                  return _RoomCoverCard(
-                                    homeId: homeId,
-                                    room: room,
-                                    imageUrl: thumbs[room.id],
-                                  );
-                                },
-                                childCount: rooms.length,
-                              ),
-                            )
-                          : SliverList.separated(
-                              itemCount: rooms.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final room = rooms[index];
-                                return SizedBox(
-                                  height: 200,
-                                  child: _RoomCoverCard(
-                                    homeId: homeId,
-                                    room: room,
-                                    imageUrl: thumbs[room.id],
-                                  ),
-                                );
-                              },
-                            ),
+                      sliver: SliverGrid(
+                        // 3∶2 landscape cover cards.
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: desktop ? 320 : 420,
+                          mainAxisSpacing: 14,
+                          crossAxisSpacing: 14,
+                          childAspectRatio: 3 / 2,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final room = rooms[index];
+                            return _RoomCoverCard(
+                              homeId: homeId,
+                              room: room,
+                              imageUrl: thumbs[room.id],
+                            );
+                          },
+                          childCount: rooms.length,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -276,7 +259,7 @@ class HomeDetailScreen extends ConsumerWidget {
   }
 }
 
-Future<void> _confirmHideHome({
+Future<void> _confirmArchiveHome({
   required BuildContext context,
   required WidgetRef ref,
   required String homeId,
@@ -285,10 +268,10 @@ Future<void> _confirmHideHome({
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text('Hide $homeName?'),
+      title: Text('Archive $homeName?'),
       content: const Text(
         'It will leave your homes list. Inventory stays saved — '
-        'open Settings → Hidden homes to show it again.',
+        'open Settings → Archived homes to restore it.',
       ),
       actions: [
         TextButton(
@@ -297,7 +280,7 @@ Future<void> _confirmHideHome({
         ),
         FilledButton(
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('Hide'),
+          child: const Text('Archive'),
         ),
       ],
     ),
@@ -305,13 +288,13 @@ Future<void> _confirmHideHome({
   if (ok != true || !context.mounted) return;
 
   try {
-    await ref.read(homesRepositoryProvider).hideHome(homeId);
+    await ref.read(homesRepositoryProvider).archiveHome(homeId);
     ref.invalidate(homesListProvider);
     ref.invalidate(hiddenHomesListProvider);
     ref.invalidate(activeHomeIdProvider);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$homeName is now hidden')),
+        SnackBar(content: Text('$homeName is archived')),
       );
       context.go('/');
     }
@@ -348,12 +331,26 @@ class _RoomCoverCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.line),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Expanded(
-                child: imageUrl == null
-                    ? const ColoredBox(
+              imageUrl == null
+                  ? const ColoredBox(
+                      color: AppColors.mossSoft,
+                      child: Center(
+                        child: Icon(
+                          Icons.meeting_room_outlined,
+                          size: 40,
+                          color: AppColors.mossDeep,
+                        ),
+                      ),
+                    )
+                  : Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (_, _, _) => const ColoredBox(
                         color: AppColors.mossSoft,
                         child: Center(
                           child: Icon(
@@ -362,38 +359,33 @@ class _RoomCoverCard extends StatelessWidget {
                             color: AppColors.mossDeep,
                           ),
                         ),
-                      )
-                    : Image.network(
-                        imageUrl!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        errorBuilder: (_, _, _) => const ColoredBox(
-                          color: AppColors.mossSoft,
-                          child: Center(
-                            child: Icon(
-                              Icons.meeting_room_outlined,
-                              size: 40,
-                              color: AppColors.mossDeep,
-                            ),
-                          ),
-                        ),
                       ),
-              ),
-              ColoredBox(
-                color: AppColors.mossDeep,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Text(
-                    room.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Color(0xCC1B3A2F),
+                    ],
+                    stops: [0.45, 1],
                   ),
+                ),
+              ),
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 12,
+                child: Text(
+                  room.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
               ),
             ],
@@ -482,6 +474,16 @@ class _HomeOverviewHeader extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
+                    const SizedBox(height: 10),
+                    statsAsync.when(
+                      loading: () => const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (_, _) => const SizedBox.shrink(),
+                      data: (stats) => _InlineHomeStats(stats: stats),
+                    ),
                   ],
                 ),
               ),
@@ -495,18 +497,6 @@ class _HomeOverviewHeader extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
-          const SizedBox(height: 16),
-          statsAsync.when(
-            loading: () => const SizedBox(
-              height: 48,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-            error: (e, _) => Text(
-              'Dashboard unavailable: $e',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            data: (stats) => _DashboardStrip(stats: stats, desktop: desktop),
-          ),
           const SizedBox(height: 8),
         ],
       ),
@@ -545,11 +535,10 @@ class _HomeImageThumb extends StatelessWidget {
   }
 }
 
-class _DashboardStrip extends StatelessWidget {
-  const _DashboardStrip({required this.stats, required this.desktop});
+class _InlineHomeStats extends StatelessWidget {
+  const _InlineHomeStats({required this.stats});
 
   final HomeDashboardStats stats;
-  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -557,51 +546,19 @@ class _DashboardStrip extends StatelessWidget {
       symbol: '${stats.valueCurrency} ',
       decimalDigits: 0,
     );
-    final items = [
-      (label: 'Rooms', value: '${stats.roomsCount}'),
-      (label: 'Furniture', value: '${stats.baseFurnitureCount}'),
-      (label: 'Items', value: '${stats.itemsCount}'),
-      (label: 'Est. value', value: valueFormat.format(stats.estimatedValue)),
+    final parts = [
+      '${stats.roomsCount} room${stats.roomsCount == 1 ? '' : 's'}',
+      '${stats.baseFurnitureCount} furniture',
+      '${stats.itemsCount} item${stats.itemsCount == 1 ? '' : 's'}',
+      '${valueFormat.format(stats.estimatedValue)} est.',
     ];
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.mossSoft.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0)
-              Container(width: 1, height: 28, color: AppColors.line),
-            Expanded(
-              child: Column(
-                children: [
-                  Text(
-                    items[i].value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    items[i].label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.inkMuted,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
+    return Text(
+      parts.join(' · '),
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColors.mossDeep,
+            fontWeight: FontWeight.w600,
+          ),
     );
   }
 }

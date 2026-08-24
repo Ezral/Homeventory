@@ -7,14 +7,14 @@ import '../../../shared/models/home.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import 'homes_providers.dart';
 
-/// App settings: hide/show homes (and later currency / notifications).
+/// App settings: archive/restore homes (and later currency / notifications).
 class PreferencesScreen extends ConsumerWidget {
   const PreferencesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final visibleAsync = ref.watch(homesListProvider);
-    final hiddenAsync = ref.watch(hiddenHomesListProvider);
+    final archivedAsync = ref.watch(hiddenHomesListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -38,9 +38,9 @@ class PreferencesScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Hide a home to remove it from your homes list. '
-              'Inventory stays saved — you can show it again anytime. '
-              'Only the home owner can hide or restore a home.',
+              'Archive a home to remove it from your homes list. '
+              'Inventory stays saved — you can restore it anytime. '
+              'Only the home owner can archive or restore a home.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
@@ -65,9 +65,9 @@ class PreferencesScreen extends ConsumerWidget {
                 return Column(
                   children: [
                     for (final home in homes) ...[
-                      _HomeHideTile(
+                      _HomeArchiveTile(
                         home: home,
-                        hidden: false,
+                        archived: false,
                         onChanged: () {
                           ref.invalidate(homesListProvider);
                           ref.invalidate(hiddenHomesListProvider);
@@ -80,9 +80,9 @@ class PreferencesScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 24),
-            const SectionLabel('Hidden homes'),
+            const SectionLabel('Archived homes'),
             const SizedBox(height: 10),
-            hiddenAsync.when(
+            archivedAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(child: CircularProgressIndicator()),
@@ -94,16 +94,16 @@ class PreferencesScreen extends ConsumerWidget {
               data: (homes) {
                 if (homes.isEmpty) {
                   return Text(
-                    'No hidden homes.',
+                    'No archived homes.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   );
                 }
                 return Column(
                   children: [
                     for (final home in homes) ...[
-                      _HomeHideTile(
+                      _HomeArchiveTile(
                         home: home,
-                        hidden: true,
+                        archived: true,
                         onChanged: () {
                           ref.invalidate(homesListProvider);
                           ref.invalidate(hiddenHomesListProvider);
@@ -122,56 +122,56 @@ class PreferencesScreen extends ConsumerWidget {
   }
 }
 
-class _HomeHideTile extends ConsumerWidget {
-  const _HomeHideTile({
+class _HomeArchiveTile extends ConsumerWidget {
+  const _HomeArchiveTile({
     required this.home,
-    required this.hidden,
+    required this.archived,
     required this.onChanged,
   });
 
   final Home home;
-  final bool hidden;
+  final bool archived;
   final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canHide = home.myRole?.isOwner ?? false;
+    final canArchive = home.myRole?.isOwner ?? false;
 
     return SoftTile(
       leading: Icon(
-        hidden ? Icons.visibility_off_outlined : Icons.home_outlined,
+        archived ? Icons.archive_outlined : Icons.home_outlined,
         color: AppColors.mossDeep,
       ),
       title: home.name,
       subtitle: [
         if (home.myRole != null) home.myRole!.label,
-        if (hidden) 'Hidden',
+        if (archived) 'Archived',
       ].join(' · '),
-      trailing: canHide
+      trailing: canArchive
           ? TextButton(
-              onPressed: () => hidden
-                  ? _unhide(context, ref)
-                  : _hide(context, ref),
-              child: Text(hidden ? 'Show' : 'Hide'),
+              onPressed: () => archived
+                  ? _unarchive(context, ref)
+                  : _archive(context, ref),
+              child: Text(archived ? 'Restore' : 'Archive'),
             )
           : Tooltip(
-              message: 'Only the home owner can hide homes',
+              message: 'Only the home owner can archive homes',
               child: Text(
-                hidden ? 'Hidden' : '',
+                archived ? 'Archived' : '',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
     );
   }
 
-  Future<void> _hide(BuildContext context, WidgetRef ref) async {
+  Future<void> _archive(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Hide ${home.name}?'),
+        title: Text('Archive ${home.name}?'),
         content: const Text(
           'It will disappear from your homes list. '
-          'You can restore it later under Hidden homes in Settings.',
+          'You can restore it later under Archived homes in Settings.',
         ),
         actions: [
           TextButton(
@@ -180,7 +180,7 @@ class _HomeHideTile extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hide'),
+            child: const Text('Archive'),
           ),
         ],
       ),
@@ -188,12 +188,12 @@ class _HomeHideTile extends ConsumerWidget {
     if (ok != true || !context.mounted) return;
 
     try {
-      await ref.read(homesRepositoryProvider).hideHome(home.id);
+      await ref.read(homesRepositoryProvider).archiveHome(home.id);
       ref.invalidate(activeHomeIdProvider);
       onChanged();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${home.name} is now hidden')),
+        SnackBar(content: Text('${home.name} is archived')),
       );
       // If we were inside that home, go back to the homes list.
       final loc = GoRouterState.of(context).uri.path;
@@ -209,13 +209,13 @@ class _HomeHideTile extends ConsumerWidget {
     }
   }
 
-  Future<void> _unhide(BuildContext context, WidgetRef ref) async {
+  Future<void> _unarchive(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(homesRepositoryProvider).unhideHome(home.id);
+      await ref.read(homesRepositoryProvider).unarchiveHome(home.id);
       onChanged();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${home.name} is visible again')),
+          SnackBar(content: Text('${home.name} is restored')),
         );
       }
     } catch (e) {

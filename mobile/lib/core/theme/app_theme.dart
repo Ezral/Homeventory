@@ -32,47 +32,46 @@ ThemeData buildHomeventoryTheme() {
     scaffoldBackgroundColor: AppColors.paper,
   );
 
-  final display = GoogleFonts.soraTextTheme(base.textTheme);
-  final body = GoogleFonts.sourceSans3TextTheme(base.textTheme);
+  final poppins = GoogleFonts.poppinsTextTheme(base.textTheme);
 
   return base.copyWith(
-    textTheme: body.copyWith(
-      displayLarge: display.displayLarge?.copyWith(
+    textTheme: poppins.copyWith(
+      displayLarge: poppins.displayLarge?.copyWith(
         fontWeight: FontWeight.w700,
         color: AppColors.ink,
         letterSpacing: -1.2,
       ),
-      displayMedium: display.displayMedium?.copyWith(
+      displayMedium: poppins.displayMedium?.copyWith(
         fontWeight: FontWeight.w700,
         color: AppColors.ink,
         letterSpacing: -0.8,
       ),
-      headlineLarge: display.headlineLarge?.copyWith(
+      headlineLarge: poppins.headlineLarge?.copyWith(
         fontWeight: FontWeight.w700,
         color: AppColors.ink,
       ),
-      headlineMedium: display.headlineMedium?.copyWith(
+      headlineMedium: poppins.headlineMedium?.copyWith(
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
-      headlineSmall: display.headlineSmall?.copyWith(
+      headlineSmall: poppins.headlineSmall?.copyWith(
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
-      titleLarge: display.titleLarge?.copyWith(
+      titleLarge: poppins.titleLarge?.copyWith(
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
-      titleMedium: display.titleMedium?.copyWith(
+      titleMedium: poppins.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
-      bodyLarge: body.bodyLarge?.copyWith(color: AppColors.ink, height: 1.4),
-      bodyMedium: body.bodyMedium?.copyWith(
+      bodyLarge: poppins.bodyLarge?.copyWith(color: AppColors.ink, height: 1.4),
+      bodyMedium: poppins.bodyMedium?.copyWith(
         color: AppColors.inkMuted,
         height: 1.4,
       ),
-      labelLarge: display.labelLarge?.copyWith(
+      labelLarge: poppins.labelLarge?.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
       ),
@@ -82,7 +81,7 @@ ThemeData buildHomeventoryTheme() {
       foregroundColor: AppColors.ink,
       elevation: 0,
       scrolledUnderElevation: 0.5,
-      titleTextStyle: display.titleLarge?.copyWith(
+      titleTextStyle: poppins.titleLarge?.copyWith(
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
         fontSize: 20,
@@ -94,7 +93,7 @@ ThemeData buildHomeventoryTheme() {
         foregroundColor: Colors.white,
         minimumSize: const Size.fromHeight(52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: display.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        textStyle: poppins.labelLarge?.copyWith(fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -124,7 +123,7 @@ ThemeData buildHomeventoryTheme() {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.mossSoft,
-      labelStyle: body.labelMedium?.copyWith(color: AppColors.mossDeep),
+      labelStyle: poppins.labelMedium?.copyWith(color: AppColors.mossDeep),
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ),
@@ -132,7 +131,7 @@ ThemeData buildHomeventoryTheme() {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: AppColors.ink,
-      contentTextStyle: body.bodyMedium?.copyWith(color: Colors.white),
+      contentTextStyle: poppins.bodyMedium?.copyWith(color: Colors.white),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
   );

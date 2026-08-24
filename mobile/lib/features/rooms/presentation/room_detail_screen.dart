@@ -7,7 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
-import '../../../shared/widgets/entity_thumbnail.dart';
+import '../../../shared/widgets/inventory_row_card.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
@@ -252,8 +252,8 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                width: 400,
+              Expanded(
+                flex: 5,
                 child: DecoratedBox(
                   decoration: const BoxDecoration(
                     border: Border(
@@ -264,6 +264,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
                 ),
               ),
               Expanded(
+                flex: 4,
                 child: _DesktopDetailPane(
                   homeId: homeId,
                   roomId: roomId,
@@ -368,34 +369,51 @@ class _InventoryListPane extends ConsumerWidget {
                   final node = nodes[i];
                   final packed = packedMap[node.id];
                   final selected = selectedId == node.id;
-                  return DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: selected
-                          ? Border.all(color: AppColors.moss, width: 2)
-                          : null,
+                  return InventoryRowCard(
+                    imageUrl: thumbs[node.id],
+                    fallbackIcon: _nodeIcon(node),
+                    title: node.name,
+                    subtitle: inventoryNodeSubtitle(
+                      node,
+                      locationPath: locationPaths[node.id],
+                      packed: packed,
                     ),
-                    child: SoftTile(
-                      leading: EntityThumbnail(
-                        imageUrl: thumbs[node.id],
-                        fallback: _nodeIcon(node),
-                      ),
-                      title: node.name,
-                      subtitle: inventoryNodeSubtitle(
-                        node,
-                        locationPath: locationPaths[node.id],
-                        packed: packed,
-                      ),
-                      dimmed: packed != null,
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (canEdit)
-                            IconButton(
-                              tooltip: 'Edit',
-                              icon: const Icon(Icons.edit_outlined),
-                              color: AppColors.inkMuted,
-                              onPressed: () async {
+                    dimmed: packed != null,
+                    selected: selected,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (canEdit)
+                          IconButton(
+                            tooltip: 'Edit',
+                            icon: const Icon(Icons.edit_outlined),
+                            color: AppColors.inkMuted,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () async {
+                              await context.push(
+                                '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
+                              );
+                              ref.invalidate(
+                                inventoryChildrenProvider(scope),
+                              );
+                              ref.invalidate(
+                                inventoryNodeProvider(node.id),
+                              );
+                            },
+                          ),
+                        PopupMenuButton<String>(
+                          tooltip: 'More',
+                          onSelected: (value) async {
+                            switch (value) {
+                              case 'details':
+                                await context.push(
+                                  '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
+                                );
+                              case 'open':
+                                await context.push(
+                                  '/homes/$homeId/rooms/$roomId/nodes/${node.id}',
+                                );
+                              case 'edit':
                                 await context.push(
                                   '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
                                 );
@@ -405,53 +423,28 @@ class _InventoryListPane extends ConsumerWidget {
                                 ref.invalidate(
                                   inventoryNodeProvider(node.id),
                                 );
-                              },
-                            ),
-                          PopupMenuButton<String>(
-                            tooltip: 'More',
-                            onSelected: (value) async {
-                              switch (value) {
-                                case 'details':
-                                  await context.push(
-                                    '/homes/$homeId/rooms/$roomId/nodes/${node.id}/details',
-                                  );
-                                case 'open':
-                                  await context.push(
-                                    '/homes/$homeId/rooms/$roomId/nodes/${node.id}',
-                                  );
-                                case 'edit':
-                                  await context.push(
-                                    '/homes/$homeId/rooms/$roomId/nodes/${node.id}/edit',
-                                  );
-                                  ref.invalidate(
-                                    inventoryChildrenProvider(scope),
-                                  );
-                                  ref.invalidate(
-                                    inventoryNodeProvider(node.id),
-                                  );
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              if (canEdit)
-                                const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Text('Edit'),
-                                ),
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            if (canEdit)
                               const PopupMenuItem(
-                                value: 'details',
-                                child: Text('Details'),
+                                value: 'edit',
+                                child: Text('Edit'),
                               ),
-                              if (node.isContainer)
-                                const PopupMenuItem(
-                                  value: 'open',
-                                  child: Text('Open contents'),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      onTap: () => onSelect(node),
+                            const PopupMenuItem(
+                              value: 'details',
+                              child: Text('Details'),
+                            ),
+                            if (node.isContainer)
+                              const PopupMenuItem(
+                                value: 'open',
+                                child: Text('Open contents'),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
+                    onTap: () => onSelect(node),
                   );
                 },
               ),
@@ -695,11 +688,9 @@ class _DesktopContainerContents extends ConsumerWidget {
                   }
                   final node = nodes[index];
                   final packed = packedMap[node.id];
-                  return SoftTile(
-                    leading: EntityThumbnail(
-                      imageUrl: thumbs[node.id],
-                      fallback: _nodeIcon(node),
-                    ),
+                  return InventoryRowCard(
+                    imageUrl: thumbs[node.id],
+                    fallbackIcon: _nodeIcon(node),
                     title: node.name,
                     subtitle: inventoryNodeSubtitle(
                       node,
@@ -707,11 +698,14 @@ class _DesktopContainerContents extends ConsumerWidget {
                       packed: packed,
                     ),
                     dimmed: packed != null,
-                    trailing: Icon(
-                      node.isContainer
-                          ? Icons.chevron_right
-                          : Icons.info_outline,
-                      color: AppColors.inkMuted,
+                    trailing: Padding(
+                      padding: const EdgeInsets.only(right: 8, top: 4),
+                      child: Icon(
+                        node.isContainer
+                            ? Icons.chevron_right
+                            : Icons.info_outline,
+                        color: AppColors.inkMuted,
+                      ),
                     ),
                     onTap: () {
                       if (node.isContainer) {
