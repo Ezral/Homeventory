@@ -400,10 +400,65 @@ class InventoryRepository {
         quantity: draft.quantity,
         purchasePrice: draft.purchasePrice,
         currency: draft.purchasePrice != null ? currency : null,
+        brand: draft.brand,
+        weight: draft.weight,
+        weightUnit: draft.weight != null ? (draft.weightUnit ?? 'g') : null,
       );
       created += 1;
     }
     return created;
+  }
+
+  Future<int> updateBulkNodes({
+    required List<InventoryNode> nodes,
+    required BulkNodePatch patch,
+  }) async {
+    if (!patch.hasChanges) return 0;
+    var updated = 0;
+    for (final node in nodes) {
+      final type =
+          patch.type ??
+          InventoryTypeChoice.fromNode(
+            nodeKind: node.nodeKind,
+            itemCategory: node.itemCategory,
+          );
+      final itemCategory = type.isItemLike
+          ? (patch.type != null
+                ? type.itemCategory
+                : (node.itemCategory ?? type.itemCategory))
+          : null;
+      await updateNode(
+        nodeId: node.id,
+        name: node.name,
+        nodeKind: type.nodeKind,
+        description: node.description,
+        isContainer:
+            type.isContainerKind || node.isContainer || node.isMobileContainer,
+        isMobileContainer: type.isItemLike ? node.isMobileContainer : false,
+        isDispenser: type.isItemLike ? node.isDispenser : false,
+        dispenserMode: type.isItemLike ? node.dispenserMode : null,
+        isDispensable: type.isItemLike ? node.isDispensable : false,
+        consumableForm: type.isItemLike ? node.consumableForm : null,
+        capacity: node.capacity,
+        itemCategory: itemCategory,
+        quantity: patch.applyQuantity ? patch.quantity : node.quantity,
+        quantityUnit: node.quantityUnit,
+        minimumQuantity: node.minimumQuantity,
+        purchasePrice: patch.applyPrice
+            ? patch.purchasePrice
+            : node.purchasePrice,
+        currency: node.currency,
+        purchaseDate: node.purchaseDate,
+        expirationDate: node.expirationDate,
+        brand: patch.applyBrand ? patch.brand : node.brand,
+        weight: patch.applyWeight ? patch.weight : node.weight,
+        weightUnit: patch.applyWeight
+            ? (patch.weightUnit ?? node.weightUnit ?? 'g')
+            : node.weightUnit,
+      );
+      updated += 1;
+    }
+    return updated;
   }
 
   /// Drop nodes whose ancestor is also in [nodeIds], so a parent move

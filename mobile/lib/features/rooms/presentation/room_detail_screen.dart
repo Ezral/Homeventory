@@ -8,6 +8,7 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/bulk_add_dialog.dart';
+import '../../../shared/widgets/bulk_edit_dialog.dart';
 import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
@@ -96,6 +97,36 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Added $count ${count == 1 ? 'entry' : 'entries'}'),
+      ),
+    );
+  }
+
+  Future<void> _bulkEdit() async {
+    final selected = _bulkSelected.values.toList();
+    if (selected.isEmpty) return;
+    final count = await showBulkEditSheet(
+      context: context,
+      homeId: homeId,
+      nodes: selected,
+    );
+    if (count == null || count <= 0) return;
+    ref.invalidate(
+      inventoryChildrenProvider(
+        InventoryScope(
+          homeId: homeId,
+          roomId: roomId,
+          parentNodeId: parentNodeId,
+        ),
+      ),
+    );
+    for (final node in selected) {
+      ref.invalidate(inventoryNodeProvider(node.id));
+    }
+    setState(_bulkSelected.clear);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Updated $count ${count == 1 ? 'entry' : 'entries'}'),
       ),
     );
   }
@@ -287,6 +318,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
           ? SelectionActionBar(
               count: _bulkSelected.length,
               onClear: () => setState(_bulkSelected.clear),
+              onEdit: _bulkEdit,
               onMove: _bulkMove,
               onDispose: _bulkDispose,
               onPack: _bulkPack,
