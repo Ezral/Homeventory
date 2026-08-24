@@ -49,7 +49,8 @@ class HomeDetailScreen extends ConsumerWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(desktop ? home.name : 'Home'),
+            // Name is shown next to the house image in the page header.
+            title: const Text('Overview'),
             actions: [
               if (canEditHome)
                 IconButton(
