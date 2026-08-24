@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
@@ -360,7 +359,7 @@ class _InventoryListPane extends ConsumerWidget {
                   final selected = selectedId == node.id;
                   return InventoryRowCard(
                     imageUrl: thumbs[node.id],
-                    fallbackIcon: _nodeIcon(node),
+                    fallbackIcon: inventoryNodeIcon(node),
                     title: node.name,
                     subtitle: inventoryNodeSubtitle(
                       node,
@@ -904,7 +903,7 @@ class _DesktopContainerContents extends ConsumerWidget {
                   final packed = packedMap[node.id];
                   return InventoryRowCard(
                     imageUrl: thumbs[node.id],
-                    fallbackIcon: _nodeIcon(node),
+                    fallbackIcon: inventoryNodeIcon(node),
                     title: node.name,
                     subtitle: inventoryNodeSubtitle(
                       node,
@@ -1029,8 +1028,9 @@ class _DesktopItemDetails extends ConsumerWidget {
                       }
                       return Text(
                         path,
-                        style: Theme.of(context).textTheme.bodyMedium
-                            ?.copyWith(color: AppColors.inkMuted),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.inkMuted,
+                        ),
                       );
                     },
                   ),
@@ -1209,8 +1209,9 @@ class _DesktopItemDetails extends ConsumerWidget {
       invalidateNodeImageCaches(ref, homeId: homeId, nodeId: node.id);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -1225,8 +1226,9 @@ class _DesktopItemDetails extends ConsumerWidget {
       invalidateNodeImageCaches(ref, homeId: homeId, nodeId: node.id);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -1249,8 +1251,9 @@ class _PaneDetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.inkMuted),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.inkMuted),
             ),
           ),
           Expanded(
@@ -1266,13 +1269,4 @@ String _formatQty(double value) {
   return value == value.roundToDouble()
       ? value.toInt().toString()
       : value.toString();
-}
-
-IconData _nodeIcon(InventoryNode node) {
-  return switch (node.nodeKind) {
-    InventoryNodeKind.furniture => Icons.weekend_outlined,
-    InventoryNodeKind.storageLocation => Icons.grid_view_outlined,
-    InventoryNodeKind.item =>
-      node.isContainer ? Icons.work_outline : Icons.inventory_2_outlined,
-  };
 }

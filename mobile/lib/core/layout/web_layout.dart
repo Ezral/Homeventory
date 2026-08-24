@@ -15,6 +15,24 @@ bool isWebDesktopLayout(BuildContext context) {
   return MediaQuery.sizeOf(context).width >= kWebDesktopBreakpoint;
 }
 
+/// How many search-result cards fit in a row.
+///
+/// Grows with available width up to **4** columns when there are multiple
+/// hits. A single match stays one card wide. Narrow phones stay one column.
+int searchResultColumnCount({
+  required double availableWidth,
+  required int resultCount,
+}) {
+  if (resultCount <= 1) return 1;
+  const minCardWidth = 240.0;
+  const maxColumns = 4;
+  var columns = (availableWidth / minCardWidth).floor();
+  if (columns < 1) columns = 1;
+  if (columns > maxColumns) columns = maxColumns;
+  if (columns > resultCount) columns = resultCount;
+  return columns;
+}
+
 /// Parses `/homes/:homeId/...` excluding `/homes/new` and `/homes/join`.
 String? homeIdFromLocation(String location) {
   final match = RegExp(r'^/homes/([^/?#]+)').firstMatch(location);

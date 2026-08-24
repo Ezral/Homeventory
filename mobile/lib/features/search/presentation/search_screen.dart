@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_theme.dart';
+import '../../../core/layout/web_layout.dart';
 import '../../../shared/utils/inventory_labels.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/inventory_row_card.dart';
+import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
+import '../../trips/presentation/trips_providers.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key, required this.homeId});
@@ -36,10 +39,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       _controller.text = _query;
     });
     try {
-      final node = await ref.read(inventoryRepositoryProvider).findByBarcode(
-            homeId: widget.homeId,
-            barcodeValue: value,
-          );
+      final node = await ref
+          .read(inventoryRepositoryProvider)
+          .findByBarcode(homeId: widget.homeId, barcodeValue: value);
       if (!mounted) return;
       if (node == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -47,32 +49,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         );
         return;
       }
-      if (node.isContainer) {
-        context.push(
-          '/homes/${widget.homeId}/rooms/${node.roomId}/nodes/${node.id}',
-        );
-      } else {
-        context.push(
-          '/homes/${widget.homeId}/rooms/${node.roomId}/nodes/${node.id}/details',
-        );
-      }
+      _openNode(node.roomId, node.id, node.isContainer);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
+    }
+  }
+
+  void _openNode(String roomId, String nodeId, bool isContainer) {
+    if (isContainer) {
+      context.push('/homes/${widget.homeId}/rooms/$roomId/nodes/$nodeId');
+    } else {
+      context.push(
+        '/homes/${widget.homeId}/rooms/$roomId/nodes/$nodeId/details',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final desktop = isWebDesktopLayout(context);
     final results = _query.trim().isEmpty
         ? null
         : ref.watch(
-            inventorySearchProvider(
-              (homeId: widget.homeId, query: _query),
-            ),
+            inventorySearchProvider((homeId: widget.homeId, query: _query)),
           );
 
     return Scaffold(
@@ -117,50 +120,76 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       if (nodes.isEmpty) {
                         return const EmptyState(
                           title: 'No matches',
-                          message: 'Try a different name, spelling, or barcode.',
+                          message:
+                              'Try a different name, spelling, or barcode.',
                         );
                       }
                       final idsKey = nodes.map((n) => n.id).join(',');
+                      final thumbs = ref
+                          .watch(
+                            entityThumbnailsProvider((
+                              homeId: widget.homeId,
+                              entityType: 'INVENTORY_NODE',
+                              idsKey: idsKey,
+                            )),
+                          )
+                          .maybeWhen(
+                            data: (m) => m,
+                            orElse: () => const <String, String>{},
+                          );
                       final locationPaths = ref
                           .watch(nodeLocationPathsProvider(idsKey))
                           .maybeWhen(
                             data: (m) => m,
                             orElse: () => const <String, String>{},
                           );
-                      return ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                        itemCount: nodes.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final node = nodes[index];
-                          return SoftTile(
-                            leading: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.mossSoft,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.inventory_2_outlined,
-                                color: AppColors.mossDeep,
-                              ),
+                      final packedMap = ref
+                          .watch(homePackedNodesProvider(widget.homeId))
+                          .maybeWhen(
+                            data: (m) => m,
+                            orElse: () => const <String, PackedNodeInfo>{},
+                          );
+
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          final columns = searchResultColumnCount(
+                            availableWidth: constraints.maxWidth - 40,
+                            resultCount: nodes.length,
+                          );
+                          return GridView.builder(
+                            padding: EdgeInsets.fromLTRB(
+                              20,
+                              0,
+                              20,
+                              desktop ? 32 : 24,
                             ),
-                            title: node.name,
-                            subtitle: inventoryNodeSubtitle(
-                              node,
-                              locationPath: locationPaths[node.id],
-                            ),
-                            onTap: () {
-                              if (node.isContainer) {
-                                context.push(
-                                  '/homes/${widget.homeId}/rooms/${node.roomId}/nodes/${node.id}',
-                                );
-                              } else {
-                                context.push(
-                                  '/homes/${widget.homeId}/rooms/${node.roomId}/nodes/${node.id}/details',
-                                );
-                              }
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  mainAxisExtent: 112,
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                ),
+                            itemCount: nodes.length,
+                            itemBuilder: (context, index) {
+                              final node = nodes[index];
+                              final packed = packedMap[node.id];
+                              return InventoryRowCard(
+                                imageUrl: thumbs[node.id],
+                                fallbackIcon: inventoryNodeIcon(node),
+                                title: node.name,
+                                subtitle: inventoryNodeSubtitle(
+                                  node,
+                                  locationPath: locationPaths[node.id],
+                                  packed: packed,
+                                ),
+                                dimmed: packed != null,
+                                onTap: () => _openNode(
+                                  node.roomId,
+                                  node.id,
+                                  node.isContainer,
+                                ),
+                              );
                             },
                           );
                         },
