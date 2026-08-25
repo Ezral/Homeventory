@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/utils/image_pick.dart';
+import '../../../shared/widgets/image_ingest_region.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 import 'homes_providers.dart';
@@ -75,7 +76,9 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
       final home = await ref
           .read(homesRepositoryProvider)
           .getHome(widget.existingHomeId!);
-      final images = await ref.read(inventoryRepositoryProvider).listImages(
+      final images = await ref
+          .read(inventoryRepositoryProvider)
+          .listImages(
             homeId: widget.existingHomeId!,
             entityType: 'HOME',
             entityId: widget.existingHomeId!,
@@ -95,9 +98,9 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -197,9 +200,9 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -211,15 +214,14 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
     final timezoneItems = {
       ..._kTimezones,
       if (!_kTimezones.contains(_timezone)) _timezone,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     final currencyItems = {
       ..._kCurrencies,
       if (!_kCurrencies.contains(_currency)) _currency,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
 
-    final showExisting = !_removeExistingImage &&
+    final showExisting =
+        !_removeExistingImage &&
         _pendingImage == null &&
         _existingImages.isNotEmpty &&
         _existingImages.first.signedUrl != null;
@@ -329,8 +331,9 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
                     value: currencyItems.contains(_currency)
                         ? _currency
                         : currencyItems.first,
-                    decoration:
-                        const InputDecoration(labelText: 'Home currency'),
+                    decoration: const InputDecoration(
+                      labelText: 'Home currency',
+                    ),
                     items: [
                       for (final c in currencyItems)
                         DropdownMenuItem(value: c, child: Text(c)),
@@ -343,65 +346,81 @@ class _CreateHomeScreenState extends ConsumerState<CreateHomeScreen> {
                           },
                   ),
                   const SizedBox(height: 20),
-                  Text('Photo', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  if (_pendingImage != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(
-                        _pendingImage!.bytes,
-                        height: 160,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  else if (showExisting)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        _existingImages.first.signedUrl!,
-                        height: 160,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  else
-                    Container(
-                      height: 120,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.home_outlined, size: 40),
+                  ImageIngestRegion(
+                    enabled: !_busy,
+                    showHint: true,
+                    onImages: (images) {
+                      if (images.isEmpty) return;
+                      setState(() => _pendingImage = images.last);
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Photo',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        if (_pendingImage != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              _pendingImage!.bytes,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else if (showExisting)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              _existingImages.first.signedUrl!,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 120,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.home_outlined, size: 40),
+                          ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _busy ? null : _pickImage,
+                              icon: const Icon(Icons.add_a_photo_outlined),
+                              label: Text(
+                                _pendingImage != null || showExisting
+                                    ? 'Replace photo'
+                                    : 'Add photo',
+                              ),
+                            ),
+                            if (_pendingImage != null || showExisting)
+                              TextButton.icon(
+                                onPressed: _busy
+                                    ? null
+                                    : () => setState(() {
+                                        _pendingImage = null;
+                                        _removeExistingImage = true;
+                                      }),
+                                icon: const Icon(Icons.hide_image_outlined),
+                                label: const Text('Remove photo'),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _pickImage,
-                        icon: const Icon(Icons.add_a_photo_outlined),
-                        label: Text(
-                          _pendingImage != null || showExisting
-                              ? 'Replace photo'
-                              : 'Add photo',
-                        ),
-                      ),
-                      if (_pendingImage != null || showExisting)
-                        TextButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () => setState(() {
-                                    _pendingImage = null;
-                                    _removeExistingImage = true;
-                                  }),
-                          icon: const Icon(Icons.hide_image_outlined),
-                          label: const Text('Remove photo'),
-                        ),
-                    ],
                   ),
                   const SizedBox(height: 28),
                   FilledButton(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shared/models/room.dart';
 import '../../../shared/utils/image_pick.dart';
+import '../../../shared/widgets/image_ingest_region.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../presentation/rooms_providers.dart';
 
@@ -43,9 +44,12 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
 
   Future<void> _load() async {
     try {
-      final room =
-          await ref.read(roomsRepositoryProvider).getRoom(widget.existingRoomId!);
-      final images = await ref.read(inventoryRepositoryProvider).listImages(
+      final room = await ref
+          .read(roomsRepositoryProvider)
+          .getRoom(widget.existingRoomId!);
+      final images = await ref
+          .read(inventoryRepositoryProvider)
+          .listImages(
             homeId: widget.homeId,
             entityType: 'ROOM',
             entityId: widget.existingRoomId!,
@@ -60,9 +64,9 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -113,14 +117,16 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
       }
 
       ref.invalidate(roomsListProvider(widget.homeId));
-      ref.invalidate(roomImagesProvider((homeId: widget.homeId, roomId: room.id)));
+      ref.invalidate(
+        roomImagesProvider((homeId: widget.homeId, roomId: room.id)),
+      );
       if (!mounted) return;
       context.pop(room);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -164,42 +170,58 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Text('Photo', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  if (_pendingImage != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(
-                        _pendingImage!.bytes,
-                        height: 160,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  else if (_existingImages.isNotEmpty &&
-                      _existingImages.first.signedUrl != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        _existingImages.first.signedUrl!,
-                        height: 160,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  else
-                    Text(
-                      'No photo yet.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _pickImage,
-                    icon: const Icon(Icons.add_a_photo_outlined),
-                    label: Text(
-                      _pendingImage != null || _existingImages.isNotEmpty
-                          ? 'Replace photo'
-                          : 'Add photo',
+                  ImageIngestRegion(
+                    enabled: !_busy,
+                    showHint: true,
+                    onImages: (images) {
+                      if (images.isEmpty) return;
+                      setState(() => _pendingImage = images.last);
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Photo',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        if (_pendingImage != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              _pendingImage!.bytes,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else if (_existingImages.isNotEmpty &&
+                            _existingImages.first.signedUrl != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              _existingImages.first.signedUrl!,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else
+                          Text(
+                            'No photo yet.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _pickImage,
+                          icon: const Icon(Icons.add_a_photo_outlined),
+                          label: Text(
+                            _pendingImage != null || _existingImages.isNotEmpty
+                                ? 'Replace photo'
+                                : 'Add photo',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 28),

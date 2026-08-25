@@ -11,6 +11,7 @@ import '../../../shared/widgets/bulk_add_dialog.dart';
 import '../../../shared/widgets/bulk_edit_dialog.dart';
 import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
+import '../../../shared/widgets/image_ingest_region.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/inventory_row_card.dart';
@@ -1276,40 +1277,50 @@ class _DesktopItemDetails extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  const Expanded(child: SectionLabel('Photos')),
-                  if (canEdit)
-                    TextButton.icon(
-                      onPressed: () => _addPhoto(context, ref),
-                      icon: const Icon(Icons.add_a_photo_outlined),
-                      label: const Text('Add'),
+              ImageIngestRegion(
+                enabled: canEdit,
+                showHint: true,
+                onImages: (images) => _addPhotos(context, ref, images),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(child: SectionLabel('Photos')),
+                        if (canEdit)
+                          TextButton.icon(
+                            onPressed: () => _addPhoto(context, ref),
+                            icon: const Icon(Icons.add_a_photo_outlined),
+                            label: const Text('Add'),
+                          ),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              imagesAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
+                    const SizedBox(height: 8),
+                    imagesAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (e, _) => Text(e.toString()),
+                      data: (images) {
+                        return EntityPhotoGallery(
+                          images: [
+                            for (final image in images)
+                              GalleryPhoto(id: image.id, url: image.signedUrl),
+                          ],
+                          canEdit: canEdit,
+                          onDelete: canEdit
+                              ? (id) => _deletePhoto(
+                                  context,
+                                  ref,
+                                  images.firstWhere((image) => image.id == id),
+                                )
+                              : null,
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                error: (e, _) => Text(e.toString()),
-                data: (images) {
-                  return EntityPhotoGallery(
-                    images: [
-                      for (final image in images)
-                        GalleryPhoto(id: image.id, url: image.signedUrl),
-                    ],
-                    canEdit: canEdit,
-                    onDelete: canEdit
-                        ? (id) => _deletePhoto(
-                            context,
-                            ref,
-                            images.firstWhere((image) => image.id == id),
-                          )
-                        : null,
-                  );
-                },
               ),
               const SizedBox(height: 20),
               const SectionLabel('Details'),
@@ -1428,17 +1439,28 @@ class _DesktopItemDetails extends ConsumerWidget {
 
   Future<void> _addPhoto(BuildContext context, WidgetRef ref) async {
     final picked = await pickEntityImage(context);
-    if (picked == null) return;
+    if (picked == null || !context.mounted) return;
+    await _addPhotos(context, ref, [picked]);
+  }
+
+  Future<void> _addPhotos(
+    BuildContext context,
+    WidgetRef ref,
+    List<PickedImageBytes> images,
+  ) async {
+    if (images.isEmpty) return;
     try {
-      await ref
-          .read(inventoryRepositoryProvider)
-          .uploadNodeImage(
-            homeId: homeId,
-            nodeId: node.id,
-            bytes: picked.bytes,
-            mimeType: picked.mimeType,
-            extension: picked.extension,
-          );
+      for (final picked in images) {
+        await ref
+            .read(inventoryRepositoryProvider)
+            .uploadNodeImage(
+              homeId: homeId,
+              nodeId: node.id,
+              bytes: picked.bytes,
+              mimeType: picked.mimeType,
+              extension: picked.extension,
+            );
+      }
       invalidateNodeImageCaches(ref, homeId: homeId, nodeId: node.id);
     } catch (e) {
       if (context.mounted) {

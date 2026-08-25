@@ -7,6 +7,7 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/image_pick.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
+import '../../../shared/widgets/image_ingest_region.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
@@ -681,103 +682,127 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                       ),
                     ),
                   const SizedBox(height: 20),
-                  Text('Photo', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  if (_existingImages.isNotEmpty) ...[
-                    EntityPhotoGallery(
-                      images: [
-                        for (final image in _existingImages)
-                          GalleryPhoto(id: image.id, url: image.signedUrl),
-                      ],
-                      canEdit: true,
-                      confirmBeforeDelete: false,
-                      onDelete: _busy
-                          ? null
-                          : (id) async {
-                              final image = _existingImages.firstWhere(
-                                (item) => item.id == id,
-                              );
-                              setState(() {
-                                _imagesToDelete.add(image);
-                                _existingImages = _existingImages
-                                    .where((item) => item.id != id)
-                                    .toList();
-                              });
-                            },
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  if (_pendingImage != null)
-                    Stack(
+                  ImageIngestRegion(
+                    enabled: !_busy,
+                    showHint: true,
+                    onImages: (images) {
+                      if (images.isEmpty) return;
+                      setState(() => _pendingImage = images.last);
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(
-                            _pendingImage!.bytes,
-                            height: 160,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                        Text(
+                          'Photo',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Material(
-                            color: Colors.black54,
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                              tooltip: 'Delete photo',
-                              iconSize: 18,
-                              padding: const EdgeInsets.all(8),
-                              constraints: const BoxConstraints(
-                                minWidth: 36,
-                                minHeight: 36,
-                              ),
-                              color: Colors.white,
-                              icon: const Icon(Icons.close),
-                              onPressed: _busy
-                                  ? null
-                                  : () => setState(() => _pendingImage = null),
-                            ),
+                        const SizedBox(height: 8),
+                        if (_existingImages.isNotEmpty) ...[
+                          EntityPhotoGallery(
+                            images: [
+                              for (final image in _existingImages)
+                                GalleryPhoto(
+                                  id: image.id,
+                                  url: image.signedUrl,
+                                ),
+                            ],
+                            canEdit: true,
+                            confirmBeforeDelete: false,
+                            onDelete: _busy
+                                ? null
+                                : (id) async {
+                                    final image = _existingImages.firstWhere(
+                                      (item) => item.id == id,
+                                    );
+                                    setState(() {
+                                      _imagesToDelete.add(image);
+                                      _existingImages = _existingImages
+                                          .where((item) => item.id != id)
+                                          .toList();
+                                    });
+                                  },
                           ),
+                          const SizedBox(height: 8),
+                        ],
+                        if (_pendingImage != null)
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.memory(
+                                  _pendingImage!.bytes,
+                                  height: 160,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Material(
+                                  color: Colors.black54,
+                                  shape: const CircleBorder(),
+                                  child: IconButton(
+                                    tooltip: 'Delete photo',
+                                    iconSize: 18,
+                                    padding: const EdgeInsets.all(8),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 36,
+                                      minHeight: 36,
+                                    ),
+                                    color: Colors.white,
+                                    icon: const Icon(Icons.close),
+                                    onPressed: _busy
+                                        ? null
+                                        : () => setState(
+                                            () => _pendingImage = null,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (_existingImages.isEmpty)
+                          Text(
+                            widget.isEditing
+                                ? 'No photos. Add one here or from details.'
+                                : 'Optional photo for this object.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        if (_imagesToDelete.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'Removed photos are deleted when you save.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _busy ? null : _pickImage,
+                              icon: const Icon(Icons.add_a_photo_outlined),
+                              label: Text(
+                                _pendingImage == null
+                                    ? 'Add photo'
+                                    : 'Replace photo',
+                              ),
+                            ),
+                            if (_pendingImage != null)
+                              TextButton.icon(
+                                onPressed: _busy
+                                    ? null
+                                    : () =>
+                                          setState(() => _pendingImage = null),
+                                icon: const Icon(Icons.hide_image_outlined),
+                                label: const Text('Remove photo'),
+                              ),
+                          ],
                         ),
                       ],
-                    )
-                  else if (_existingImages.isEmpty)
-                    Text(
-                      widget.isEditing
-                          ? 'No photos. Add one here or from details.'
-                          : 'Optional photo for this object.',
-                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                  if (_imagesToDelete.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Removed photos are deleted when you save.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _pickImage,
-                        icon: const Icon(Icons.add_a_photo_outlined),
-                        label: Text(
-                          _pendingImage == null ? 'Add photo' : 'Replace photo',
-                        ),
-                      ),
-                      if (_pendingImage != null)
-                        TextButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () => setState(() => _pendingImage = null),
-                          icon: const Icon(Icons.hide_image_outlined),
-                          label: const Text('Remove photo'),
-                        ),
-                    ],
                   ),
                   const SizedBox(height: 28),
                   FilledButton(
