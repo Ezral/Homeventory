@@ -126,6 +126,25 @@ void main() {
       expect(shared.typeMixed, isFalse);
     });
 
+    test('BulkNodeDraft.fromNode copies per-item fields', () {
+      final draft = BulkNodeDraft.fromNode(
+        _item(
+          id: '1',
+          name: 'Tee',
+          quantity: 2,
+          price: 15,
+          brand: 'Uniqlo',
+          weight: 180,
+        ),
+      );
+      expect(draft.name, 'Tee');
+      expect(draft.quantity, 2);
+      expect(draft.purchasePrice, 15);
+      expect(draft.brand, 'Uniqlo');
+      expect(draft.weight, 180);
+      expect(draft.type, InventoryTypeChoice.item);
+    });
+
     test('clothing type maps to item + clothing category', () {
       const draft = BulkNodeDraft(
         name: 'Jeans',
@@ -348,6 +367,87 @@ void main() {
 
       expect(saved![0].type, InventoryTypeChoice.clothing);
       expect(saved![1].type, InventoryTypeChoice.clothing);
+    });
+
+    testWidgets('edit mode shows one prefilled row per selected item', (
+      tester,
+    ) async {
+      await useWideSurface(tester);
+      List<BulkNodeDraft>? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              existingNodes: [
+                _item(
+                  id: '1',
+                  name: 'Tee',
+                  quantity: 2,
+                  brand: 'Uniqlo',
+                  weight: 180,
+                ),
+                _item(
+                  id: '2',
+                  name: 'Jeans',
+                  category: ItemCategory.clothing,
+                  quantity: 1,
+                  price: 40,
+                ),
+              ],
+              onClose: () {},
+              onSave: (drafts) async => saved = drafts,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Edit selected'), findsOneWidget);
+      expect(find.byKey(const ValueKey('bulk-add-row')), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('bulk-name-0')))
+            .controller
+            ?.text,
+        'Tee',
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('bulk-name-1')))
+            .controller
+            ?.text,
+        'Jeans',
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('bulk-qty-0')))
+            .controller
+            ?.text,
+        '2',
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('bulk-brand-0')))
+            .controller
+            ?.text,
+        'Uniqlo',
+      );
+
+      await tester.enterText(find.byKey(const ValueKey('bulk-qty-0')), '5');
+      await tester.enterText(
+        find.byKey(const ValueKey('bulk-brand-1')),
+        'Levi\'s',
+      );
+      await tester.tap(find.byKey(const ValueKey('bulk-save')));
+      await tester.pumpAndSettle();
+
+      expect(saved, hasLength(2));
+      expect(saved![0].name, 'Tee');
+      expect(saved![0].quantity, 5);
+      expect(saved![0].brand, 'Uniqlo');
+      expect(saved![1].name, 'Jeans');
+      expect(saved![1].type, InventoryTypeChoice.clothing);
+      expect(saved![1].brand, "Levi's");
+      expect(saved![1].quantity, 1);
     });
   });
 }

@@ -411,25 +411,25 @@ class InventoryRepository {
 
   Future<int> updateBulkNodes({
     required List<InventoryNode> nodes,
-    required BulkNodePatch patch,
+    required List<BulkNodeDraft> drafts,
   }) async {
-    if (!patch.hasChanges) return 0;
+    final count = nodes.length < drafts.length ? nodes.length : drafts.length;
     var updated = 0;
-    for (final node in nodes) {
-      final type =
-          patch.type ??
-          InventoryTypeChoice.fromNode(
-            nodeKind: node.nodeKind,
-            itemCategory: node.itemCategory,
-          );
+    for (var i = 0; i < count; i++) {
+      final node = nodes[i];
+      final draft = drafts[i];
+      final name = draft.name.trim().isEmpty ? node.name : draft.name.trim();
+      final type = draft.type;
       final itemCategory = type.isItemLike
-          ? (patch.type != null
-                ? type.itemCategory
-                : (node.itemCategory ?? type.itemCategory))
+          ? (type == InventoryTypeChoice.clothing
+                ? ItemCategory.clothing
+                : (node.itemCategory == ItemCategory.clothing
+                      ? ItemCategory.misc
+                      : (node.itemCategory ?? ItemCategory.misc)))
           : null;
       await updateNode(
         nodeId: node.id,
-        name: node.name,
+        name: name,
         nodeKind: type.nodeKind,
         description: node.description,
         isContainer:
@@ -441,20 +441,18 @@ class InventoryRepository {
         consumableForm: type.isItemLike ? node.consumableForm : null,
         capacity: node.capacity,
         itemCategory: itemCategory,
-        quantity: patch.applyQuantity ? patch.quantity : node.quantity,
+        quantity: draft.quantity,
         quantityUnit: node.quantityUnit,
         minimumQuantity: node.minimumQuantity,
-        purchasePrice: patch.applyPrice
-            ? patch.purchasePrice
-            : node.purchasePrice,
+        purchasePrice: draft.purchasePrice,
         currency: node.currency,
         purchaseDate: node.purchaseDate,
         expirationDate: node.expirationDate,
-        brand: patch.applyBrand ? patch.brand : node.brand,
-        weight: patch.applyWeight ? patch.weight : node.weight,
-        weightUnit: patch.applyWeight
-            ? (patch.weightUnit ?? node.weightUnit ?? 'g')
-            : node.weightUnit,
+        brand: draft.brand,
+        weight: draft.weight,
+        weightUnit: draft.weight == null
+            ? null
+            : (draft.weightUnit ?? node.weightUnit ?? 'g'),
       );
       updated += 1;
     }

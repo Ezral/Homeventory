@@ -7,6 +7,7 @@ import '../../features/homes/presentation/homes_providers.dart';
 import '../../features/rooms/presentation/rooms_providers.dart';
 import '../models/bulk_node_draft.dart';
 import '../models/enums.dart';
+import '../models/inventory_node.dart';
 import 'bulk_edit_fields.dart';
 
 Future<int?> showBulkAddItemsSheet({
@@ -88,12 +89,16 @@ class BulkAddTable extends StatefulWidget {
     required this.onSave,
     this.currencyLabel = 'USD',
     this.initialRowCount = 6,
+    this.existingNodes,
   });
 
   final VoidCallback onClose;
   final Future<void> Function(List<BulkNodeDraft> drafts) onSave;
   final String currencyLabel;
   final int initialRowCount;
+  final List<InventoryNode>? existingNodes;
+
+  bool get isEditing => existingNodes != null && existingNodes!.isNotEmpty;
 
   @override
   State<BulkAddTable> createState() => _BulkAddTableState();
@@ -107,8 +112,15 @@ class _BulkAddTableState extends State<BulkAddTable> {
   @override
   void initState() {
     super.initState();
-    final count = widget.initialRowCount < 1 ? 1 : widget.initialRowCount;
-    _rows = List<_BulkRow>.generate(count, (_) => _BulkRow());
+    if (widget.isEditing) {
+      _rows = [
+        for (final node in widget.existingNodes!)
+          _BulkRow(initial: BulkNodeDraft.fromNode(node)),
+      ];
+    } else {
+      final count = widget.initialRowCount < 1 ? 1 : widget.initialRowCount;
+      _rows = List<_BulkRow>.generate(count, (_) => _BulkRow());
+    }
     for (final row in _rows) {
       row.name.addListener(_onNameChanged);
     }
@@ -216,11 +228,19 @@ class _BulkAddTableState extends State<BulkAddTable> {
   }
 
   Future<void> _save() async {
-    final drafts = namedBulkDrafts(_rows.map((row) => row.toDraft()));
+    final drafts = widget.isEditing
+        ? _rows.map((row) => row.toDraft()).toList()
+        : namedBulkDrafts(_rows.map((row) => row.toDraft()));
     if (drafts.isEmpty) return;
+    if (widget.isEditing && drafts.any((d) => d.name.trim().isEmpty)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Every row needs a name')));
+      return;
+    }
     setState(() => _busy = true);
     try {
-      await widget.onSave(drafts);
+      await widget.onSave(widget.isEditing ? namedBulkDrafts(drafts) : drafts);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -243,7 +263,10 @@ class _BulkAddTableState extends State<BulkAddTable> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Add several', style: theme.textTheme.titleLarge),
+                  child: Text(
+                    widget.isEditing ? 'Edit selected' : 'Add several',
+                    style: theme.textTheme.titleLarge,
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -256,10 +279,13 @@ class _BulkAddTableState extends State<BulkAddTable> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(
-              'Check rows, then edit the shared fields and Apply. '
-              'Mixed values stay blank until you type a new one. '
-              'With none checked, Apply updates every row. '
-              'Blank names are skipped.',
+              widget.isEditing
+                  ? 'Each row is one selected item. Change fields per row, then save. '
+                        'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
+                  : 'Check rows, then edit the shared fields and Apply. '
+                        'Mixed values stay blank until you type a new one. '
+                        'With none checked, Apply updates every row. '
+                        'Blank names are skipped.',
               style: theme.textTheme.bodyMedium,
             ),
           ),
@@ -283,12 +309,13 @@ class _BulkAddTableState extends State<BulkAddTable> {
                       style: theme.textTheme.bodyMedium,
                     ),
                     const Spacer(),
-                    TextButton.icon(
-                      key: const ValueKey('bulk-add-row'),
-                      onPressed: _busy ? null : _addRow,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add row'),
-                    ),
+                    if (!widget.isEditing)
+                      TextButton.icon(
+                        key: const ValueKey('bulk-add-row'),
+                        onPressed: _busy ? null : _addRow,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add row'),
+                      ),
                   ],
                 ),
                 BulkEditFields(
@@ -338,7 +365,9 @@ class _BulkAddTableState extends State<BulkAddTable> {
                               onType: (type) {
                                 setState(() => _rows[index].type = type);
                               },
-                              onRemove: () => _removeRow(index),
+                              onRemove: widget.isEditing
+                                  ? null
+                                  : () => _removeRow(index),
                             );
                           },
                         ),
@@ -383,7 +412,13 @@ class _BulkAddTableState extends State<BulkAddTable> {
                     backgroundColor: AppColors.moss,
                     minimumSize: const Size(140, 44),
                   ),
-                  child: Text(_busy ? 'Adding…' : 'Add $_namedCount'),
+                  child: Text(
+                    _busy
+                        ? (widget.isEditing ? 'Saving…' : 'Adding…')
+                        : widget.isEditing
+                        ? 'Save $_namedCount'
+                        : 'Add $_namedCount',
+                  ),
                 ),
               ],
             ),
@@ -446,7 +481,7 @@ class _DataRow extends StatelessWidget {
   final bool autofocus;
   final VoidCallback onToggle;
   final ValueChanged<InventoryTypeChoice> onType;
-  final VoidCallback onRemove;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -557,15 +592,18 @@ class _DataRow extends StatelessWidget {
               decoration: _cellDecoration(hint: 'g'),
             ),
           ),
-          SizedBox(
-            width: 40,
-            child: IconButton(
-              key: ValueKey('bulk-remove-$index'),
-              tooltip: 'Remove row',
-              onPressed: enabled ? onRemove : null,
-              icon: const Icon(Icons.close, size: 18),
-            ),
-          ),
+          if (onRemove != null)
+            SizedBox(
+              width: 40,
+              child: IconButton(
+                key: ValueKey('bulk-remove-$index'),
+                tooltip: 'Remove row',
+                onPressed: enabled ? onRemove : null,
+                icon: const Icon(Icons.close, size: 18),
+              ),
+            )
+          else
+            const SizedBox(width: 40),
         ],
       ),
     );
@@ -595,30 +633,40 @@ InputDecoration _cellDecoration({String? hint}) {
 }
 
 class _BulkRow {
-  _BulkRow()
-    : name = TextEditingController(),
-      quantity = TextEditingController(),
-      price = TextEditingController(),
-      brand = TextEditingController(),
-      weight = TextEditingController();
+  _BulkRow({BulkNodeDraft? initial})
+    : name = TextEditingController(text: initial?.name ?? ''),
+      quantity = TextEditingController(
+        text: formatOptionalNumber(initial?.quantity) ?? '',
+      ),
+      price = TextEditingController(
+        text: formatOptionalNumber(initial?.purchasePrice) ?? '',
+      ),
+      brand = TextEditingController(text: initial?.brand ?? ''),
+      weight = TextEditingController(
+        text: formatOptionalNumber(initial?.weight) ?? '',
+      ),
+      type = initial?.type ?? InventoryTypeChoice.item,
+      _weightUnit = initial?.weightUnit;
 
   final TextEditingController name;
   final TextEditingController quantity;
   final TextEditingController price;
   final TextEditingController brand;
   final TextEditingController weight;
-  InventoryTypeChoice type = InventoryTypeChoice.item;
+  InventoryTypeChoice type;
+  final String? _weightUnit;
   bool selected = false;
 
   BulkNodeDraft toDraft() {
+    final parsedWeight = parseOptionalNumber(weight.text);
     return BulkNodeDraft(
       name: name.text,
       type: type,
       quantity: parseOptionalNumber(quantity.text),
       purchasePrice: parseOptionalNumber(price.text),
       brand: brand.text,
-      weight: parseOptionalNumber(weight.text),
-      weightUnit: parseOptionalNumber(weight.text) == null ? null : 'g',
+      weight: parsedWeight,
+      weightUnit: parsedWeight == null ? null : (_weightUnit ?? 'g'),
     );
   }
 

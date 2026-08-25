@@ -23,6 +23,21 @@ class BulkNodeDraft {
 
   bool get isItemLike => type.isItemLike;
 
+  factory BulkNodeDraft.fromNode(InventoryNode node) {
+    return BulkNodeDraft(
+      name: node.name,
+      type: InventoryTypeChoice.fromNode(
+        nodeKind: node.nodeKind,
+        itemCategory: node.itemCategory,
+      ),
+      quantity: node.quantity,
+      purchasePrice: node.purchasePrice,
+      brand: node.brand,
+      weight: node.weight,
+      weightUnit: node.weightUnit,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     return other is BulkNodeDraft &&

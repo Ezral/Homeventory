@@ -32,7 +32,7 @@ CSV import is not in the client.
 - **Desktop web:** checkbox on inventory cards for editors.
 - **Phone / mobile web:** long-press a card to enter selection mode; further taps toggle. Checkboxes appear while selecting.
 - Overflow **Select** on browse cards is an extra affordance.
-- Selection bar: **Edit**, **Move**, **Pack**, **Dispose**, clear. Edit opens a form prefilled with shared values of the selection (mixed fields stay blank).
+- Selection bar: **Edit**, **Move**, **Pack**, **Dispose**, clear. Edit opens a table with **one row per selected item**, prefilled so each can be changed individually.
 
 Move reuses `move_inventory_node` (top-most selected nodes only, so a parent is not followed by its already-nested child). Dispose reuses `apply_inventory_transaction` (`DISPOSE`). Pack reuses `add_items_to_packing_plan` for `ITEM` nodes onto a planned/active trip bag.
 
