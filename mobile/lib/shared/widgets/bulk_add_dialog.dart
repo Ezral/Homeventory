@@ -7,6 +7,8 @@ import '../../features/homes/presentation/homes_providers.dart';
 import '../../features/rooms/presentation/rooms_providers.dart';
 import '../models/bulk_node_draft.dart';
 import '../models/enums.dart';
+import '../models/inventory_node.dart';
+import '../utils/image_pick.dart';
 import 'bulk_edit_fields.dart';
 
 Future<int?> showBulkAddItemsSheet({
@@ -69,7 +71,7 @@ class _BulkAddHost extends ConsumerWidget {
         backgroundColor: AppColors.paperElevated,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(width: 1100, height: height, child: table),
+        child: SizedBox(width: 1200, height: height, child: table),
       );
     }
 
@@ -80,7 +82,7 @@ class _BulkAddHost extends ConsumerWidget {
   }
 }
 
-/// Spreadsheet of name / type / quantity / price for bulk create.
+/// Spreadsheet of name / type / quantity / price / photo for bulk create.
 class BulkAddTable extends StatefulWidget {
   const BulkAddTable({
     super.key,
@@ -88,12 +90,20 @@ class BulkAddTable extends StatefulWidget {
     required this.onSave,
     this.currencyLabel = 'USD',
     this.initialRowCount = 6,
+    this.existingNodes,
+    this.pickImage,
   });
 
   final VoidCallback onClose;
   final Future<void> Function(List<BulkNodeDraft> drafts) onSave;
   final String currencyLabel;
   final int initialRowCount;
+  final List<InventoryNode>? existingNodes;
+
+  /// Override for tests. Defaults to [pickEntityImage].
+  final Future<PickedImageBytes?> Function(BuildContext context)? pickImage;
+
+  bool get isEditing => existingNodes != null && existingNodes!.isNotEmpty;
 
   @override
   State<BulkAddTable> createState() => _BulkAddTableState();
@@ -107,8 +117,15 @@ class _BulkAddTableState extends State<BulkAddTable> {
   @override
   void initState() {
     super.initState();
-    final count = widget.initialRowCount < 1 ? 1 : widget.initialRowCount;
-    _rows = List<_BulkRow>.generate(count, (_) => _BulkRow());
+    if (widget.isEditing) {
+      _rows = [
+        for (final node in widget.existingNodes!)
+          _BulkRow(initial: BulkNodeDraft.fromNode(node)),
+      ];
+    } else {
+      final count = widget.initialRowCount < 1 ? 1 : widget.initialRowCount;
+      _rows = List<_BulkRow>.generate(count, (_) => _BulkRow());
+    }
     for (final row in _rows) {
       row.name.addListener(_onNameChanged);
     }
@@ -122,6 +139,28 @@ class _BulkAddTableState extends State<BulkAddTable> {
       row.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _addPhoto(int index) async {
+    final picker = widget.pickImage ?? pickEntityImage;
+    final picked = await picker(context);
+    if (picked == null || !mounted) return;
+    setState(() {
+      _rows[index].photos.add(
+        BulkPendingPhoto(
+          bytes: picked.bytes,
+          mimeType: picked.mimeType,
+          extension: picked.extension,
+        ),
+      );
+    });
+  }
+
+  void _removePhoto(int index) {
+    setState(() {
+      final photos = _rows[index].photos;
+      if (photos.isNotEmpty) photos.removeLast();
+    });
   }
 
   void _onNameChanged() {
@@ -205,6 +244,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
         _rows.first.weight.clear();
         _rows.first.type = InventoryTypeChoice.item;
         _rows.first.selected = false;
+        _rows.first.photos.clear();
       });
       return;
     }
@@ -216,11 +256,19 @@ class _BulkAddTableState extends State<BulkAddTable> {
   }
 
   Future<void> _save() async {
-    final drafts = namedBulkDrafts(_rows.map((row) => row.toDraft()));
+    final drafts = widget.isEditing
+        ? _rows.map((row) => row.toDraft()).toList()
+        : namedBulkDrafts(_rows.map((row) => row.toDraft()));
     if (drafts.isEmpty) return;
+    if (widget.isEditing && drafts.any((d) => d.name.trim().isEmpty)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Every row needs a name')));
+      return;
+    }
     setState(() => _busy = true);
     try {
-      await widget.onSave(drafts);
+      await widget.onSave(widget.isEditing ? namedBulkDrafts(drafts) : drafts);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -243,7 +291,10 @@ class _BulkAddTableState extends State<BulkAddTable> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Add several', style: theme.textTheme.titleLarge),
+                  child: Text(
+                    widget.isEditing ? 'Edit selected' : 'Add several',
+                    style: theme.textTheme.titleLarge,
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -256,10 +307,14 @@ class _BulkAddTableState extends State<BulkAddTable> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(
-              'Check rows, then edit the shared fields and Apply. '
-              'Mixed values stay blank until you type a new one. '
-              'With none checked, Apply updates every row. '
-              'Blank names are skipped.',
+              widget.isEditing
+                  ? 'Each row is one selected item. Change fields per row, then save. '
+                        'Add photos on any row — they all upload together when you save. '
+                        'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
+                  : 'Check rows, then edit the shared fields and Apply. '
+                        'Mixed values stay blank until you type a new one. '
+                        'With none checked, Apply updates every row. '
+                        'Blank names are skipped. Photos on a row upload when you add.',
               style: theme.textTheme.bodyMedium,
             ),
           ),
@@ -283,12 +338,13 @@ class _BulkAddTableState extends State<BulkAddTable> {
                       style: theme.textTheme.bodyMedium,
                     ),
                     const Spacer(),
-                    TextButton.icon(
-                      key: const ValueKey('bulk-add-row'),
-                      onPressed: _busy ? null : _addRow,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add row'),
-                    ),
+                    if (!widget.isEditing)
+                      TextButton.icon(
+                        key: const ValueKey('bulk-add-row'),
+                        onPressed: _busy ? null : _addRow,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add row'),
+                      ),
                   ],
                 ),
                 BulkEditFields(
@@ -310,7 +366,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                const minWidth = 1020.0;
+                const minWidth = 1120.0;
                 final width = constraints.maxWidth < minWidth
                     ? minWidth
                     : constraints.maxWidth;
@@ -338,7 +394,13 @@ class _BulkAddTableState extends State<BulkAddTable> {
                               onType: (type) {
                                 setState(() => _rows[index].type = type);
                               },
-                              onRemove: () => _removeRow(index),
+                              onAddPhoto: () => _addPhoto(index),
+                              onRemovePhoto: _rows[index].photos.isEmpty
+                                  ? null
+                                  : () => _removePhoto(index),
+                              onRemove: widget.isEditing
+                                  ? null
+                                  : () => _removeRow(index),
                             );
                           },
                         ),
@@ -383,7 +445,13 @@ class _BulkAddTableState extends State<BulkAddTable> {
                     backgroundColor: AppColors.moss,
                     minimumSize: const Size(140, 44),
                   ),
-                  child: Text(_busy ? 'Adding…' : 'Add $_namedCount'),
+                  child: Text(
+                    _busy
+                        ? (widget.isEditing ? 'Saving…' : 'Adding…')
+                        : widget.isEditing
+                        ? 'Save $_namedCount'
+                        : 'Add $_namedCount',
+                  ),
                 ),
               ],
             ),
@@ -421,6 +489,7 @@ class _HeaderRow extends StatelessWidget {
             ),
             SizedBox(width: 120, child: Text('Brand', style: style)),
             SizedBox(width: 84, child: Text('Weight', style: style)),
+            SizedBox(width: 108, child: Text('Photo', style: style)),
             const SizedBox(width: 40),
           ],
         ),
@@ -437,6 +506,8 @@ class _DataRow extends StatelessWidget {
     required this.autofocus,
     required this.onToggle,
     required this.onType,
+    required this.onAddPhoto,
+    required this.onRemovePhoto,
     required this.onRemove,
   });
 
@@ -446,7 +517,9 @@ class _DataRow extends StatelessWidget {
   final bool autofocus;
   final VoidCallback onToggle;
   final ValueChanged<InventoryTypeChoice> onType;
-  final VoidCallback onRemove;
+  final VoidCallback onAddPhoto;
+  final VoidCallback? onRemovePhoto;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -557,15 +630,29 @@ class _DataRow extends StatelessWidget {
               decoration: _cellDecoration(hint: 'g'),
             ),
           ),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 40,
-            child: IconButton(
-              key: ValueKey('bulk-remove-$index'),
-              tooltip: 'Remove row',
-              onPressed: enabled ? onRemove : null,
-              icon: const Icon(Icons.close, size: 18),
+            width: 108,
+            child: _PhotoCell(
+              index: index,
+              photos: row.photos,
+              enabled: enabled,
+              onAdd: onAddPhoto,
+              onRemoveLast: onRemovePhoto,
             ),
           ),
+          if (onRemove != null)
+            SizedBox(
+              width: 40,
+              child: IconButton(
+                key: ValueKey('bulk-remove-$index'),
+                tooltip: 'Remove row',
+                onPressed: enabled ? onRemove : null,
+                icon: const Icon(Icons.close, size: 18),
+              ),
+            )
+          else
+            const SizedBox(width: 40),
         ],
       ),
     );
@@ -594,31 +681,140 @@ InputDecoration _cellDecoration({String? hint}) {
   );
 }
 
+class _PhotoCell extends StatelessWidget {
+  const _PhotoCell({
+    required this.index,
+    required this.photos,
+    required this.enabled,
+    required this.onAdd,
+    required this.onRemoveLast,
+  });
+
+  final int index;
+  final List<BulkPendingPhoto> photos;
+  final bool enabled;
+  final VoidCallback onAdd;
+  final VoidCallback? onRemoveLast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (photos.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(right: 2),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    photos.last.bytes,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 40,
+                      height: 40,
+                      color: AppColors.mossSoft,
+                      child: const Icon(Icons.image, size: 18),
+                    ),
+                  ),
+                ),
+                if (photos.length > 1)
+                  Positioned(
+                    left: -4,
+                    top: -4,
+                    child: CircleAvatar(
+                      radius: 8,
+                      backgroundColor: AppColors.moss,
+                      child: Text(
+                        '${photos.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  right: -6,
+                  bottom: -6,
+                  child: Material(
+                    color: Colors.black54,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      key: ValueKey('bulk-photo-remove-$index'),
+                      customBorder: const CircleBorder(),
+                      onTap: enabled ? onRemoveLast : null,
+                      child: const Padding(
+                        padding: EdgeInsets.all(2),
+                        child: Icon(Icons.close, size: 12, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        IconButton(
+          key: ValueKey('bulk-photo-$index'),
+          tooltip: photos.isEmpty ? 'Take photo' : 'Add another photo',
+          onPressed: enabled ? onAdd : null,
+          iconSize: 20,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          icon: Icon(
+            photos.isEmpty ? Icons.add_a_photo_outlined : Icons.add_a_photo,
+            color: AppColors.moss,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _BulkRow {
-  _BulkRow()
-    : name = TextEditingController(),
-      quantity = TextEditingController(),
-      price = TextEditingController(),
-      brand = TextEditingController(),
-      weight = TextEditingController();
+  _BulkRow({BulkNodeDraft? initial})
+    : name = TextEditingController(text: initial?.name ?? ''),
+      quantity = TextEditingController(
+        text: formatOptionalNumber(initial?.quantity) ?? '',
+      ),
+      price = TextEditingController(
+        text: formatOptionalNumber(initial?.purchasePrice) ?? '',
+      ),
+      brand = TextEditingController(text: initial?.brand ?? ''),
+      weight = TextEditingController(
+        text: formatOptionalNumber(initial?.weight) ?? '',
+      ),
+      type = initial?.type ?? InventoryTypeChoice.item,
+      _weightUnit = initial?.weightUnit,
+      photos = List<BulkPendingPhoto>.from(initial?.photos ?? const []);
 
   final TextEditingController name;
   final TextEditingController quantity;
   final TextEditingController price;
   final TextEditingController brand;
   final TextEditingController weight;
-  InventoryTypeChoice type = InventoryTypeChoice.item;
+  InventoryTypeChoice type;
+  final String? _weightUnit;
+  final List<BulkPendingPhoto> photos;
   bool selected = false;
 
   BulkNodeDraft toDraft() {
+    final parsedWeight = parseOptionalNumber(weight.text);
     return BulkNodeDraft(
       name: name.text,
       type: type,
       quantity: parseOptionalNumber(quantity.text),
       purchasePrice: parseOptionalNumber(price.text),
       brand: brand.text,
-      weight: parseOptionalNumber(weight.text),
-      weightUnit: parseOptionalNumber(weight.text) == null ? null : 'g',
+      weight: parsedWeight,
+      weightUnit: parsedWeight == null ? null : (_weightUnit ?? 'g'),
+      photos: List<BulkPendingPhoto>.from(photos),
     );
   }
 

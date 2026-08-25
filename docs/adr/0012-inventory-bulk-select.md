@@ -22,7 +22,7 @@ Editors needed a fast way to capture many item names in the current location, an
 
 ### Bulk input
 
-- **Add several** dialog (desktop) / fullscreen page (phone): table of **Name**, **Type**, **Qty**, **Price**, **Brand**, **Weight**. Type is furniture / storage / item / **clothing**. Clothing is stored as an `ITEM` with category `CLOTHING`. Check rows to bulk-edit shared fields (type, quantity, price, brand, weight); mixed values show as Mixed and stay unchanged if left blank. With none checked, Apply updates every row. Blank names are skipped. Photos, barcodes, and other details stay on the single-item form. On the create/edit form, Type can be changed after create, including Item → Furniture. Switching to furniture or storage clears item category and marks the node as a container.
+- **Add several** dialog (desktop) / fullscreen page (phone): table of **Name**, **Type**, **Qty**, **Price**, **Brand**, **Weight**, **Photo**. Type is furniture / storage / item / **clothing**. Clothing is stored as an `ITEM` with category `CLOTHING`. Check rows to bulk-edit shared fields (type, quantity, price, brand, weight); mixed values show as Mixed and stay unchanged if left blank. With none checked, Apply updates every row. Blank names are skipped. Each row can attach one or more photos (camera or gallery); they upload when the table is saved. Other details (barcodes, dates) stay on the single-item form. On the create/edit form, Type can be changed after create, including Item → Furniture. Switching to furniture or storage clears item category and marks the node as a container.
 - Create form: **Save & add another** keeps the editor on the form after insert.
 
 CSV import is not in the client.
@@ -32,7 +32,7 @@ CSV import is not in the client.
 - **Desktop web:** checkbox on inventory cards for editors.
 - **Phone / mobile web:** long-press a card to enter selection mode; further taps toggle. Checkboxes appear while selecting.
 - Overflow **Select** on browse cards is an extra affordance.
-- Selection bar: **Edit**, **Move**, **Pack**, **Dispose**, clear. Edit opens a form prefilled with shared values of the selection (mixed fields stay blank).
+- Selection bar: **Edit**, **Move**, **Pack**, **Dispose**, clear. Edit opens a table with **one row per selected item**, prefilled so each can be changed individually, including per-row photos saved together.
 
 Move reuses `move_inventory_node` (top-most selected nodes only, so a parent is not followed by its already-nested child). Dispose reuses `apply_inventory_transaction` (`DISPOSE`). Pack reuses `add_items_to_packing_plan` for `ITEM` nodes onto a planned/active trip bag.
 

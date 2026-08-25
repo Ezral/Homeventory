@@ -1,5 +1,20 @@
+import 'dart:typed_data';
+
 import 'enums.dart';
 import 'inventory_node.dart';
+
+/// A photo attached to a bulk-add / bulk-edit row, uploaded on save.
+class BulkPendingPhoto {
+  const BulkPendingPhoto({
+    required this.bytes,
+    required this.mimeType,
+    this.extension = 'jpg',
+  });
+
+  final Uint8List bytes;
+  final String mimeType;
+  final String extension;
+}
 
 /// One row in the bulk-add table before it is saved.
 class BulkNodeDraft {
@@ -11,6 +26,7 @@ class BulkNodeDraft {
     this.brand,
     this.weight,
     this.weightUnit,
+    this.photos = const [],
   });
 
   final String name;
@@ -20,8 +36,24 @@ class BulkNodeDraft {
   final String? brand;
   final double? weight;
   final String? weightUnit;
+  final List<BulkPendingPhoto> photos;
 
   bool get isItemLike => type.isItemLike;
+
+  factory BulkNodeDraft.fromNode(InventoryNode node) {
+    return BulkNodeDraft(
+      name: node.name,
+      type: InventoryTypeChoice.fromNode(
+        nodeKind: node.nodeKind,
+        itemCategory: node.itemCategory,
+      ),
+      quantity: node.quantity,
+      purchasePrice: node.purchasePrice,
+      brand: node.brand,
+      weight: node.weight,
+      weightUnit: node.weightUnit,
+    );
+  }
 
   @override
   bool operator ==(Object other) {
@@ -58,6 +90,7 @@ class BulkNodeDraft {
     double? weight,
     bool clearWeight = false,
     String? weightUnit,
+    List<BulkPendingPhoto>? photos,
   }) {
     return BulkNodeDraft(
       name: name ?? this.name,
@@ -69,6 +102,7 @@ class BulkNodeDraft {
       brand: clearBrand ? null : (brand ?? this.brand),
       weight: clearWeight ? null : (weight ?? this.weight),
       weightUnit: weightUnit ?? this.weightUnit,
+      photos: photos ?? this.photos,
     );
   }
 }
@@ -166,6 +200,7 @@ List<BulkNodeDraft> namedBulkDrafts(Iterable<BulkNodeDraft> drafts) {
           weightUnit: draft.weight != null
               ? (draft.weightUnit ?? 'g')
               : draft.weightUnit,
+          photos: draft.photos,
         ),
   ];
 }
