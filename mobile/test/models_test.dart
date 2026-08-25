@@ -298,7 +298,83 @@ void main() {
         ],
       );
       expect(summary.packedKg, closeTo(3.4, 0.0001));
+      expect(summary.toBePackedKg, 0);
       expect(summary.availableKg, closeTo(19.6, 0.0001));
+      expect(summary.isOverAllowance, isFalse);
+    });
+
+    test('to-be packed items reduce available before they are packed', () {
+      final trip = Trip.fromJson({
+        'id': 't1',
+        'home_id': 'h1',
+        'name': 'Bali',
+        'notes': null,
+        'status': 'ACTIVE',
+        'starts_on': null,
+        'ends_on': null,
+        'luggage_allowance_kg': 10,
+        'archived_at': null,
+        'created_by_user_id': 'u1',
+        'created_at': '2026-07-13T00:00:00Z',
+        'updated_at': '2026-07-13T00:00:00Z',
+      });
+      final suitcase = node(id: 's1', name: 'Suitcase', weight: 3, unit: 'kg');
+      final shirt = node(id: 'i1', name: 'Shirt', weight: 400, unit: 'g');
+      final shoes = node(id: 'i2', name: 'Shoes', weight: 1.5, unit: 'kg');
+      final unpacked = node(id: 'i3', name: 'Hat', weight: 200, unit: 'g');
+      final summary = buildTripWeightSummary(
+        trip: trip,
+        containers: [
+          TripContainer(
+            id: 'tc1',
+            homeId: 'h1',
+            tripId: 't1',
+            inventoryNodeId: suitcase.id,
+            createdAt: DateTime.parse('2026-07-13T00:00:00Z'),
+            node: suitcase,
+          ),
+        ],
+        items: [
+          TripItem(
+            id: 'ti1',
+            homeId: 'h1',
+            tripId: 't1',
+            inventoryNodeId: shirt.id,
+            packedIntoNodeId: suitcase.id,
+            originalRoomId: 'r1',
+            status: TripItemStatus.packed,
+            packedAt: DateTime.parse('2026-07-13T00:00:00Z'),
+            packedByUserId: 'u1',
+            node: shirt,
+          ),
+          TripItem(
+            id: 'ti2',
+            homeId: 'h1',
+            tripId: 't1',
+            inventoryNodeId: shoes.id,
+            packedIntoNodeId: suitcase.id,
+            originalRoomId: 'r1',
+            status: TripItemStatus.planned,
+            packedByUserId: 'u1',
+            node: shoes,
+          ),
+          TripItem(
+            id: 'ti3',
+            homeId: 'h1',
+            tripId: 't1',
+            inventoryNodeId: unpacked.id,
+            packedIntoNodeId: suitcase.id,
+            originalRoomId: 'r1',
+            status: TripItemStatus.unpacked,
+            packedByUserId: 'u1',
+            node: unpacked,
+          ),
+        ],
+      );
+      // Packed: suitcase 3 + shirt 0.4. To-be packed: shoes 1.5. Hat ignored.
+      expect(summary.packedKg, closeTo(3.4, 0.0001));
+      expect(summary.toBePackedKg, closeTo(1.5, 0.0001));
+      expect(summary.availableKg, closeTo(5.1, 0.0001));
       expect(summary.isOverAllowance, isFalse);
     });
   });

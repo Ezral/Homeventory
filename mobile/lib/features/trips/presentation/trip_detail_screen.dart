@@ -132,17 +132,16 @@ class TripDetailScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodyMedium,
                       );
                     }
-                    final idsKey =
-                        containers.map((c) => c.inventoryNodeId).join(',');
+                    final idsKey = containers
+                        .map((c) => c.inventoryNodeId)
+                        .join(',');
                     final thumbs = ref
                         .watch(
-                          entityThumbnailsProvider(
-                            (
-                              homeId: homeId,
-                              entityType: 'INVENTORY_NODE',
-                              idsKey: idsKey,
-                            ),
-                          ),
+                          entityThumbnailsProvider((
+                            homeId: homeId,
+                            entityType: 'INVENTORY_NODE',
+                            idsKey: idsKey,
+                          )),
                         )
                         .maybeWhen(
                           data: (m) => m,
@@ -193,11 +192,8 @@ class TripDetailScreen extends ConsumerWidget {
                         data: (containers) => TextButton.icon(
                           onPressed: containers.isEmpty
                               ? null
-                              : () => _addFromFurniture(
-                                    context,
-                                    ref,
-                                    containers,
-                                  ),
+                              : () =>
+                                    _addFromFurniture(context, ref, containers),
                           icon: const Icon(Icons.playlist_add),
                           label: const Text('Add items'),
                         ),
@@ -208,9 +204,9 @@ class TripDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Add from a room or furniture. Only items are listed (not furniture/storage). Check when packed — they stay greyed in place. Unpacked items can be packed again on any trip.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.inkMuted,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.inkMuted),
                 ),
                 const SizedBox(height: 8),
                 itemsAsync.when(
@@ -234,17 +230,14 @@ class TripDetailScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodyMedium,
                       );
                     }
-                    final idsKey =
-                        plan.map((i) => i.inventoryNodeId).join(',');
+                    final idsKey = plan.map((i) => i.inventoryNodeId).join(',');
                     final thumbs = ref
                         .watch(
-                          entityThumbnailsProvider(
-                            (
-                              homeId: homeId,
-                              entityType: 'INVENTORY_NODE',
-                              idsKey: idsKey,
-                            ),
-                          ),
+                          entityThumbnailsProvider((
+                            homeId: homeId,
+                            entityType: 'INVENTORY_NODE',
+                            idsKey: idsKey,
+                          )),
                         )
                         .maybeWhen(
                           data: (m) => m,
@@ -280,10 +273,10 @@ class TripDetailScreen extends ConsumerWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Checkbox(
-                                        value: item.status ==
+                                        value:
+                                            item.status ==
                                             TripItemStatus.packed,
-                                        onChanged: (checked) =>
-                                            _togglePacked(
+                                        onChanged: (checked) => _togglePacked(
                                           context,
                                           ref,
                                           item,
@@ -323,11 +316,7 @@ class TripDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editTrip(
-    BuildContext context,
-    WidgetRef ref,
-    Trip trip,
-  ) async {
+  Future<void> _editTrip(BuildContext context, WidgetRef ref, Trip trip) async {
     final nameController = TextEditingController(text: trip.name);
     final notesController = TextEditingController(text: trip.notes ?? '');
     final allowanceController = TextEditingController(
@@ -429,7 +418,9 @@ class TripDetailScreen extends ConsumerWidget {
         : double.tryParse(allowanceText);
 
     try {
-      await ref.read(tripsRepositoryProvider).updateTrip(
+      await ref
+          .read(tripsRepositoryProvider)
+          .updateTrip(
             tripId: tripId,
             name: nameController.text,
             notes: notesController.text,
@@ -527,13 +518,11 @@ class TripDetailScreen extends ConsumerWidget {
                       final idsKey = available.map((n) => n.id).join(',');
                       final thumbs = ref
                           .watch(
-                            entityThumbnailsProvider(
-                              (
-                                homeId: homeId,
-                                entityType: 'INVENTORY_NODE',
-                                idsKey: idsKey,
-                              ),
-                            ),
+                            entityThumbnailsProvider((
+                              homeId: homeId,
+                              entityType: 'INVENTORY_NODE',
+                              idsKey: idsKey,
+                            )),
                           )
                           .maybeWhen(
                             data: (m) => m,
@@ -627,7 +616,9 @@ class TripDetailScreen extends ConsumerWidget {
   ) async {
     try {
       if (pack) {
-        await ref.read(tripsRepositoryProvider).packItem(
+        await ref
+            .read(tripsRepositoryProvider)
+            .packItem(
               tripId: tripId,
               nodeId: item.inventoryNodeId,
               packedIntoNodeId: item.packedIntoNodeId,
@@ -672,10 +663,7 @@ class TripDetailScreen extends ConsumerWidget {
 }
 
 class _WeightSummaryCard extends StatelessWidget {
-  const _WeightSummaryCard({
-    required this.summary,
-    this.onEditAllowance,
-  });
+  const _WeightSummaryCard({required this.summary, this.onEditAllowance});
 
   final TripWeightSummary summary;
   final VoidCallback? onEditAllowance;
@@ -718,10 +706,11 @@ class _WeightSummaryCard extends StatelessWidget {
                 ? 'Not set'
                 : '${_fmtKg(summary.allowanceKg!)} kg',
           ),
+          _weightRow(context, 'Packed', '${_fmtKg(summary.packedKg)} kg'),
           _weightRow(
             context,
-            'Packed',
-            '${_fmtKg(summary.packedKg)} kg',
+            'To-be packed',
+            '${_fmtKg(summary.toBePackedKg)} kg',
           ),
           _weightRow(
             context,
@@ -734,10 +723,10 @@ class _WeightSummaryCard extends StatelessWidget {
           if (summary.missingWeightCount > 0) ...[
             const SizedBox(height: 6),
             Text(
-              '${summary.missingWeightCount} packed object${summary.missingWeightCount == 1 ? '' : 's'} missing weight.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.inkMuted,
-                  ),
+              '${summary.missingWeightCount} object${summary.missingWeightCount == 1 ? '' : 's'} missing weight.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.inkMuted),
             ),
           ],
         ],
@@ -758,17 +747,17 @@ class _WeightSummaryCard extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.inkMuted,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.inkMuted),
             ),
           ),
           Text(
             value,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: emphasize ? AppColors.danger : null,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: emphasize ? AppColors.danger : null,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
