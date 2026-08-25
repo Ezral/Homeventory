@@ -281,182 +281,198 @@ class _BulkAddTableState extends State<BulkAddTable> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final compact = theme.copyWith(
+      textTheme: theme.textTheme.copyWith(
+        bodyLarge: theme.textTheme.bodyLarge?.copyWith(
+          fontSize: 11,
+          height: 1.25,
+        ),
+        titleMedium: theme.textTheme.titleMedium?.copyWith(
+          fontSize: 11,
+          height: 1.25,
+        ),
+      ),
+    );
     return Material(
       color: Colors.transparent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.isEditing ? 'Edit selected' : 'Add several',
-                    style: theme.textTheme.titleLarge,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Close',
-                  onPressed: _busy ? null : widget.onClose,
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text(
-              widget.isEditing
-                  ? 'Each row is one selected item. Change fields per row, then save. '
-                        'Add photos on any row — they all upload together when you save. '
-                        'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
-                  : 'Check rows, then edit the shared fields and Apply. '
-                        'Mixed values stay blank until you type a new one. '
-                        'With none checked, Apply updates every row. '
-                        'Blank names are skipped. Photos on a row upload when you add.',
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Checkbox(
-                      key: const ValueKey('bulk-select-all'),
-                      tristate: true,
-                      value: _selectAllValue,
-                      onChanged: _busy ? null : _toggleSelectAll,
+      child: Theme(
+        data: compact,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.isEditing ? 'Edit selected' : 'Add several',
+                      style: theme.textTheme.titleLarge,
                     ),
-                    Text(
-                      _selectedCount == 0
-                          ? 'None selected'
-                          : '$_selectedCount selected',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const Spacer(),
-                    if (!widget.isEditing)
-                      TextButton.icon(
-                        key: const ValueKey('bulk-add-row'),
-                        onPressed: _busy ? null : _addRow,
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add row'),
-                      ),
-                  ],
-                ),
-                BulkEditFields(
-                  key: ValueKey('bulk-edit-$_editKey'),
-                  initial: sharedValuesFromDrafts(
-                    _editTargets.map((row) => row.toDraft()).toList(),
                   ),
-                  enabled: !_busy,
-                  currencyLabel: widget.currencyLabel,
-                  applyLabel: _selectedCount == 0
-                      ? 'Apply to all'
-                      : 'Apply to selected',
-                  onApply: _applyPatch,
-                ),
-              ],
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: _busy ? null : widget.onClose,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const minWidth = 1120.0;
-                final width = constraints.maxWidth < minWidth
-                    ? minWidth
-                    : constraints.maxWidth;
-                final table = SizedBox(
-                  width: width,
-                  child: Column(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                widget.isEditing
+                    ? 'Each row is one selected item. Change fields per row, then save. '
+                          'Add photos on any row — they all upload together when you save. '
+                          'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
+                    : 'Check rows, then edit the shared fields and Apply. '
+                          'Mixed values stay blank until you type a new one. '
+                          'With none checked, Apply updates every row. '
+                          'Blank names are skipped. Photos on a row upload when you add.',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      _HeaderRow(currencyLabel: widget.currencyLabel),
-                      Expanded(
-                        child: ListView.separated(
-                          itemCount: _rows.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            return _DataRow(
-                              row: _rows[index],
-                              index: index,
-                              enabled: !_busy,
-                              autofocus: index == 0,
-                              onToggle: () {
-                                setState(() {
-                                  _rows[index].selected =
-                                      !_rows[index].selected;
-                                });
-                              },
-                              onType: (type) {
-                                setState(() => _rows[index].type = type);
-                              },
-                              onAddPhoto: () => _addPhoto(index),
-                              onRemovePhoto: _rows[index].photos.isEmpty
-                                  ? null
-                                  : () => _removePhoto(index),
-                              onRemove: widget.isEditing
-                                  ? null
-                                  : () => _removeRow(index),
-                            );
-                          },
-                        ),
+                      Checkbox(
+                        key: const ValueKey('bulk-select-all'),
+                        tristate: true,
+                        value: _selectAllValue,
+                        onChanged: _busy ? null : _toggleSelectAll,
                       ),
+                      Text(
+                        _selectedCount == 0
+                            ? 'None selected'
+                            : '$_selectedCount selected',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      const Spacer(),
+                      if (!widget.isEditing)
+                        TextButton.icon(
+                          key: const ValueKey('bulk-add-row'),
+                          onPressed: _busy ? null : _addRow,
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Add row'),
+                        ),
                     ],
                   ),
-                );
-                if (constraints.maxWidth >= minWidth) return table;
-                return Scrollbar(
-                  controller: _hScroll,
-                  thumbVisibility: true,
-                  notificationPredicate: (notification) =>
-                      notification.metrics.axis == Axis.horizontal,
-                  child: SingleChildScrollView(
+                  BulkEditFields(
+                    key: ValueKey('bulk-edit-$_editKey'),
+                    initial: sharedValuesFromDrafts(
+                      _editTargets.map((row) => row.toDraft()).toList(),
+                    ),
+                    enabled: !_busy,
+                    currencyLabel: widget.currencyLabel,
+                    applyLabel: _selectedCount == 0
+                        ? 'Apply to all'
+                        : 'Apply to selected',
+                    onApply: _applyPatch,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  const minWidth = 1120.0;
+                  final width = constraints.maxWidth < minWidth
+                      ? minWidth
+                      : constraints.maxWidth;
+                  final table = SizedBox(
+                    width: width,
+                    child: Column(
+                      children: [
+                        _HeaderRow(currencyLabel: widget.currencyLabel),
+                        Expanded(
+                          child: ListView.separated(
+                            itemCount: _rows.length,
+                            separatorBuilder: (_, _) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              return _DataRow(
+                                row: _rows[index],
+                                index: index,
+                                enabled: !_busy,
+                                autofocus: index == 0,
+                                onToggle: () {
+                                  setState(() {
+                                    _rows[index].selected =
+                                        !_rows[index].selected;
+                                  });
+                                },
+                                onType: (type) {
+                                  setState(() => _rows[index].type = type);
+                                },
+                                onAddPhoto: () => _addPhoto(index),
+                                onRemovePhoto: _rows[index].photos.isEmpty
+                                    ? null
+                                    : () => _removePhoto(index),
+                                onRemove: widget.isEditing
+                                    ? null
+                                    : () => _removeRow(index),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (constraints.maxWidth >= minWidth) return table;
+                  return Scrollbar(
                     controller: _hScroll,
-                    scrollDirection: Axis.horizontal,
-                    child: table,
-                  ),
-                );
-              },
+                    thumbVisibility: true,
+                    notificationPredicate: (notification) =>
+                        notification.metrics.axis == Axis.horizontal,
+                    child: SingleChildScrollView(
+                      controller: _hScroll,
+                      scrollDirection: Axis.horizontal,
+                      child: table,
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              12 + MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: Row(
-              children: [
-                TextButton(
-                  onPressed: _busy ? null : widget.onClose,
-                  child: const Text('Cancel'),
-                ),
-                const Spacer(),
-                FilledButton(
-                  key: const ValueKey('bulk-save'),
-                  onPressed: _busy || _namedCount == 0 ? null : _save,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.moss,
-                    minimumSize: const Size(140, 44),
+            const Divider(height: 1),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                12 + MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: _busy ? null : widget.onClose,
+                    child: const Text('Cancel'),
                   ),
-                  child: Text(
-                    _busy
-                        ? (widget.isEditing ? 'Saving…' : 'Adding…')
-                        : widget.isEditing
-                        ? 'Save $_namedCount'
-                        : 'Add $_namedCount',
+                  const Spacer(),
+                  FilledButton(
+                    key: const ValueKey('bulk-save'),
+                    onPressed: _busy || _namedCount == 0 ? null : _save,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.moss,
+                      minimumSize: const Size(140, 44),
+                    ),
+                    child: Text(
+                      _busy
+                          ? (widget.isEditing ? 'Saving…' : 'Adding…')
+                          : widget.isEditing
+                          ? 'Save $_namedCount'
+                          : 'Add $_namedCount',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -543,6 +559,7 @@ class _DataRow extends StatelessWidget {
               enabled: enabled,
               autofocus: autofocus,
               textCapitalization: TextCapitalization.sentences,
+              style: AppTextStyles.bulkCell,
               decoration: _cellDecoration(hint: 'Name'),
             ),
           ),
@@ -558,9 +575,13 @@ class _DataRow extends StatelessWidget {
                   value: row.type,
                   isDense: true,
                   isExpanded: true,
+                  style: AppTextStyles.bulkCell,
                   items: [
                     for (final type in InventoryTypeChoice.values)
-                      DropdownMenuItem(value: type, child: Text(type.label)),
+                      DropdownMenuItem(
+                        value: type,
+                        child: Text(type.label, style: AppTextStyles.bulkCell),
+                      ),
                   ],
                   onChanged: enabled
                       ? (type) {
@@ -584,6 +605,7 @@ class _DataRow extends StatelessWidget {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
+              style: AppTextStyles.bulkCell,
               decoration: _cellDecoration(hint: 'Qty'),
             ),
           ),
@@ -600,6 +622,7 @@ class _DataRow extends StatelessWidget {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
+              style: AppTextStyles.bulkCell,
               decoration: _cellDecoration(hint: 'Price'),
             ),
           ),
@@ -611,6 +634,7 @@ class _DataRow extends StatelessWidget {
               controller: row.brand,
               enabled: enabled,
               textCapitalization: TextCapitalization.sentences,
+              style: AppTextStyles.bulkCell,
               decoration: _cellDecoration(hint: 'Brand'),
             ),
           ),
@@ -627,6 +651,7 @@ class _DataRow extends StatelessWidget {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
+              style: AppTextStyles.bulkCell,
               decoration: _cellDecoration(hint: 'g'),
             ),
           ),
@@ -663,9 +688,10 @@ InputDecoration _cellDecoration({String? hint}) {
   return InputDecoration(
     isDense: true,
     hintText: hint,
+    hintStyle: AppTextStyles.bulkCellHint,
     filled: true,
     fillColor: AppColors.paperElevated,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
       borderSide: const BorderSide(color: AppColors.line),

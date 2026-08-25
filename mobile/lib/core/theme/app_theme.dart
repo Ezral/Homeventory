@@ -15,6 +15,19 @@ abstract final class AppColors {
   static const line = Color(0xFFCBD8D1);
 }
 
+abstract final class AppTextStyles {
+  static const bulkCell = TextStyle(
+    fontSize: 11,
+    height: 1.25,
+    color: AppColors.ink,
+  );
+  static const bulkCellHint = TextStyle(
+    fontSize: 11,
+    height: 1.2,
+    color: AppColors.inkMuted,
+  );
+}
+
 ThemeData buildHomeventoryTheme() {
   final base = ThemeData(
     useMaterial3: true,

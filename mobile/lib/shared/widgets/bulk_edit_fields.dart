@@ -86,7 +86,6 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -108,11 +107,15 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
                 isExpanded: true,
                 hint: Text(
                   widget.initial.typeMixed ? 'Mixed' : 'Type',
-                  style: theme.textTheme.bodyMedium,
+                  style: AppTextStyles.bulkCellHint,
                 ),
+                style: AppTextStyles.bulkCell,
                 items: [
                   for (final type in InventoryTypeChoice.values)
-                    DropdownMenuItem(value: type, child: Text(type.label)),
+                    DropdownMenuItem(
+                      value: type,
+                      child: Text(type.label, style: AppTextStyles.bulkCell),
+                    ),
                 ],
                 onChanged: widget.enabled
                     ? (type) => setState(() => _type = type)
@@ -127,6 +130,7 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
             key: const ValueKey('bulk-edit-qty'),
             controller: _quantity,
             enabled: widget.enabled,
+            style: AppTextStyles.bulkCell,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
@@ -143,6 +147,7 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
             key: const ValueKey('bulk-edit-price'),
             controller: _price,
             enabled: widget.enabled,
+            style: AppTextStyles.bulkCell,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
@@ -159,6 +164,7 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
             key: const ValueKey('bulk-edit-brand'),
             controller: _brand,
             enabled: widget.enabled,
+            style: AppTextStyles.bulkCell,
             textCapitalization: TextCapitalization.sentences,
             decoration: _decoration(
               label: 'Brand',
@@ -172,6 +178,7 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
             key: const ValueKey('bulk-edit-weight'),
             controller: _weight,
             enabled: widget.enabled,
+            style: AppTextStyles.bulkCell,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
@@ -201,10 +208,13 @@ InputDecoration _decoration({required String label, String? hint}) {
   return InputDecoration(
     isDense: true,
     labelText: label,
+    labelStyle: AppTextStyles.bulkCellHint,
+    floatingLabelStyle: AppTextStyles.bulkCellHint,
     hintText: hint,
+    hintStyle: AppTextStyles.bulkCellHint,
     filled: true,
     fillColor: AppColors.paperElevated,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
       borderSide: const BorderSide(color: AppColors.line),
