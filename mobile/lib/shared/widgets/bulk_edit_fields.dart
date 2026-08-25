@@ -15,6 +15,7 @@ class BulkEditFields extends StatefulWidget {
     required this.applyLabel,
     this.enabled = true,
     this.currencyLabel = 'USD',
+    this.pickLocation,
   });
 
   final SharedBulkValues initial;
@@ -22,6 +23,7 @@ class BulkEditFields extends StatefulWidget {
   final String applyLabel;
   final bool enabled;
   final String currencyLabel;
+  final Future<BulkPlacement?> Function(BulkPlacement? current)? pickLocation;
 
   @override
   State<BulkEditFields> createState() => _BulkEditFieldsState();
@@ -33,11 +35,16 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
   late final TextEditingController _price;
   late final TextEditingController _brand;
   late final TextEditingController _weight;
+  BulkPlacement? _placement;
+  bool _locationPicked = false;
 
   @override
   void initState() {
     super.initState();
     _type = widget.initial.typeMixed ? null : widget.initial.type;
+    _placement = widget.initial.placementMixed
+        ? null
+        : widget.initial.placement;
     _quantity = TextEditingController(
       text: widget.initial.quantityMixed
           ? ''
@@ -80,8 +87,21 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
         applyWeight: _weight.text.trim().isNotEmpty,
         weight: parseOptionalNumber(_weight.text),
         weightUnit: _weight.text.trim().isNotEmpty ? 'g' : null,
+        applyPlacement: _locationPicked,
+        placement: _placement,
       ),
     );
+  }
+
+  Future<void> _pickLocation() async {
+    final picker = widget.pickLocation;
+    if (picker == null) return;
+    final next = await picker(_placement ?? widget.initial.placement);
+    if (!mounted || next == null) return;
+    setState(() {
+      _placement = next;
+      _locationPicked = true;
+    });
   }
 
   @override
@@ -189,6 +209,44 @@ class _BulkEditFieldsState extends State<BulkEditFields> {
             ),
           ),
         ),
+        if (widget.pickLocation != null)
+          SizedBox(
+            width: 220,
+            child: InputDecorator(
+              decoration: _decoration(
+                label: 'Location',
+                hint: widget.initial.placementMixed ? 'Mixed' : 'Choose',
+              ),
+              child: InkWell(
+                key: const ValueKey('bulk-edit-location'),
+                onTap: widget.enabled ? _pickLocation : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          (_placement?.label.isNotEmpty ?? false)
+                              ? _placement!.label
+                              : (widget.initial.placementMixed
+                                    ? 'Mixed'
+                                    : 'Choose location'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bulkCell,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.place_outlined,
+                        size: 16,
+                        color: AppColors.inkMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         FilledButton(
           key: const ValueKey('bulk-edit-apply'),
           onPressed: widget.enabled ? _apply : null,

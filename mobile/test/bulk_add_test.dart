@@ -155,6 +155,52 @@ void main() {
       expect(kept.first.photos.first.bytes, [1, 2, 3]);
     });
 
+    test('namedBulkDrafts keeps placement on named rows', () {
+      const placement = BulkPlacement(
+        roomId: 'r2',
+        parentNodeId: 'c1',
+        label: 'Bedroom › Closet',
+      );
+      final kept = namedBulkDrafts(const [
+        BulkNodeDraft(name: 'Lamp', placement: placement),
+        BulkNodeDraft(name: '  ', placement: placement),
+      ]);
+      expect(kept, hasLength(1));
+      expect(kept.first.placement, placement);
+    });
+
+    test('formatBulkPlacementLabel joins room and containers', () {
+      expect(formatBulkPlacementLabel(roomName: 'Kitchen'), 'Kitchen');
+      expect(
+        formatBulkPlacementLabel(
+          roomName: 'Kitchen',
+          containerNames: const ['Closet', 'Drawer'],
+        ),
+        'Kitchen › Closet › Drawer',
+      );
+    });
+
+    test('bulkCreateTarget prefers the draft placement', () {
+      const draft = BulkNodeDraft(
+        name: 'Lamp',
+        placement: BulkPlacement(roomId: 'r2', parentNodeId: 'c1'),
+      );
+      final target = bulkCreateTarget(
+        draft: draft,
+        fallbackRoomId: 'r1',
+        fallbackParentNodeId: 'p0',
+      );
+      expect(target.roomId, 'r2');
+      expect(target.parentNodeId, 'c1');
+      final fallback = bulkCreateTarget(
+        draft: const BulkNodeDraft(name: 'Lamp'),
+        fallbackRoomId: 'r1',
+        fallbackParentNodeId: 'p0',
+      );
+      expect(fallback.roomId, 'r1');
+      expect(fallback.parentNodeId, 'p0');
+    });
+
     test('parseOptionalNumber treats blank and junk as omitted', () {
       expect(parseOptionalNumber(''), isNull);
       expect(parseOptionalNumber('  '), isNull);
@@ -198,6 +244,31 @@ void main() {
       expect(updated[0].brand, isNull);
       expect(updated[1].quantity, 4);
       expect(updated[1].brand, 'Nike');
+    });
+
+    test('applyPatchToDrafts writes location onto selected rows', () {
+      const drafts = [
+        BulkNodeDraft(
+          name: 'Desk',
+          placement: BulkPlacement(roomId: 'r1', label: 'Kitchen'),
+        ),
+        BulkNodeDraft(
+          name: 'Lamp',
+          placement: BulkPlacement(roomId: 'r1', label: 'Kitchen'),
+        ),
+      ];
+      const closet = BulkPlacement(
+        roomId: 'r2',
+        parentNodeId: 'c1',
+        label: 'Bedroom › Closet',
+      );
+      final updated = applyPatchToDrafts(
+        drafts: drafts,
+        patch: const BulkNodePatch(applyPlacement: true, placement: closet),
+        selectedIndices: {1},
+      );
+      expect(updated[0].placement?.roomId, 'r1');
+      expect(updated[1].placement, closet);
     });
 
     test('sharedValuesFromDrafts marks mixed quantity', () {
@@ -305,6 +376,41 @@ void main() {
       expect(patch!.quantity, 6);
       expect(patch!.applyBrand, isTrue);
       expect(patch!.brand, 'Nike');
+    });
+
+    testWidgets('location field applies the picked placement', (tester) async {
+      BulkNodePatch? patch;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkEditFields(
+              initial: const SharedBulkValues(
+                placement: BulkPlacement(roomId: 'r1', label: 'Kitchen'),
+              ),
+              applyLabel: 'Apply',
+              pickLocation: (current) async => const BulkPlacement(
+                roomId: 'r2',
+                parentNodeId: 'c1',
+                label: 'Bedroom › Closet',
+              ),
+              onApply: (p) => patch = p,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Kitchen'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('bulk-edit-location')));
+      await tester.pumpAndSettle();
+      expect(find.text('Bedroom › Closet'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('bulk-edit-apply')));
+      await tester.pump();
+
+      expect(patch, isNotNull);
+      expect(patch!.applyPlacement, isTrue);
+      expect(patch!.placement?.roomId, 'r2');
+      expect(patch!.placement?.parentNodeId, 'c1');
     });
   });
 
@@ -631,9 +737,7 @@ void main() {
       expect(saved![0].photos, isEmpty);
     });
 
-    testWidgets('dropped or pasted images attach to the hovered row', (
-      tester,
-    ) async {
+    testWidgets('dropped images attach to the hovered row', (tester) async {
       await useWideSurface(tester);
       List<BulkNodeDraft>? saved;
       await tester.pumpWidget(
@@ -651,9 +755,11 @@ void main() {
         ),
       );
 
-      expect(find.byType(ImageIngestRegion), findsNWidgets(2));
+      expect(find.byType(ImageIngestRegion), findsNWidgets(3));
       tester
-          .widget<ImageIngestRegion>(find.byType(ImageIngestRegion).first)
+          .widget<ImageIngestRegion>(
+            find.byKey(const ValueKey('bulk-row-ingest-0')),
+          )
           .onImages([_pickedPhoto(), _pickedPhoto()]);
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('bulk-save')));
@@ -662,6 +768,104 @@ void main() {
       expect(saved, hasLength(2));
       expect(saved![0].photos, hasLength(2));
       expect(saved![1].photos, isEmpty);
+    });
+
+    testWidgets('pasted images attach to checked rows', (tester) async {
+      await useWideSurface(tester);
+      List<BulkNodeDraft>? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              existingNodes: [
+                _item(id: '1', name: 'Tee'),
+                _item(id: '2', name: 'Jeans'),
+              ],
+              onClose: () {},
+              onSave: (drafts) async => saved = drafts,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('bulk-select-0')));
+      await tester.pump();
+      tester
+          .widget<ImageIngestRegion>(find.byKey(const ValueKey('bulk-paste')))
+          .onImages([_pickedPhoto()]);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bulk-save')));
+      await tester.pumpAndSettle();
+
+      expect(saved, hasLength(2));
+      expect(saved![0].photos, hasLength(1));
+      expect(saved![1].photos, isEmpty);
+    });
+
+    testWidgets('paste without a checked row shows a hint', (tester) async {
+      await useWideSurface(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              existingNodes: [
+                _item(id: '1', name: 'Tee'),
+                _item(id: '2', name: 'Jeans'),
+              ],
+              onClose: () {},
+              onSave: (_) async {},
+            ),
+          ),
+        ),
+      );
+
+      tester
+          .widget<ImageIngestRegion>(find.byKey(const ValueKey('bulk-paste')))
+          .onImages([_pickedPhoto()]);
+      await tester.pump();
+      expect(find.text('Check a row, then paste the photo.'), findsOneWidget);
+    });
+
+    testWidgets('applying location sets placement on selected add rows', (
+      tester,
+    ) async {
+      await useWideSurface(tester);
+      List<BulkNodeDraft>? saved;
+      const kitchen = BulkPlacement(roomId: 'r1', label: 'Kitchen');
+      const closet = BulkPlacement(
+        roomId: 'r2',
+        parentNodeId: 'c1',
+        label: 'Bedroom › Closet',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              initialRowCount: 2,
+              defaultPlacement: kitchen,
+              pickLocation: (context, current) async => closet,
+              onClose: () {},
+              onSave: (drafts) async => saved = drafts,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Kitchen'), findsWidgets);
+      await tester.enterText(find.byKey(const ValueKey('bulk-name-0')), 'Lamp');
+      await tester.enterText(find.byKey(const ValueKey('bulk-name-1')), 'Mug');
+      await tester.tap(find.byKey(const ValueKey('bulk-select-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bulk-edit-location')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('bulk-edit-apply')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('bulk-save')));
+      await tester.pumpAndSettle();
+
+      expect(saved, hasLength(2));
+      expect(saved![0].placement, closet);
+      expect(saved![1].placement, kitchen);
     });
   });
 }
