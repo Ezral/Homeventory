@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../models/enums.dart';
 import '../models/inventory_node.dart';
 import '../utils/image_pick.dart';
 import 'bulk_edit_fields.dart';
+import 'image_ingest_region.dart';
 
 Future<int?> showBulkAddItemsSheet({
   required BuildContext context,
@@ -145,14 +147,21 @@ class _BulkAddTableState extends State<BulkAddTable> {
     final picker = widget.pickImage ?? pickEntityImage;
     final picked = await picker(context);
     if (picked == null || !mounted) return;
+    _addPickedPhotos(index, [picked]);
+  }
+
+  void _addPickedPhotos(int index, List<PickedImageBytes> images) {
+    if (images.isEmpty) return;
     setState(() {
-      _rows[index].photos.add(
-        BulkPendingPhoto(
-          bytes: picked.bytes,
-          mimeType: picked.mimeType,
-          extension: picked.extension,
-        ),
-      );
+      for (final picked in images) {
+        _rows[index].photos.add(
+          BulkPendingPhoto(
+            bytes: picked.bytes,
+            mimeType: picked.mimeType,
+            extension: picked.extension,
+          ),
+        );
+      }
     });
   }
 
@@ -324,11 +333,13 @@ class _BulkAddTableState extends State<BulkAddTable> {
                 widget.isEditing
                     ? 'Each row is one selected item. Change fields per row, then save. '
                           'Add photos on any row — they all upload together when you save. '
+                          '${kIsWeb ? 'On desktop you can paste (Ctrl+V) or drop an image onto a row. ' : ''}'
                           'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
                     : 'Check rows, then edit the shared fields and Apply. '
                           'Mixed values stay blank until you type a new one. '
                           'With none checked, Apply updates every row. '
-                          'Blank names are skipped. Photos on a row upload when you add.',
+                          'Blank names are skipped. Photos on a row upload when you add.'
+                          '${kIsWeb ? ' Paste or drop images onto a row.' : ''}',
                 style: theme.textTheme.bodyMedium,
               ),
             ),
@@ -410,6 +421,8 @@ class _BulkAddTableState extends State<BulkAddTable> {
                                   setState(() => _rows[index].type = type);
                                 },
                                 onAddPhoto: () => _addPhoto(index),
+                                onAddPhotos: (images) =>
+                                    _addPickedPhotos(index, images),
                                 onRemovePhoto: _rows[index].photos.isEmpty
                                     ? null
                                     : () => _removePhoto(index),
@@ -523,6 +536,7 @@ class _DataRow extends StatelessWidget {
     required this.onToggle,
     required this.onType,
     required this.onAddPhoto,
+    required this.onAddPhotos,
     required this.onRemovePhoto,
     required this.onRemove,
   });
@@ -534,151 +548,160 @@ class _DataRow extends StatelessWidget {
   final VoidCallback onToggle;
   final ValueChanged<InventoryTypeChoice> onType;
   final VoidCallback onAddPhoto;
+  final ValueChanged<List<PickedImageBytes>> onAddPhotos;
   final VoidCallback? onRemovePhoto;
   final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 44,
-            child: Checkbox(
-              key: ValueKey('bulk-select-$index'),
-              value: row.selected,
-              onChanged: enabled ? (_) => onToggle() : null,
+    return ImageIngestRegion(
+      enabled: enabled,
+      compact: true,
+      onImages: onAddPhotos,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 44,
+              child: Checkbox(
+                key: ValueKey('bulk-select-$index'),
+                value: row.selected,
+                onChanged: enabled ? (_) => onToggle() : null,
+              ),
             ),
-          ),
-          Expanded(
-            flex: 4,
-            child: TextField(
-              key: ValueKey('bulk-name-$index'),
-              controller: row.name,
-              enabled: enabled,
-              autofocus: autofocus,
-              textCapitalization: TextCapitalization.sentences,
-              style: AppTextStyles.bulkCell,
-              decoration: _cellDecoration(hint: 'Name'),
+            Expanded(
+              flex: 4,
+              child: TextField(
+                key: ValueKey('bulk-name-$index'),
+                controller: row.name,
+                enabled: enabled,
+                autofocus: autofocus,
+                textCapitalization: TextCapitalization.sentences,
+                style: AppTextStyles.bulkCell,
+                decoration: _cellDecoration(hint: 'Name'),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 148,
-            child: InputDecorator(
-              decoration: _cellDecoration(),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<InventoryTypeChoice>(
-                  key: ValueKey('bulk-type-$index'),
-                  // ignore: deprecated_member_use
-                  value: row.type,
-                  isDense: true,
-                  isExpanded: true,
-                  style: AppTextStyles.bulkCell,
-                  items: [
-                    for (final type in InventoryTypeChoice.values)
-                      DropdownMenuItem(
-                        value: type,
-                        child: Text(type.label, style: AppTextStyles.bulkCell),
-                      ),
-                  ],
-                  onChanged: enabled
-                      ? (type) {
-                          if (type != null) onType(type);
-                        }
-                      : null,
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 148,
+              child: InputDecorator(
+                decoration: _cellDecoration(),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<InventoryTypeChoice>(
+                    key: ValueKey('bulk-type-$index'),
+                    // ignore: deprecated_member_use
+                    value: row.type,
+                    isDense: true,
+                    isExpanded: true,
+                    style: AppTextStyles.bulkCell,
+                    items: [
+                      for (final type in InventoryTypeChoice.values)
+                        DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            type.label,
+                            style: AppTextStyles.bulkCell,
+                          ),
+                        ),
+                    ],
+                    onChanged: enabled
+                        ? (type) {
+                            if (type != null) onType(type);
+                          }
+                        : null,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 84,
-            child: TextField(
-              key: ValueKey('bulk-qty-$index'),
-              controller: row.quantity,
-              enabled: enabled,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              style: AppTextStyles.bulkCell,
-              decoration: _cellDecoration(hint: 'Qty'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 96,
-            child: TextField(
-              key: ValueKey('bulk-price-$index'),
-              controller: row.price,
-              enabled: enabled,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              style: AppTextStyles.bulkCell,
-              decoration: _cellDecoration(hint: 'Price'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 120,
-            child: TextField(
-              key: ValueKey('bulk-brand-$index'),
-              controller: row.brand,
-              enabled: enabled,
-              textCapitalization: TextCapitalization.sentences,
-              style: AppTextStyles.bulkCell,
-              decoration: _cellDecoration(hint: 'Brand'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 84,
-            child: TextField(
-              key: ValueKey('bulk-weight-$index'),
-              controller: row.weight,
-              enabled: enabled,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              style: AppTextStyles.bulkCell,
-              decoration: _cellDecoration(hint: 'g'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 108,
-            child: _PhotoCell(
-              index: index,
-              photos: row.photos,
-              enabled: enabled,
-              onAdd: onAddPhoto,
-              onRemoveLast: onRemovePhoto,
-            ),
-          ),
-          if (onRemove != null)
+            const SizedBox(width: 8),
             SizedBox(
-              width: 40,
-              child: IconButton(
-                key: ValueKey('bulk-remove-$index'),
-                tooltip: 'Remove row',
-                onPressed: enabled ? onRemove : null,
-                icon: const Icon(Icons.close, size: 18),
+              width: 84,
+              child: TextField(
+                key: ValueKey('bulk-qty-$index'),
+                controller: row.quantity,
+                enabled: enabled,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+                style: AppTextStyles.bulkCell,
+                decoration: _cellDecoration(hint: 'Qty'),
               ),
-            )
-          else
-            const SizedBox(width: 40),
-        ],
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 96,
+              child: TextField(
+                key: ValueKey('bulk-price-$index'),
+                controller: row.price,
+                enabled: enabled,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+                style: AppTextStyles.bulkCell,
+                decoration: _cellDecoration(hint: 'Price'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 120,
+              child: TextField(
+                key: ValueKey('bulk-brand-$index'),
+                controller: row.brand,
+                enabled: enabled,
+                textCapitalization: TextCapitalization.sentences,
+                style: AppTextStyles.bulkCell,
+                decoration: _cellDecoration(hint: 'Brand'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 84,
+              child: TextField(
+                key: ValueKey('bulk-weight-$index'),
+                controller: row.weight,
+                enabled: enabled,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+                style: AppTextStyles.bulkCell,
+                decoration: _cellDecoration(hint: 'g'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 108,
+              child: _PhotoCell(
+                index: index,
+                photos: row.photos,
+                enabled: enabled,
+                onAdd: onAddPhoto,
+                onRemoveLast: onRemovePhoto,
+              ),
+            ),
+            if (onRemove != null)
+              SizedBox(
+                width: 40,
+                child: IconButton(
+                  key: ValueKey('bulk-remove-$index'),
+                  tooltip: 'Remove row',
+                  onPressed: enabled ? onRemove : null,
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+              )
+            else
+              const SizedBox(width: 40),
+          ],
+        ),
       ),
     );
   }
@@ -787,7 +810,11 @@ class _PhotoCell extends StatelessWidget {
           ),
         IconButton(
           key: ValueKey('bulk-photo-$index'),
-          tooltip: photos.isEmpty ? 'Take photo' : 'Add another photo',
+          tooltip: photos.isEmpty
+              ? (kIsWeb ? 'Add photo — or paste / drop' : 'Take photo')
+              : (kIsWeb
+                    ? 'Add another — or paste / drop'
+                    : 'Add another photo'),
           onPressed: enabled ? onAdd : null,
           iconSize: 20,
           visualDensity: VisualDensity.compact,

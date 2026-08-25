@@ -8,6 +8,7 @@ import 'package:homeventory/shared/models/inventory_node.dart';
 import 'package:homeventory/shared/utils/image_pick.dart';
 import 'package:homeventory/shared/widgets/bulk_add_dialog.dart';
 import 'package:homeventory/shared/widgets/bulk_edit_fields.dart';
+import 'package:homeventory/shared/widgets/image_ingest_region.dart';
 
 InventoryNode _item({
   required String id,
@@ -628,6 +629,39 @@ void main() {
 
       expect(saved, hasLength(1));
       expect(saved![0].photos, isEmpty);
+    });
+
+    testWidgets('dropped or pasted images attach to the hovered row', (
+      tester,
+    ) async {
+      await useWideSurface(tester);
+      List<BulkNodeDraft>? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              existingNodes: [
+                _item(id: '1', name: 'Tee'),
+                _item(id: '2', name: 'Jeans'),
+              ],
+              onClose: () {},
+              onSave: (drafts) async => saved = drafts,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ImageIngestRegion), findsNWidgets(2));
+      tester
+          .widget<ImageIngestRegion>(find.byType(ImageIngestRegion).first)
+          .onImages([_pickedPhoto(), _pickedPhoto()]);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bulk-save')));
+      await tester.pumpAndSettle();
+
+      expect(saved, hasLength(2));
+      expect(saved![0].photos, hasLength(2));
+      expect(saved![1].photos, isEmpty);
     });
   });
 }

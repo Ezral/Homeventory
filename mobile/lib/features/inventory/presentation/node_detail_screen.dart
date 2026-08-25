@@ -10,6 +10,7 @@ import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/image_pick.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
+import '../../../shared/widgets/image_ingest_region.dart';
 import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../homes/presentation/homes_providers.dart';
@@ -204,40 +205,50 @@ class NodeDetailScreen extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  const Expanded(child: SectionLabel('Photos')),
-                  if (canEdit)
-                    TextButton.icon(
-                      onPressed: () => _addPhoto(context, ref),
-                      icon: const Icon(Icons.add_a_photo_outlined),
-                      label: const Text('Add'),
+              ImageIngestRegion(
+                enabled: canEdit,
+                showHint: true,
+                onImages: (images) => _addPhotos(context, ref, images),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(child: SectionLabel('Photos')),
+                        if (canEdit)
+                          TextButton.icon(
+                            onPressed: () => _addPhoto(context, ref),
+                            icon: const Icon(Icons.add_a_photo_outlined),
+                            label: const Text('Add'),
+                          ),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              imagesAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
+                    const SizedBox(height: 8),
+                    imagesAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (e, _) => Text(e.toString()),
+                      data: (images) {
+                        return EntityPhotoGallery(
+                          images: [
+                            for (final image in images)
+                              GalleryPhoto(id: image.id, url: image.signedUrl),
+                          ],
+                          canEdit: canEdit,
+                          onDelete: canEdit
+                              ? (id) => _deleteImage(
+                                  context,
+                                  ref,
+                                  images.firstWhere((image) => image.id == id),
+                                )
+                              : null,
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                error: (e, _) => Text(e.toString()),
-                data: (images) {
-                  return EntityPhotoGallery(
-                    images: [
-                      for (final image in images)
-                        GalleryPhoto(id: image.id, url: image.signedUrl),
-                    ],
-                    canEdit: canEdit,
-                    onDelete: canEdit
-                        ? (id) => _deleteImage(
-                            context,
-                            ref,
-                            images.firstWhere((image) => image.id == id),
-                          )
-                        : null,
-                  );
-                },
               ),
               const SizedBox(height: 24),
               const SectionLabel('Details'),
@@ -299,8 +310,9 @@ class NodeDetailScreen extends ConsumerWidget {
                             ? 'Each slot is an independent chamber. Set capacity on edit, then use/refill per product.'
                             : 'Each linked product fills its own ${_formatQty(node.capacity!)}${node.quantityUnit != null ? ' ${node.quantityUnit}' : ' CC'} chamber. Use and refill per slot.'
                       : 'Link one dispensable product to this dispenser.',
-                  style: Theme.of(context).textTheme.bodyMedium
-                      ?.copyWith(color: AppColors.inkMuted),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.inkMuted),
                 ),
                 const SizedBox(height: 12),
                 _DispenserSlotsSection(
@@ -350,8 +362,9 @@ class NodeDetailScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       'Use and refill each chamber under Dispenser products.',
-                      style: Theme.of(context).textTheme.bodyMedium
-                          ?.copyWith(color: AppColors.inkMuted),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.inkMuted,
+                      ),
                     ),
                   ),
                 Wrap(
@@ -602,8 +615,9 @@ class NodeDetailScreen extends ConsumerWidget {
       _invalidateNode(ref, node);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -646,8 +660,9 @@ class NodeDetailScreen extends ConsumerWidget {
       if (context.mounted) context.pop(true);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -668,22 +683,34 @@ class NodeDetailScreen extends ConsumerWidget {
 
   Future<void> _addPhoto(BuildContext context, WidgetRef ref) async {
     final picked = await pickEntityImage(context);
-    if (picked == null) return;
+    if (picked == null || !context.mounted) return;
+    await _addPhotos(context, ref, [picked]);
+  }
+
+  Future<void> _addPhotos(
+    BuildContext context,
+    WidgetRef ref,
+    List<PickedImageBytes> images,
+  ) async {
+    if (images.isEmpty) return;
     try {
-      await ref
-          .read(inventoryRepositoryProvider)
-          .uploadNodeImage(
-            homeId: homeId,
-            nodeId: nodeId,
-            bytes: picked.bytes,
-            mimeType: picked.mimeType,
-            extension: picked.extension,
-          );
+      for (final picked in images) {
+        await ref
+            .read(inventoryRepositoryProvider)
+            .uploadNodeImage(
+              homeId: homeId,
+              nodeId: nodeId,
+              bytes: picked.bytes,
+              mimeType: picked.mimeType,
+              extension: picked.extension,
+            );
+      }
       invalidateNodeImageCaches(ref, homeId: homeId, nodeId: nodeId);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -698,8 +725,9 @@ class NodeDetailScreen extends ConsumerWidget {
       invalidateNodeImageCaches(ref, homeId: homeId, nodeId: nodeId);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -727,8 +755,9 @@ class NodeDetailScreen extends ConsumerWidget {
       ref.invalidate(nodeBarcodesProvider(nodeId));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -779,8 +808,9 @@ class _DetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: AppColors.inkMuted),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.inkMuted),
             ),
           ),
           Expanded(
@@ -900,8 +930,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
                           : isMulti
                           ? 'Chamber ${assignment.fillLabel}'
                           : 'Linked product',
-                      style: Theme.of(context).textTheme.bodyMedium
-                          ?.copyWith(color: AppColors.inkMuted),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.inkMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -1080,8 +1111,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
       ref.invalidate(inventoryTransactionsProvider(dispenser.id));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -1092,16 +1124,19 @@ class _DispenserSlotsSection extends ConsumerWidget {
     required int slotNumber,
   }) async {
     final productsAsync = ref.read(
-      dispensableProductsProvider((homeId: homeId, excludeNodeId: dispenser.id))
-          .future,
+      dispensableProductsProvider((
+        homeId: homeId,
+        excludeNodeId: dispenser.id,
+      )).future,
     );
     List<InventoryNode> products;
     try {
       products = await productsAsync;
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
       return;
     }
@@ -1170,8 +1205,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
       ref.invalidate(dispenserAssignmentsProvider(dispenser.id));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -1191,8 +1227,9 @@ class _DispenserSlotsSection extends ConsumerWidget {
       ref.invalidate(dispenserAssignmentsProvider(dispenser.id));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
