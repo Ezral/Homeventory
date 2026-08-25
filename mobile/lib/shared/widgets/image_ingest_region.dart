@@ -17,6 +17,8 @@ class ImageIngestRegion extends StatefulWidget {
     this.enabled = true,
     this.showHint = false,
     this.compact = false,
+    this.listenForPaste = true,
+    this.listenForDrop = true,
   });
 
   final ValueChanged<List<PickedImageBytes>> onImages;
@@ -25,14 +27,19 @@ class ImageIngestRegion extends StatefulWidget {
   final bool showHint;
   final bool compact;
 
+  /// When false, this region only accepts dropped files (used on bulk-add
+  /// rows so table-level Ctrl+V can target checked rows).
+  final bool listenForPaste;
+
+  /// When false, this region is skipped for hit-testing drops.
+  final bool listenForDrop;
+
   @override
   State<ImageIngestRegion> createState() => _ImageIngestRegionState();
 }
 
 class _ImageIngestRegionState extends State<ImageIngestRegion> {
   ImageIngestHandle? _handle;
-  bool _hovered = false;
-  bool _focused = false;
   bool _dragOver = false;
 
   @override
@@ -55,7 +62,7 @@ class _ImageIngestRegionState extends State<ImageIngestRegion> {
   }
 
   bool _containsPoint(Offset global) {
-    if (!widget.enabled || !mounted) return false;
+    if (!widget.enabled || !widget.listenForDrop || !mounted) return false;
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize || !box.attached) return false;
     final origin = box.localToGlobal(Offset.zero);
@@ -63,18 +70,7 @@ class _ImageIngestRegionState extends State<ImageIngestRegion> {
   }
 
   bool _canPaste() {
-    if (!widget.enabled || !mounted) return false;
-    if (_textFieldHasFocus) return false;
-    return _hovered || _focused || _dragOver;
-  }
-
-  bool get _textFieldHasFocus {
-    var node = FocusManager.instance.primaryFocus;
-    while (node != null) {
-      if (node.context?.widget is EditableText) return true;
-      node = node.parent;
-    }
-    return false;
+    return widget.enabled && widget.listenForPaste && mounted;
   }
 
   void _setDragOver(bool over) {
@@ -102,7 +98,9 @@ class _ImageIngestRegionState extends State<ImageIngestRegion> {
             child: Text(
               highlight
                   ? 'Drop to add'
-                  : 'Drop an image here, or paste with Ctrl+V',
+                  : widget.listenForPaste
+                  ? 'Drop an image here, or paste with Ctrl+V'
+                  : 'Drop an image here',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: highlight ? AppColors.moss : AppColors.inkMuted,
               ),
@@ -112,7 +110,7 @@ class _ImageIngestRegionState extends State<ImageIngestRegion> {
       );
     }
 
-    child = AnimatedContainer(
+    return AnimatedContainer(
       duration: const Duration(milliseconds: 120),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(widget.compact ? 10 : 12),
@@ -120,22 +118,6 @@ class _ImageIngestRegionState extends State<ImageIngestRegion> {
         color: highlight ? AppColors.mossSoft.withValues(alpha: 0.45) : null,
       ),
       child: child,
-    );
-
-    return Focus(
-      canRequestFocus: widget.enabled && kIsWeb,
-      onFocusChange: (focused) {
-        if (mounted) setState(() => _focused = focused);
-      },
-      child: MouseRegion(
-        onEnter: (_) {
-          if (mounted) setState(() => _hovered = true);
-        },
-        onExit: (_) {
-          if (mounted) setState(() => _hovered = false);
-        },
-        child: child,
-      ),
     );
   }
 }

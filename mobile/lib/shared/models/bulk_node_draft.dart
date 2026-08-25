@@ -3,6 +3,54 @@ import 'dart:typed_data';
 import 'enums.dart';
 import 'inventory_node.dart';
 
+/// Room + optional parent container where a bulk-add row will be created.
+class BulkPlacement {
+  const BulkPlacement({
+    required this.roomId,
+    this.parentNodeId,
+    this.label = '',
+  });
+
+  final String roomId;
+  final String? parentNodeId;
+  final String label;
+
+  @override
+  bool operator ==(Object other) {
+    return other is BulkPlacement &&
+        other.roomId == roomId &&
+        other.parentNodeId == parentNodeId;
+  }
+
+  @override
+  int get hashCode => Object.hash(roomId, parentNodeId);
+}
+
+/// `Kitchen` or `Kitchen › Closet › Drawer`.
+String formatBulkPlacementLabel({
+  required String roomName,
+  List<String> containerNames = const [],
+}) {
+  final parts = [
+    roomName.trim(),
+    for (final name in containerNames)
+      if (name.trim().isNotEmpty) name.trim(),
+  ].where((part) => part.isNotEmpty);
+  return parts.join(' › ');
+}
+
+({String roomId, String? parentNodeId}) bulkCreateTarget({
+  required BulkNodeDraft draft,
+  required String fallbackRoomId,
+  String? fallbackParentNodeId,
+}) {
+  final placement = draft.placement;
+  if (placement == null) {
+    return (roomId: fallbackRoomId, parentNodeId: fallbackParentNodeId);
+  }
+  return (roomId: placement.roomId, parentNodeId: placement.parentNodeId);
+}
+
 /// A photo attached to a bulk-add / bulk-edit row, uploaded on save.
 class BulkPendingPhoto {
   const BulkPendingPhoto({
@@ -27,6 +75,7 @@ class BulkNodeDraft {
     this.weight,
     this.weightUnit,
     this.photos = const [],
+    this.placement,
   });
 
   final String name;
@@ -37,6 +86,7 @@ class BulkNodeDraft {
   final double? weight;
   final String? weightUnit;
   final List<BulkPendingPhoto> photos;
+  final BulkPlacement? placement;
 
   bool get isItemLike => type.isItemLike;
 
@@ -64,7 +114,8 @@ class BulkNodeDraft {
         other.purchasePrice == purchasePrice &&
         other.brand == brand &&
         other.weight == weight &&
-        other.weightUnit == weightUnit;
+        other.weightUnit == weightUnit &&
+        other.placement == placement;
   }
 
   @override
@@ -76,6 +127,7 @@ class BulkNodeDraft {
     brand,
     weight,
     weightUnit,
+    placement,
   );
 
   BulkNodeDraft copyWith({
@@ -91,6 +143,8 @@ class BulkNodeDraft {
     bool clearWeight = false,
     String? weightUnit,
     List<BulkPendingPhoto>? photos,
+    BulkPlacement? placement,
+    bool clearPlacement = false,
   }) {
     return BulkNodeDraft(
       name: name ?? this.name,
@@ -103,6 +157,7 @@ class BulkNodeDraft {
       weight: clearWeight ? null : (weight ?? this.weight),
       weightUnit: weightUnit ?? this.weightUnit,
       photos: photos ?? this.photos,
+      placement: clearPlacement ? null : (placement ?? this.placement),
     );
   }
 }
@@ -120,6 +175,8 @@ class BulkNodePatch {
     this.weight,
     this.applyWeight = false,
     this.weightUnit,
+    this.placement,
+    this.applyPlacement = false,
   });
 
   final InventoryTypeChoice? type;
@@ -132,9 +189,16 @@ class BulkNodePatch {
   final double? weight;
   final bool applyWeight;
   final String? weightUnit;
+  final BulkPlacement? placement;
+  final bool applyPlacement;
 
   bool get hasChanges =>
-      type != null || applyQuantity || applyPrice || applyBrand || applyWeight;
+      type != null ||
+      applyQuantity ||
+      applyPrice ||
+      applyBrand ||
+      applyWeight ||
+      applyPlacement;
 }
 
 /// Shared vs mixed values across a checked set.
@@ -150,6 +214,8 @@ class SharedBulkValues {
     this.brandMixed = false,
     this.weight,
     this.weightMixed = false,
+    this.placement,
+    this.placementMixed = false,
   });
 
   final InventoryTypeChoice? type;
@@ -162,6 +228,8 @@ class SharedBulkValues {
   final bool brandMixed;
   final double? weight;
   final bool weightMixed;
+  final BulkPlacement? placement;
+  final bool placementMixed;
 }
 
 /// Parses quantity / price / weight cells. Blank or unreadable text is omitted.
@@ -201,6 +269,7 @@ List<BulkNodeDraft> namedBulkDrafts(Iterable<BulkNodeDraft> drafts) {
               ? (draft.weightUnit ?? 'g')
               : draft.weightUnit,
           photos: draft.photos,
+          placement: draft.placement,
         ),
   ];
 }
@@ -212,6 +281,7 @@ SharedBulkValues sharedValuesFromDrafts(List<BulkNodeDraft> drafts) {
     prices: drafts.map((d) => d.purchasePrice),
     brands: drafts.map((d) => _normBrand(d.brand)),
     weights: drafts.map((d) => d.weight),
+    placements: drafts.map((d) => d.placement),
   );
 }
 
@@ -227,6 +297,7 @@ SharedBulkValues sharedValuesFromNodes(List<InventoryNode> nodes) {
     prices: nodes.map((n) => n.purchasePrice),
     brands: nodes.map((n) => _normBrand(n.brand)),
     weights: nodes.map((n) => n.weight),
+    placements: nodes.map((_) => null),
   );
 }
 
@@ -236,12 +307,14 @@ SharedBulkValues _shared({
   required Iterable<double?> prices,
   required Iterable<String?> brands,
   required Iterable<double?> weights,
+  required Iterable<BulkPlacement?> placements,
 }) {
   final typeList = types.toList();
   final qtyList = quantities.toList();
   final priceList = prices.toList();
   final brandList = brands.toList();
   final weightList = weights.toList();
+  final placementList = placements.toList();
   if (typeList.isEmpty) return const SharedBulkValues();
 
   bool mixed<T>(List<T> values) => values.any((v) => v != values.first);
@@ -257,6 +330,8 @@ SharedBulkValues _shared({
     brand: mixed(brandList) ? null : brandList.first,
     weightMixed: mixed(weightList),
     weight: mixed(weightList) ? null : weightList.first,
+    placementMixed: mixed(placementList),
+    placement: mixed(placementList) ? null : placementList.first,
   );
 }
 
@@ -281,6 +356,8 @@ List<BulkNodeDraft> applyPatchToDrafts({
           weight: patch.applyWeight ? patch.weight : null,
           clearWeight: patch.applyWeight && patch.weight == null,
           weightUnit: patch.applyWeight ? (patch.weightUnit ?? 'g') : null,
+          placement: patch.applyPlacement ? patch.placement : null,
+          clearPlacement: patch.applyPlacement && patch.placement == null,
         )
       else
         drafts[i],

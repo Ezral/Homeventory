@@ -389,10 +389,15 @@ class InventoryRepository {
     final toCreate = namedBulkDrafts(drafts);
     var created = 0;
     for (final draft in toCreate) {
+      final target = bulkCreateTarget(
+        draft: draft,
+        fallbackRoomId: roomId,
+        fallbackParentNodeId: parentNodeId,
+      );
       final node = await createNode(
         homeId: homeId,
-        roomId: roomId,
-        parentNodeId: parentNodeId,
+        roomId: target.roomId,
+        parentNodeId: target.parentNodeId,
         nodeKind: draft.type.nodeKind,
         name: draft.name,
         isContainer: draft.type.isContainerKind,

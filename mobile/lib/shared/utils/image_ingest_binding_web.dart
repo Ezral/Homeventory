@@ -37,6 +37,7 @@ class ImageIngestHandle {
 
 class ImageIngestBinding {
   static final List<_Target> _targets = [];
+  static final JSAny _pasteCapture = true.toJS;
   static JSFunction? _paste;
   static JSFunction? _dragOver;
   static JSFunction? _dragLeave;
@@ -58,7 +59,9 @@ class ImageIngestBinding {
     _dragOver = _onDragOver.toJS;
     _dragLeave = _onDragLeave.toJS;
     _drop = _onDrop.toJS;
-    web.document.addEventListener('paste', _paste!);
+    // Capture on window so Ctrl+V is intercepted before a focused text field
+    // consumes the event.
+    web.window.addEventListener('paste', _paste!, _pasteCapture);
     web.document.addEventListener('dragover', _dragOver!);
     web.document.addEventListener('dragleave', _dragLeave!);
     web.document.addEventListener('drop', _drop!);
@@ -66,7 +69,7 @@ class ImageIngestBinding {
 
   static void _unlisten() {
     if (_paste != null) {
-      web.document.removeEventListener('paste', _paste!);
+      web.window.removeEventListener('paste', _paste!, _pasteCapture);
     }
     if (_dragOver != null) {
       web.document.removeEventListener('dragover', _dragOver!);
@@ -91,25 +94,21 @@ class ImageIngestBinding {
     return null;
   }
 
-  static void _onPaste(web.Event event) {
-    unawaited(_handlePaste(event));
+  static _Target? _pasteTarget() {
+    for (var i = _targets.length - 1; i >= 0; i--) {
+      if (_targets[i].canPaste()) return _targets[i];
+    }
+    return null;
   }
 
-  static Future<void> _handlePaste(web.Event event) async {
-    _Target? target;
-    for (var i = _targets.length - 1; i >= 0; i--) {
-      if (_targets[i].canPaste()) {
-        target = _targets[i];
-        break;
-      }
-    }
+  static void _onPaste(web.Event event) {
+    final target = _pasteTarget();
     if (target == null) return;
     final clipboard = (event as web.ClipboardEvent).clipboardData;
-    final images = await _imagesFromDataTransfer(clipboard);
-    if (images.isEmpty) return;
+    if (!_transferLooksLikeImage(clipboard)) return;
     event.preventDefault();
-    event.stopPropagation();
-    target.onImages(images);
+    event.stopImmediatePropagation();
+    unawaited(_deliverImages(target, clipboard));
   }
 
   static void _onDragOver(web.Event event) {
@@ -137,10 +136,6 @@ class ImageIngestBinding {
   }
 
   static void _onDrop(web.Event event) {
-    unawaited(_handleDrop(event));
-  }
-
-  static Future<void> _handleDrop(web.Event event) async {
     final de = event as web.DragEvent;
     final target = _hit(Offset(de.clientX.toDouble(), de.clientY.toDouble()));
     for (final t in _targets) {
@@ -149,7 +144,14 @@ class ImageIngestBinding {
     if (target == null) return;
     event.preventDefault();
     event.stopPropagation();
-    final images = await _imagesFromDataTransfer(de.dataTransfer);
+    unawaited(_deliverImages(target, de.dataTransfer));
+  }
+
+  static Future<void> _deliverImages(
+    _Target target,
+    web.DataTransfer? transfer,
+  ) async {
+    final images = await _imagesFromDataTransfer(transfer);
     if (images.isEmpty) return;
     target.onImages(images);
   }
@@ -169,6 +171,23 @@ ImageIngestHandle registerImageIngestTarget({
   );
   ImageIngestBinding._attach(target);
   return ImageIngestHandle._(target);
+}
+
+bool _transferLooksLikeImage(web.DataTransfer? transfer) {
+  if (transfer == null) return false;
+  final items = transfer.items;
+  for (var i = 0; i < items.length; i++) {
+    final type = items[i].type.toLowerCase();
+    if (type.startsWith('image/') && !type.contains('svg')) return true;
+  }
+  final files = transfer.files;
+  for (var i = 0; i < files.length; i++) {
+    final file = files.item(i);
+    if (file == null) continue;
+    final type = file.type.toLowerCase();
+    if (type.startsWith('image/') && !type.contains('svg')) return true;
+  }
+  return false;
 }
 
 Future<List<PickedImageBytes>> _imagesFromDataTransfer(

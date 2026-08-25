@@ -12,6 +12,7 @@ import '../models/inventory_node.dart';
 import '../utils/image_pick.dart';
 import 'bulk_edit_fields.dart';
 import 'image_ingest_region.dart';
+import 'location_picker_dialog.dart';
 
 Future<int?> showBulkAddItemsSheet({
   required BuildContext context,
@@ -46,9 +47,45 @@ class _BulkAddHost extends ConsumerWidget {
     final currency = ref
         .watch(homeProvider(homeId))
         .maybeWhen(data: (home) => home.defaultCurrency, orElse: () => 'USD');
+    final rooms = ref
+        .watch(roomsListProvider(homeId))
+        .maybeWhen(data: (value) => value, orElse: () => const []);
+    final roomName = rooms
+        .where((room) => room.id == roomId)
+        .map((room) => room.name)
+        .firstOrNull;
+    final parent = parentNodeId == null
+        ? null
+        : ref
+              .watch(inventoryNodeProvider(parentNodeId!))
+              .maybeWhen(data: (node) => node, orElse: () => null);
+    final parentPath = parentNodeId == null
+        ? null
+        : ref
+              .watch(nodeLocationPathProvider(parentNodeId!))
+              .maybeWhen(data: (path) => path, orElse: () => null);
+    final resolvedLabel = parent == null
+        ? (roomName ?? 'This room')
+        : (parentPath == null || parentPath.isEmpty
+              ? formatBulkPlacementLabel(
+                  roomName: roomName ?? 'This room',
+                  containerNames: [parent.name],
+                )
+              : '$parentPath › ${parent.name}');
+    final defaultPlacement = BulkPlacement(
+      roomId: roomId,
+      parentNodeId: parentNodeId,
+      label: resolvedLabel,
+    );
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final table = BulkAddTable(
       currencyLabel: currency,
+      defaultPlacement: defaultPlacement,
+      pickLocation: (context, current) => showLocationPickerDialog(
+        context: context,
+        homeId: homeId,
+        current: current,
+      ),
       onClose: () => Navigator.of(context).pop(),
       onSave: (drafts) async {
         final count = await ref
@@ -73,7 +110,7 @@ class _BulkAddHost extends ConsumerWidget {
         backgroundColor: AppColors.paperElevated,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(width: 1200, height: height, child: table),
+        child: SizedBox(width: 1360, height: height, child: table),
       );
     }
 
@@ -94,6 +131,8 @@ class BulkAddTable extends StatefulWidget {
     this.initialRowCount = 6,
     this.existingNodes,
     this.pickImage,
+    this.defaultPlacement,
+    this.pickLocation,
   });
 
   final VoidCallback onClose;
@@ -105,7 +144,19 @@ class BulkAddTable extends StatefulWidget {
   /// Override for tests. Defaults to [pickEntityImage].
   final Future<PickedImageBytes?> Function(BuildContext context)? pickImage;
 
+  /// Where new rows are created unless the user applies another location.
+  final BulkPlacement? defaultPlacement;
+
+  /// Opens a room/container picker. Add-several only.
+  final Future<BulkPlacement?> Function(
+    BuildContext context,
+    BulkPlacement current,
+  )?
+  pickLocation;
+
   bool get isEditing => existingNodes != null && existingNodes!.isNotEmpty;
+
+  bool get showsLocation => !isEditing && pickLocation != null;
 
   @override
   State<BulkAddTable> createState() => _BulkAddTableState();
@@ -165,6 +216,33 @@ class _BulkAddTableState extends State<BulkAddTable> {
     });
   }
 
+  void _addPastedPhotosToSelectedRows(List<PickedImageBytes> images) {
+    if (images.isEmpty) return;
+    final selected = [
+      for (var i = 0; i < _rows.length; i++)
+        if (_rows[i].selected) i,
+    ];
+    if (selected.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Check a row, then paste the photo.')),
+      );
+      return;
+    }
+    setState(() {
+      for (final i in selected) {
+        for (final picked in images) {
+          _rows[i].photos.add(
+            BulkPendingPhoto(
+              bytes: picked.bytes,
+              mimeType: picked.mimeType,
+              extension: picked.extension,
+            ),
+          );
+        }
+      }
+    });
+  }
+
   void _removePhoto(int index) {
     setState(() {
       final photos = _rows[index].photos;
@@ -218,8 +296,21 @@ class _BulkAddTableState extends State<BulkAddTable> {
         if (patch.applyWeight) {
           row.weight.text = formatOptionalNumber(patch.weight) ?? '';
         }
+        if (patch.applyPlacement) {
+          row.placement = patch.placement;
+        }
       }
     });
+  }
+
+  Future<void> _pickRowLocation(int index) async {
+    final picker = widget.pickLocation;
+    if (picker == null) return;
+    final current = _rows[index].placement ?? widget.defaultPlacement;
+    if (current == null) return;
+    final next = await picker(context, current);
+    if (next == null || !mounted) return;
+    setState(() => _rows[index].placement = next);
   }
 
   List<_BulkRow> get _editTargets {
@@ -254,6 +345,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
         _rows.first.type = InventoryTypeChoice.item;
         _rows.first.selected = false;
         _rows.first.photos.clear();
+        _rows.first.placement = null;
       });
       return;
     }
@@ -267,7 +359,9 @@ class _BulkAddTableState extends State<BulkAddTable> {
   Future<void> _save() async {
     final drafts = widget.isEditing
         ? _rows.map((row) => row.toDraft()).toList()
-        : namedBulkDrafts(_rows.map((row) => row.toDraft()));
+        : namedBulkDrafts(
+            _rows.map((row) => row.toDraft(widget.defaultPlacement)),
+          );
     if (drafts.isEmpty) return;
     if (widget.isEditing && drafts.any((d) => d.name.trim().isEmpty)) {
       ScaffoldMessenger.of(
@@ -333,13 +427,14 @@ class _BulkAddTableState extends State<BulkAddTable> {
                 widget.isEditing
                     ? 'Each row is one selected item. Change fields per row, then save. '
                           'Add photos on any row — they all upload together when you save. '
-                          '${kIsWeb ? 'On desktop you can paste (Ctrl+V) or drop an image onto a row. ' : ''}'
+                          '${kIsWeb ? 'Check a row, then paste (Ctrl+V) or drop an image onto a row. ' : ''}'
                           'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
                     : 'Check rows, then edit the shared fields and Apply. '
+                          'Assign a location in the options row to place items in a room or container. '
                           'Mixed values stay blank until you type a new one. '
                           'With none checked, Apply updates every row. '
                           'Blank names are skipped. Photos on a row upload when you add.'
-                          '${kIsWeb ? ' Paste or drop images onto a row.' : ''}',
+                          '${kIsWeb ? ' Check a row, then paste (Ctrl+V) or drop an image onto it.' : ''}',
                 style: theme.textTheme.bodyMedium,
               ),
             ),
@@ -375,13 +470,24 @@ class _BulkAddTableState extends State<BulkAddTable> {
                   BulkEditFields(
                     key: ValueKey('bulk-edit-$_editKey'),
                     initial: sharedValuesFromDrafts(
-                      _editTargets.map((row) => row.toDraft()).toList(),
+                      _editTargets
+                          .map((row) => row.toDraft(widget.defaultPlacement))
+                          .toList(),
                     ),
                     enabled: !_busy,
                     currencyLabel: widget.currencyLabel,
                     applyLabel: _selectedCount == 0
                         ? 'Apply to all'
                         : 'Apply to selected',
+                    pickLocation: widget.pickLocation == null
+                        ? null
+                        : (current) {
+                            final fallback = current ?? widget.defaultPlacement;
+                            if (fallback == null) {
+                              return Future<BulkPlacement?>.value();
+                            }
+                            return widget.pickLocation!(context, fallback);
+                          },
                     onApply: _applyPatch,
                   ),
                 ],
@@ -391,7 +497,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  const minWidth = 1120.0;
+                  final minWidth = widget.showsLocation ? 1288.0 : 1120.0;
                   final width = constraints.maxWidth < minWidth
                       ? minWidth
                       : constraints.maxWidth;
@@ -399,7 +505,10 @@ class _BulkAddTableState extends State<BulkAddTable> {
                     width: width,
                     child: Column(
                       children: [
-                        _HeaderRow(currencyLabel: widget.currencyLabel),
+                        _HeaderRow(
+                          currencyLabel: widget.currencyLabel,
+                          showLocation: widget.showsLocation,
+                        ),
                         Expanded(
                           child: ListView.separated(
                             itemCount: _rows.length,
@@ -411,6 +520,14 @@ class _BulkAddTableState extends State<BulkAddTable> {
                                 index: index,
                                 enabled: !_busy,
                                 autofocus: index == 0,
+                                locationLabel: widget.showsLocation
+                                    ? (_rows[index].placement ??
+                                              widget.defaultPlacement)
+                                          ?.label
+                                    : null,
+                                onLocation: widget.showsLocation
+                                    ? () => _pickRowLocation(index)
+                                    : null,
                                 onToggle: () {
                                   setState(() {
                                     _rows[index].selected =
@@ -436,17 +553,26 @@ class _BulkAddTableState extends State<BulkAddTable> {
                       ],
                     ),
                   );
-                  if (constraints.maxWidth >= minWidth) return table;
-                  return Scrollbar(
-                    controller: _hScroll,
-                    thumbVisibility: true,
-                    notificationPredicate: (notification) =>
-                        notification.metrics.axis == Axis.horizontal,
-                    child: SingleChildScrollView(
-                      controller: _hScroll,
-                      scrollDirection: Axis.horizontal,
-                      child: table,
-                    ),
+                  Widget body = constraints.maxWidth >= minWidth
+                      ? table
+                      : Scrollbar(
+                          controller: _hScroll,
+                          thumbVisibility: true,
+                          notificationPredicate: (notification) =>
+                              notification.metrics.axis == Axis.horizontal,
+                          child: SingleChildScrollView(
+                            controller: _hScroll,
+                            scrollDirection: Axis.horizontal,
+                            child: table,
+                          ),
+                        );
+                  return ImageIngestRegion(
+                    key: const ValueKey('bulk-paste'),
+                    enabled: !_busy,
+                    listenForDrop: false,
+                    listenForPaste: true,
+                    onImages: _addPastedPhotosToSelectedRows,
+                    child: body,
                   );
                 },
               ),
@@ -492,9 +618,10 @@ class _BulkAddTableState extends State<BulkAddTable> {
 }
 
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({required this.currencyLabel});
+  const _HeaderRow({required this.currencyLabel, this.showLocation = false});
 
   final String currencyLabel;
+  final bool showLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -518,6 +645,8 @@ class _HeaderRow extends StatelessWidget {
             ),
             SizedBox(width: 120, child: Text('Brand', style: style)),
             SizedBox(width: 84, child: Text('Weight', style: style)),
+            if (showLocation)
+              SizedBox(width: 168, child: Text('Location', style: style)),
             SizedBox(width: 108, child: Text('Photo', style: style)),
             const SizedBox(width: 40),
           ],
@@ -539,6 +668,8 @@ class _DataRow extends StatelessWidget {
     required this.onAddPhotos,
     required this.onRemovePhoto,
     required this.onRemove,
+    this.locationLabel,
+    this.onLocation,
   });
 
   final _BulkRow row;
@@ -551,12 +682,16 @@ class _DataRow extends StatelessWidget {
   final ValueChanged<List<PickedImageBytes>> onAddPhotos;
   final VoidCallback? onRemovePhoto;
   final VoidCallback? onRemove;
+  final String? locationLabel;
+  final VoidCallback? onLocation;
 
   @override
   Widget build(BuildContext context) {
     return ImageIngestRegion(
+      key: ValueKey('bulk-row-ingest-$index'),
       enabled: enabled,
       compact: true,
+      listenForPaste: false,
       onImages: onAddPhotos,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -678,6 +813,26 @@ class _DataRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
+            if (onLocation != null)
+              SizedBox(
+                width: 168,
+                child: InkWell(
+                  key: ValueKey('bulk-location-$index'),
+                  onTap: enabled ? onLocation : null,
+                  child: InputDecorator(
+                    decoration: _cellDecoration(hint: 'Location'),
+                    child: Text(
+                      (locationLabel == null || locationLabel!.isEmpty)
+                          ? 'Choose location'
+                          : locationLabel!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bulkCell,
+                    ),
+                  ),
+                ),
+              ),
+            if (onLocation != null) const SizedBox(width: 8),
             SizedBox(
               width: 108,
               child: _PhotoCell(
@@ -811,9 +966,11 @@ class _PhotoCell extends StatelessWidget {
         IconButton(
           key: ValueKey('bulk-photo-$index'),
           tooltip: photos.isEmpty
-              ? (kIsWeb ? 'Add photo — or paste / drop' : 'Take photo')
+              ? (kIsWeb
+                    ? 'Add photo — check a row, then paste (Ctrl+V) or drop'
+                    : 'Take photo')
               : (kIsWeb
-                    ? 'Add another — or paste / drop'
+                    ? 'Add another — check a row, then paste / drop'
                     : 'Add another photo'),
           onPressed: enabled ? onAdd : null,
           iconSize: 20,
@@ -845,7 +1002,8 @@ class _BulkRow {
       ),
       type = initial?.type ?? InventoryTypeChoice.item,
       _weightUnit = initial?.weightUnit,
-      photos = List<BulkPendingPhoto>.from(initial?.photos ?? const []);
+      photos = List<BulkPendingPhoto>.from(initial?.photos ?? const []),
+      placement = initial?.placement;
 
   final TextEditingController name;
   final TextEditingController quantity;
@@ -855,9 +1013,10 @@ class _BulkRow {
   InventoryTypeChoice type;
   final String? _weightUnit;
   final List<BulkPendingPhoto> photos;
+  BulkPlacement? placement;
   bool selected = false;
 
-  BulkNodeDraft toDraft() {
+  BulkNodeDraft toDraft([BulkPlacement? fallback]) {
     final parsedWeight = parseOptionalNumber(weight.text);
     return BulkNodeDraft(
       name: name.text,
@@ -868,6 +1027,7 @@ class _BulkRow {
       weight: parsedWeight,
       weightUnit: parsedWeight == null ? null : (_weightUnit ?? 'g'),
       photos: List<BulkPendingPhoto>.from(photos),
+      placement: placement ?? fallback,
     );
   }
 
