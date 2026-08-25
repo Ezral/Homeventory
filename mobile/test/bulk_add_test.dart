@@ -286,6 +286,13 @@ void main() {
             ?.text,
         'Nike',
       );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('bulk-edit-qty')))
+            .style
+            ?.fontSize,
+        11,
+      );
 
       await tester.enterText(find.byKey(const ValueKey('bulk-edit-qty')), '6');
       await tester.tap(find.byKey(const ValueKey('bulk-edit-apply')));
@@ -505,6 +512,13 @@ void main() {
             .controller
             ?.text,
         'Tee',
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('bulk-name-0')))
+            .style
+            ?.fontSize,
+        11,
       );
       expect(
         tester
