@@ -8,6 +8,7 @@ import '../../features/rooms/presentation/rooms_providers.dart';
 import '../models/bulk_node_draft.dart';
 import '../models/enums.dart';
 import '../models/inventory_node.dart';
+import '../utils/image_pick.dart';
 import 'bulk_edit_fields.dart';
 
 Future<int?> showBulkAddItemsSheet({
@@ -70,7 +71,7 @@ class _BulkAddHost extends ConsumerWidget {
         backgroundColor: AppColors.paperElevated,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(width: 1100, height: height, child: table),
+        child: SizedBox(width: 1200, height: height, child: table),
       );
     }
 
@@ -81,7 +82,7 @@ class _BulkAddHost extends ConsumerWidget {
   }
 }
 
-/// Spreadsheet of name / type / quantity / price for bulk create.
+/// Spreadsheet of name / type / quantity / price / photo for bulk create.
 class BulkAddTable extends StatefulWidget {
   const BulkAddTable({
     super.key,
@@ -90,6 +91,7 @@ class BulkAddTable extends StatefulWidget {
     this.currencyLabel = 'USD',
     this.initialRowCount = 6,
     this.existingNodes,
+    this.pickImage,
   });
 
   final VoidCallback onClose;
@@ -97,6 +99,9 @@ class BulkAddTable extends StatefulWidget {
   final String currencyLabel;
   final int initialRowCount;
   final List<InventoryNode>? existingNodes;
+
+  /// Override for tests. Defaults to [pickEntityImage].
+  final Future<PickedImageBytes?> Function(BuildContext context)? pickImage;
 
   bool get isEditing => existingNodes != null && existingNodes!.isNotEmpty;
 
@@ -134,6 +139,28 @@ class _BulkAddTableState extends State<BulkAddTable> {
       row.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _addPhoto(int index) async {
+    final picker = widget.pickImage ?? pickEntityImage;
+    final picked = await picker(context);
+    if (picked == null || !mounted) return;
+    setState(() {
+      _rows[index].photos.add(
+        BulkPendingPhoto(
+          bytes: picked.bytes,
+          mimeType: picked.mimeType,
+          extension: picked.extension,
+        ),
+      );
+    });
+  }
+
+  void _removePhoto(int index) {
+    setState(() {
+      final photos = _rows[index].photos;
+      if (photos.isNotEmpty) photos.removeLast();
+    });
   }
 
   void _onNameChanged() {
@@ -217,6 +244,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
         _rows.first.weight.clear();
         _rows.first.type = InventoryTypeChoice.item;
         _rows.first.selected = false;
+        _rows.first.photos.clear();
       });
       return;
     }
@@ -281,11 +309,12 @@ class _BulkAddTableState extends State<BulkAddTable> {
             child: Text(
               widget.isEditing
                   ? 'Each row is one selected item. Change fields per row, then save. '
+                        'Add photos on any row — they all upload together when you save. '
                         'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
                   : 'Check rows, then edit the shared fields and Apply. '
                         'Mixed values stay blank until you type a new one. '
                         'With none checked, Apply updates every row. '
-                        'Blank names are skipped.',
+                        'Blank names are skipped. Photos on a row upload when you add.',
               style: theme.textTheme.bodyMedium,
             ),
           ),
@@ -337,7 +366,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                const minWidth = 1020.0;
+                const minWidth = 1120.0;
                 final width = constraints.maxWidth < minWidth
                     ? minWidth
                     : constraints.maxWidth;
@@ -365,6 +394,10 @@ class _BulkAddTableState extends State<BulkAddTable> {
                               onType: (type) {
                                 setState(() => _rows[index].type = type);
                               },
+                              onAddPhoto: () => _addPhoto(index),
+                              onRemovePhoto: _rows[index].photos.isEmpty
+                                  ? null
+                                  : () => _removePhoto(index),
                               onRemove: widget.isEditing
                                   ? null
                                   : () => _removeRow(index),
@@ -456,6 +489,7 @@ class _HeaderRow extends StatelessWidget {
             ),
             SizedBox(width: 120, child: Text('Brand', style: style)),
             SizedBox(width: 84, child: Text('Weight', style: style)),
+            SizedBox(width: 108, child: Text('Photo', style: style)),
             const SizedBox(width: 40),
           ],
         ),
@@ -472,6 +506,8 @@ class _DataRow extends StatelessWidget {
     required this.autofocus,
     required this.onToggle,
     required this.onType,
+    required this.onAddPhoto,
+    required this.onRemovePhoto,
     required this.onRemove,
   });
 
@@ -481,6 +517,8 @@ class _DataRow extends StatelessWidget {
   final bool autofocus;
   final VoidCallback onToggle;
   final ValueChanged<InventoryTypeChoice> onType;
+  final VoidCallback onAddPhoto;
+  final VoidCallback? onRemovePhoto;
   final VoidCallback? onRemove;
 
   @override
@@ -592,6 +630,17 @@ class _DataRow extends StatelessWidget {
               decoration: _cellDecoration(hint: 'g'),
             ),
           ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 108,
+            child: _PhotoCell(
+              index: index,
+              photos: row.photos,
+              enabled: enabled,
+              onAdd: onAddPhoto,
+              onRemoveLast: onRemovePhoto,
+            ),
+          ),
           if (onRemove != null)
             SizedBox(
               width: 40,
@@ -632,6 +681,102 @@ InputDecoration _cellDecoration({String? hint}) {
   );
 }
 
+class _PhotoCell extends StatelessWidget {
+  const _PhotoCell({
+    required this.index,
+    required this.photos,
+    required this.enabled,
+    required this.onAdd,
+    required this.onRemoveLast,
+  });
+
+  final int index;
+  final List<BulkPendingPhoto> photos;
+  final bool enabled;
+  final VoidCallback onAdd;
+  final VoidCallback? onRemoveLast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (photos.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(right: 2),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    photos.last.bytes,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 40,
+                      height: 40,
+                      color: AppColors.mossSoft,
+                      child: const Icon(Icons.image, size: 18),
+                    ),
+                  ),
+                ),
+                if (photos.length > 1)
+                  Positioned(
+                    left: -4,
+                    top: -4,
+                    child: CircleAvatar(
+                      radius: 8,
+                      backgroundColor: AppColors.moss,
+                      child: Text(
+                        '${photos.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  right: -6,
+                  bottom: -6,
+                  child: Material(
+                    color: Colors.black54,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      key: ValueKey('bulk-photo-remove-$index'),
+                      customBorder: const CircleBorder(),
+                      onTap: enabled ? onRemoveLast : null,
+                      child: const Padding(
+                        padding: EdgeInsets.all(2),
+                        child: Icon(Icons.close, size: 12, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        IconButton(
+          key: ValueKey('bulk-photo-$index'),
+          tooltip: photos.isEmpty ? 'Take photo' : 'Add another photo',
+          onPressed: enabled ? onAdd : null,
+          iconSize: 20,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          icon: Icon(
+            photos.isEmpty ? Icons.add_a_photo_outlined : Icons.add_a_photo,
+            color: AppColors.moss,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _BulkRow {
   _BulkRow({BulkNodeDraft? initial})
     : name = TextEditingController(text: initial?.name ?? ''),
@@ -646,7 +791,8 @@ class _BulkRow {
         text: formatOptionalNumber(initial?.weight) ?? '',
       ),
       type = initial?.type ?? InventoryTypeChoice.item,
-      _weightUnit = initial?.weightUnit;
+      _weightUnit = initial?.weightUnit,
+      photos = List<BulkPendingPhoto>.from(initial?.photos ?? const []);
 
   final TextEditingController name;
   final TextEditingController quantity;
@@ -655,6 +801,7 @@ class _BulkRow {
   final TextEditingController weight;
   InventoryTypeChoice type;
   final String? _weightUnit;
+  final List<BulkPendingPhoto> photos;
   bool selected = false;
 
   BulkNodeDraft toDraft() {
@@ -667,6 +814,7 @@ class _BulkRow {
       brand: brand.text,
       weight: parsedWeight,
       weightUnit: parsedWeight == null ? null : (_weightUnit ?? 'g'),
+      photos: List<BulkPendingPhoto>.from(photos),
     );
   }
 

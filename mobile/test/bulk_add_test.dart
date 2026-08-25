@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeventory/shared/models/bulk_node_draft.dart';
 import 'package:homeventory/shared/models/enums.dart';
 import 'package:homeventory/shared/models/inventory_node.dart';
+import 'package:homeventory/shared/utils/image_pick.dart';
 import 'package:homeventory/shared/widgets/bulk_add_dialog.dart';
 import 'package:homeventory/shared/widgets/bulk_edit_fields.dart';
 
@@ -31,6 +34,85 @@ InventoryNode _item({
   );
 }
 
+/// 1×1 PNG so [Image.memory] can decode in widget tests.
+final _pngBytes = Uint8List.fromList(const [
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x1F,
+  0x15,
+  0xC4,
+  0x89,
+  0x00,
+  0x00,
+  0x00,
+  0x0A,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x05,
+  0x00,
+  0x01,
+  0x0D,
+  0x0A,
+  0x2D,
+  0xB4,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
+]);
+
+PickedImageBytes _pickedPhoto() {
+  return PickedImageBytes(
+    bytes: _pngBytes,
+    mimeType: 'image/png',
+    extension: 'png',
+  );
+}
+
 void main() {
   group('bulk drafts', () {
     test('namedBulkDrafts drops blanks and trims brand', () {
@@ -56,6 +138,20 @@ void main() {
           const BulkNodeDraft(name: 'Lamp', quantity: 2, purchasePrice: 12.5),
         ],
       );
+    });
+
+    test('namedBulkDrafts keeps photos on named rows', () {
+      final photo = BulkPendingPhoto(
+        bytes: Uint8List.fromList(const [1, 2, 3]),
+        mimeType: 'image/jpeg',
+      );
+      final kept = namedBulkDrafts([
+        BulkNodeDraft(name: 'Lamp', photos: [photo]),
+        const BulkNodeDraft(name: '  '),
+      ]);
+      expect(kept, hasLength(1));
+      expect(kept.first.photos, hasLength(1));
+      expect(kept.first.photos.first.bytes, [1, 2, 3]);
     });
 
     test('parseOptionalNumber treats blank and junk as omitted', () {
@@ -448,6 +544,76 @@ void main() {
       expect(saved![1].type, InventoryTypeChoice.clothing);
       expect(saved![1].brand, "Levi's");
       expect(saved![1].quantity, 1);
+    });
+
+    testWidgets('edit mode attaches multiple photos per row before save', (
+      tester,
+    ) async {
+      await useWideSurface(tester);
+      List<BulkNodeDraft>? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              existingNodes: [
+                _item(id: '1', name: 'Tee'),
+                _item(id: '2', name: 'Jeans'),
+              ],
+              pickImage: (_) async => _pickedPhoto(),
+              onClose: () {},
+              onSave: (drafts) async => saved = drafts,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('bulk-photo-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('bulk-photo-1')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('bulk-photo-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bulk-photo-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bulk-photo-1')));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('bulk-photo-remove-0')), findsOneWidget);
+      expect(find.text('2'), findsWidgets);
+
+      await tester.tap(find.byKey(const ValueKey('bulk-save')));
+      await tester.pumpAndSettle();
+
+      expect(saved, hasLength(2));
+      expect(saved![0].photos, hasLength(2));
+      expect(saved![1].photos, hasLength(1));
+      expect(saved![0].photos.first.mimeType, 'image/png');
+    });
+
+    testWidgets('photo remove drops the last pending picture', (tester) async {
+      await useWideSurface(tester);
+      List<BulkNodeDraft>? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              existingNodes: [_item(id: '1', name: 'Tee')],
+              pickImage: (_) async => _pickedPhoto(),
+              onClose: () {},
+              onSave: (drafts) async => saved = drafts,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('bulk-photo-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bulk-photo-remove-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bulk-save')));
+      await tester.pumpAndSettle();
+
+      expect(saved, hasLength(1));
+      expect(saved![0].photos, isEmpty);
     });
   });
 }

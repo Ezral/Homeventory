@@ -389,7 +389,7 @@ class InventoryRepository {
     final toCreate = namedBulkDrafts(drafts);
     var created = 0;
     for (final draft in toCreate) {
-      await createNode(
+      final node = await createNode(
         homeId: homeId,
         roomId: roomId,
         parentNodeId: parentNodeId,
@@ -404,6 +404,7 @@ class InventoryRepository {
         weight: draft.weight,
         weightUnit: draft.weight != null ? (draft.weightUnit ?? 'g') : null,
       );
+      await _uploadDraftPhotos(homeId: homeId, nodeId: node.id, draft: draft);
       created += 1;
     }
     return created;
@@ -454,9 +455,30 @@ class InventoryRepository {
             ? null
             : (draft.weightUnit ?? node.weightUnit ?? 'g'),
       );
+      await _uploadDraftPhotos(
+        homeId: node.homeId,
+        nodeId: node.id,
+        draft: draft,
+      );
       updated += 1;
     }
     return updated;
+  }
+
+  Future<void> _uploadDraftPhotos({
+    required String homeId,
+    required String nodeId,
+    required BulkNodeDraft draft,
+  }) async {
+    for (final photo in draft.photos) {
+      await uploadNodeImage(
+        homeId: homeId,
+        nodeId: nodeId,
+        bytes: photo.bytes,
+        mimeType: photo.mimeType,
+        extension: photo.extension,
+      );
+    }
   }
 
   /// Drop nodes whose ancestor is also in [nodeIds], so a parent move

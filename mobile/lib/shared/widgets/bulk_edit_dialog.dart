@@ -40,6 +40,9 @@ class _BulkEditHost extends ConsumerWidget {
         final count = await ref
             .read(inventoryRepositoryProvider)
             .updateBulkNodes(nodes: nodes, drafts: drafts);
+        for (final node in nodes) {
+          invalidateNodeImageCaches(ref, homeId: homeId, nodeId: node.id);
+        }
         if (context.mounted) Navigator.of(context).pop(count);
       },
     );
@@ -53,7 +56,7 @@ class _BulkEditHost extends ConsumerWidget {
         backgroundColor: AppColors.paperElevated,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(width: 1100, height: height, child: table),
+        child: SizedBox(width: 1200, height: height, child: table),
       );
     }
 
