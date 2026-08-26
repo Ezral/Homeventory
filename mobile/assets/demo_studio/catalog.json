@@ -1,0 +1,892 @@
+{
+  "home": {
+    "name": "Bangkok studio",
+    "description": "24 m² Bangkok studio furnished for Homeventory demos.",
+    "addressText": "Bangkok",
+    "timezone": "Asia/Bangkok",
+    "defaultCurrency": "THB",
+    "photo": "overview",
+    "residingSince": "2025-12-20"
+  },
+  "photos": {
+    "overview": "assets/demo_studio/overview.jpg",
+    "sleeping": "assets/demo_studio/sleeping.jpg",
+    "living": "assets/demo_studio/living.jpg",
+    "media": "assets/demo_studio/media.jpg",
+    "kitchen": "assets/demo_studio/kitchen.jpg",
+    "bathroom": "assets/demo_studio/bathroom.jpg"
+  },
+  "rooms": [
+    {
+      "name": "Studio",
+      "description": "Sleeping, living, and dining in one room.",
+      "photo": "overview",
+      "sortOrder": 0,
+      "nodes": [
+        {
+          "name": "Double bed frame",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 12900,
+          "currency": "THB",
+          "purchased": "2026-01-12",
+          "photo": "sleeping",
+          "description": "Sleeping area · Against the window wall",
+          "children": [
+            {
+              "name": "Queen mattress",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 1,
+              "price": 8900,
+              "currency": "THB",
+              "purchased": "2026-01-12",
+              "photo": "sleeping",
+              "description": "On bed slats"
+            },
+            {
+              "name": "Beige fitted sheet set",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 2,
+              "price": 1190,
+              "currency": "THB",
+              "purchased": "2026-01-12",
+              "photo": "sleeping",
+              "description": "On the mattress"
+            },
+            {
+              "name": "Beige duvet",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 1,
+              "price": 1990,
+              "currency": "THB",
+              "purchased": "2026-01-12",
+              "photo": "sleeping",
+              "description": "On the mattress"
+            },
+            {
+              "name": "Sleeping pillow",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 2,
+              "price": 690,
+              "currency": "THB",
+              "purchased": "2026-01-12",
+              "photo": "sleeping",
+              "description": "Headboard side"
+            }
+          ]
+        },
+        {
+          "name": "Bedside table",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 2490,
+          "currency": "THB",
+          "purchased": "2026-01-15",
+          "photo": "sleeping",
+          "description": "Sleeping area · Right side of the bed",
+          "children": [
+            {
+              "name": "Bedside lamp",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 1,
+              "price": 890,
+              "currency": "THB",
+              "purchased": "2026-01-15",
+              "photo": "sleeping",
+              "description": "On top"
+            },
+            {
+              "name": "Drawer",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "description": "Bedside table drawer",
+              "children": [
+                {
+                  "name": "Phone charging cable",
+                  "kind": "ITEM",
+                  "category": "ELECTRONICS",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 390,
+                  "currency": "THB",
+                  "purchased": "2026-03-04"
+                },
+                {
+                  "name": "Sleep mask",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 250,
+                  "currency": "THB",
+                  "purchased": "2026-03-04"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Muted green loveseat",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 10900,
+          "currency": "THB",
+          "purchased": "2026-01-18",
+          "photo": "living",
+          "description": "Living area · Right wall"
+        },
+        {
+          "name": "Round dining table",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 3990,
+          "currency": "THB",
+          "purchased": "2026-01-18",
+          "photo": "living",
+          "description": "Dining area · In front of the loveseat"
+        },
+        {
+          "name": "Dining chair",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 2,
+          "price": 2290,
+          "currency": "THB",
+          "purchased": "2026-01-18",
+          "photo": "living",
+          "description": "Dining area · Around the dining table"
+        },
+        {
+          "name": "Area rug",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 1,
+          "price": 3590,
+          "currency": "THB",
+          "purchased": "2026-01-18",
+          "photo": "living",
+          "description": "Living and sleeping area · Floor"
+        },
+        {
+          "name": "TV console",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 5990,
+          "currency": "THB",
+          "purchased": "2026-01-18",
+          "photo": "media",
+          "description": "Living area · Opposite the loveseat",
+          "children": [
+            {
+              "name": "Flat-screen television",
+              "kind": "ITEM",
+              "category": "ELECTRONICS",
+              "container": false,
+              "quantity": 1,
+              "price": 12990,
+              "currency": "THB",
+              "purchased": "2026-01-20",
+              "photo": "media",
+              "description": "On top"
+            },
+            {
+              "name": "Top drawer",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "TV remote control",
+                  "kind": "ITEM",
+                  "category": "ELECTRONICS",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 0,
+                  "currency": "THB",
+                  "purchased": "2026-01-20"
+                }
+              ]
+            },
+            {
+              "name": "Left cabinet",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "HDMI cable",
+                  "kind": "ITEM",
+                  "category": "ELECTRONICS",
+                  "container": false,
+                  "quantity": 2,
+                  "price": 350,
+                  "currency": "THB",
+                  "purchased": "2026-01-20"
+                },
+                {
+                  "name": "Power strip",
+                  "kind": "ITEM",
+                  "category": "ELECTRONICS",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 650,
+                  "currency": "THB",
+                  "purchased": "2026-01-20"
+                }
+              ]
+            },
+            {
+              "name": "Open middle shelf",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Wi-Fi router",
+                  "kind": "ITEM",
+                  "category": "ELECTRONICS",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 1890,
+                  "currency": "THB",
+                  "purchased": "2026-01-20",
+                  "photo": "media"
+                }
+              ]
+            },
+            {
+              "name": "Right cabinet",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Document folder",
+                  "kind": "ITEM",
+                  "container": false,
+                  "quantity": 3,
+                  "price": 120,
+                  "currency": "THB",
+                  "purchased": "2026-02-03"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Open shelving unit",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 2990,
+          "currency": "THB",
+          "purchased": "2026-01-18",
+          "photo": "media",
+          "description": "Living area · Beside the wardrobe",
+          "children": [
+            {
+              "name": "Ceramic bowl",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 2,
+              "price": 220,
+              "currency": "THB",
+              "purchased": "2026-02-02",
+              "description": "Upper shelf"
+            },
+            {
+              "name": "Paperback book",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 6,
+              "price": 390,
+              "currency": "THB",
+              "purchased": "2026-02-17",
+              "description": "Middle shelves"
+            }
+          ]
+        },
+        {
+          "name": "Two-door wardrobe",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 8990,
+          "currency": "THB",
+          "purchased": "2026-01-12",
+          "photo": "media",
+          "description": "Sleeping area · Beside the window",
+          "children": [
+            {
+              "name": "Wooden clothes hanger",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 12,
+              "price": 85,
+              "currency": "THB",
+              "purchased": "2026-01-13",
+              "description": "Hanging rail"
+            },
+            {
+              "name": "Left section",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "White work shirt",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 4,
+                  "price": 890,
+                  "currency": "THB",
+                  "purchased": "2026-02-05",
+                  "description": "Hanging rail"
+                },
+                {
+                  "name": "Casual T-shirt",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 6,
+                  "price": 450,
+                  "currency": "THB",
+                  "purchased": "2026-02-05",
+                  "description": "Upper shelf"
+                },
+                {
+                  "name": "Trousers",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 3,
+                  "price": 1190,
+                  "currency": "THB",
+                  "purchased": "2026-02-06",
+                  "description": "Hanging rail"
+                }
+              ]
+            },
+            {
+              "name": "Right section",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Jeans",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 2,
+                  "price": 1490,
+                  "currency": "THB",
+                  "purchased": "2026-02-06",
+                  "description": "Lower shelf"
+                },
+                {
+                  "name": "Light jacket",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 2490,
+                  "currency": "THB",
+                  "purchased": "2026-02-08",
+                  "description": "Hanging rail"
+                },
+                {
+                  "name": "Underwear set",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 8,
+                  "price": 190,
+                  "currency": "THB",
+                  "purchased": "2026-02-05",
+                  "description": "Drawer"
+                },
+                {
+                  "name": "Sock pair",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 8,
+                  "price": 120,
+                  "currency": "THB",
+                  "purchased": "2026-02-05",
+                  "description": "Drawer"
+                }
+              ]
+            },
+            {
+              "name": "Bottom shelf",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Sneaker pair",
+                  "kind": "ITEM",
+                  "category": "CLOTHING",
+                  "container": false,
+                  "quantity": 2,
+                  "price": 2490,
+                  "currency": "THB",
+                  "purchased": "2026-02-08"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Curtain set",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 1,
+          "price": 3290,
+          "currency": "THB",
+          "purchased": "2026-01-10",
+          "photo": "sleeping",
+          "description": "Window · Curtain rail"
+        },
+        {
+          "name": "Split air conditioner",
+          "kind": "ITEM",
+          "category": "ELECTRONICS",
+          "container": false,
+          "quantity": 1,
+          "price": 18900,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "media",
+          "description": "Upper wall · Above the TV area"
+        }
+      ]
+    },
+    {
+      "name": "Kitchen",
+      "description": "Compact cooking corner with fridge and hob.",
+      "photo": "kitchen",
+      "sortOrder": 1,
+      "nodes": [
+        {
+          "name": "Compact refrigerator",
+          "kind": "ITEM",
+          "category": "ELECTRONICS",
+          "container": true,
+          "quantity": 1,
+          "price": 10900,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "kitchen",
+          "description": "Cooking corner · Right side",
+          "children": [
+            {
+              "name": "Bottled water",
+              "kind": "ITEM",
+              "category": "EDIBLE",
+              "container": false,
+              "quantity": 6,
+              "price": 15,
+              "currency": "THB",
+              "purchased": "2026-08-23",
+              "description": "Lower shelf"
+            },
+            {
+              "name": "Egg carton",
+              "kind": "ITEM",
+              "category": "EDIBLE",
+              "container": false,
+              "quantity": 1,
+              "price": 85,
+              "currency": "THB",
+              "purchased": "2026-08-23",
+              "description": "Middle shelf"
+            }
+          ]
+        },
+        {
+          "name": "Upper wall cabinet",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 5900,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "kitchen",
+          "description": "Cooking corner · Above the countertop",
+          "children": [
+            {
+              "name": "Dinner plate",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 4,
+              "price": 180,
+              "currency": "THB",
+              "purchased": "2026-01-09",
+              "description": "Open shelf"
+            },
+            {
+              "name": "Cereal bowl",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 4,
+              "price": 150,
+              "currency": "THB",
+              "purchased": "2026-01-09",
+              "description": "Open shelf"
+            },
+            {
+              "name": "Drinking glass",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 4,
+              "price": 120,
+              "currency": "THB",
+              "purchased": "2026-01-09",
+              "description": "Right compartment"
+            },
+            {
+              "name": "Coffee mug",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 2,
+              "price": 220,
+              "currency": "THB",
+              "purchased": "2026-01-09",
+              "description": "Right compartment"
+            },
+            {
+              "name": "Closed compartment",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Dry food container",
+                  "kind": "ITEM",
+                  "container": false,
+                  "quantity": 4,
+                  "price": 190,
+                  "currency": "THB",
+                  "purchased": "2026-01-22"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Base cabinet",
+          "kind": "FURNITURE",
+          "container": true,
+          "quantity": 1,
+          "price": 7900,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "kitchen",
+          "description": "Cooking corner · Below the countertop",
+          "children": [
+            {
+              "name": "Microwave oven",
+              "kind": "ITEM",
+              "category": "ELECTRONICS",
+              "container": false,
+              "quantity": 1,
+              "price": 3290,
+              "currency": "THB",
+              "purchased": "2026-01-08",
+              "photo": "kitchen",
+              "description": "Open appliance bay"
+            },
+            {
+              "name": "Top drawer",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Cutlery set",
+                  "kind": "ITEM",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 690,
+                  "currency": "THB",
+                  "purchased": "2026-01-09"
+                },
+                {
+                  "name": "Chef knife",
+                  "kind": "ITEM",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 1290,
+                  "currency": "THB",
+                  "purchased": "2026-01-09"
+                }
+              ]
+            },
+            {
+              "name": "Right compartment",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Cutting board",
+                  "kind": "ITEM",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 490,
+                  "currency": "THB",
+                  "purchased": "2026-01-09"
+                },
+                {
+                  "name": "Saucepan",
+                  "kind": "ITEM",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 1490,
+                  "currency": "THB",
+                  "purchased": "2026-01-09"
+                },
+                {
+                  "name": "Frying pan",
+                  "kind": "ITEM",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 1690,
+                  "currency": "THB",
+                  "purchased": "2026-01-09"
+                }
+              ]
+            },
+            {
+              "name": "Under sink",
+              "kind": "STORAGE_LOCATION",
+              "container": true,
+              "quantity": 1,
+              "children": [
+                {
+                  "name": "Dishwashing liquid",
+                  "kind": "ITEM",
+                  "category": "CONSUMABLE",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 95,
+                  "currency": "THB",
+                  "purchased": "2026-08-10"
+                },
+                {
+                  "name": "Cleaning sponge pack",
+                  "kind": "ITEM",
+                  "category": "CONSUMABLE",
+                  "container": false,
+                  "quantity": 1,
+                  "price": 75,
+                  "currency": "THB",
+                  "purchased": "2026-08-10"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Single induction hob",
+          "kind": "ITEM",
+          "category": "ELECTRONICS",
+          "container": false,
+          "quantity": 1,
+          "price": 1890,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "kitchen",
+          "description": "Countertop · Right side"
+        },
+        {
+          "name": "Stainless-steel sink and faucet",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 1,
+          "price": 4500,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "kitchen",
+          "description": "Countertop · Left side"
+        }
+      ]
+    },
+    {
+      "name": "Bathroom",
+      "description": "Toilet, basin, and glass shower.",
+      "photo": "bathroom",
+      "sortOrder": 2,
+      "nodes": [
+        {
+          "name": "Toilet",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 1,
+          "price": 6500,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "bathroom",
+          "description": "Left side · Floor"
+        },
+        {
+          "name": "Wall-hung basin",
+          "kind": "ITEM",
+          "container": true,
+          "quantity": 1,
+          "price": 4900,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "bathroom",
+          "description": "Vanity area · Wall",
+          "children": [
+            {
+              "name": "Hand towel",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 2,
+              "price": 250,
+              "currency": "THB",
+              "purchased": "2026-01-11",
+              "description": "Side hook"
+            },
+            {
+              "name": "Toothbrush",
+              "kind": "ITEM",
+              "container": false,
+              "quantity": 2,
+              "price": 120,
+              "currency": "THB",
+              "purchased": "2026-08-16",
+              "description": "Counter ledge"
+            }
+          ]
+        },
+        {
+          "name": "Wall mirror",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 1,
+          "price": 2400,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "bathroom",
+          "description": "Vanity area · Above the basin"
+        },
+        {
+          "name": "Glass shower partition",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 1,
+          "price": 8900,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "bathroom",
+          "description": "Shower area · Glass enclosure"
+        },
+        {
+          "name": "Rain shower set",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 1,
+          "price": 5900,
+          "currency": "THB",
+          "purchased": "2025-12-20",
+          "photo": "bathroom",
+          "description": "Shower area · Wall"
+        },
+        {
+          "name": "Bath towel",
+          "kind": "ITEM",
+          "container": false,
+          "quantity": 2,
+          "price": 590,
+          "currency": "THB",
+          "purchased": "2026-01-11",
+          "photo": "bathroom",
+          "description": "Door · Towel hook"
+        },
+        {
+          "name": "Corner shelf",
+          "kind": "STORAGE_LOCATION",
+          "container": true,
+          "quantity": 1,
+          "description": "Shower area",
+          "children": [
+            {
+              "name": "Shampoo bottle",
+              "kind": "ITEM",
+              "category": "CONSUMABLE",
+              "container": false,
+              "quantity": 1,
+              "price": 220,
+              "currency": "THB",
+              "purchased": "2026-08-16"
+            },
+            {
+              "name": "Body wash bottle",
+              "kind": "ITEM",
+              "category": "CONSUMABLE",
+              "container": false,
+              "quantity": 1,
+              "price": 190,
+              "currency": "THB",
+              "purchased": "2026-08-16"
+            }
+          ]
+        },
+        {
+          "name": "Hair dryer",
+          "kind": "ITEM",
+          "category": "ELECTRONICS",
+          "container": false,
+          "quantity": 1,
+          "price": 1290,
+          "currency": "THB",
+          "purchased": "2026-02-12",
+          "photo": "bathroom",
+          "description": "Vanity area · Storage pouch"
+        },
+        {
+          "name": "Toilet paper roll",
+          "kind": "ITEM",
+          "category": "CONSUMABLE",
+          "container": false,
+          "quantity": 6,
+          "price": 35,
+          "currency": "THB",
+          "purchased": "2026-08-20",
+          "description": "Behind the door · Storage basket"
+        },
+        {
+          "name": "Cleaning brush",
+          "kind": "ITEM",
+          "category": "CONSUMABLE",
+          "container": false,
+          "quantity": 1,
+          "price": 180,
+          "currency": "THB",
+          "purchased": "2026-01-11",
+          "description": "Toilet area · Floor corner"
+        }
+      ]
+    }
+  ],
+  "expectedItemCount": 68,
+  "expectedValue": 213925
+}

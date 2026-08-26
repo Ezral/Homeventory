@@ -29,6 +29,7 @@ The source code remains the source of truth for **how**.
 | [0012](0012-inventory-bulk-select.md) | Inventory bulk add and multi-select actions | Accepted |
 | [0013](0013-reminders-and-local-notifications.md) | Reminders and local Android notifications | Accepted |
 | [0014](0014-home-activity-events.md) | Home activity events | Accepted |
+| [0015](0015-demo-studio-apartment.md) | Bundled Bangkok demo studio | Accepted |
 
 ## Not yet documented (not implemented)
 
