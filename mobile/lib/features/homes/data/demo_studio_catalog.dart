@@ -6,6 +6,9 @@ import '../../../shared/models/enums.dart';
 
 const demoStudioCatalogAsset = 'assets/demo_studio/catalog.json';
 
+/// Display name created by the installer. Used to skip a second copy.
+const demoStudioHomeName = 'Bangkok studio';
+
 class DemoStudioCatalog {
   const DemoStudioCatalog({
     required this.home,

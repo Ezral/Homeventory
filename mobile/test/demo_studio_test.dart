@@ -20,6 +20,7 @@ void main() {
     expect(catalog.listedValue, catalog.expectedValue);
     expect(catalog.home.defaultCurrency, 'THB');
     expect(catalog.home.timezone, 'Asia/Bangkok');
+    expect(catalog.home.name, demoStudioHomeName);
   });
 
   test('nested furniture holds the items named in the location column', () {

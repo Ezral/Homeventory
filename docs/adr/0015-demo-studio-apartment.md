@@ -18,7 +18,7 @@ Demos need a furnished home that matches a real 24 m² Bangkok studio: three r
 
 ## Decision
 
-Ship a **client-side installer**. Signed-in editors tap **Demo studio** on the homes list. The app creates a new home named **Bangkok studio** (timezone `Asia/Bangkok`, currency THB) from bundled `assets/demo_studio/catalog.json` and the six apartment JPEGs, then uploads photos through the existing private `home-images` bucket.
+Ship a **client-side installer**. After sign-in, **Your homes** creates **Bangkok studio** if that home is not already in the list (timezone `Asia/Bangkok`, currency THB). The same action is also a **Demo studio** control. The app reads bundled `assets/demo_studio/catalog.json` and the six apartment JPEGs, then uploads photos through the existing private `home-images` bucket. The signed-in user is `created_by_user_id` and therefore **OWNER**.
 
 Inventory follows ADR-0005:
 
@@ -63,7 +63,7 @@ None. No migration.
 
 ## UI Impact
 
-- Homes list: **Demo studio** control
+- Homes list: **Demo studio** control; auto-creates **Bangkok studio** when missing
 - Empty homes list: **Load demo studio**
 
 ## References

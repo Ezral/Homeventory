@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/user_menu_button.dart';
 import '../../auth/presentation/auth_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
+import '../data/demo_studio_catalog.dart';
 import 'homes_providers.dart';
 
 class HomesScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class HomesScreen extends ConsumerStatefulWidget {
 class _HomesScreenState extends ConsumerState<HomesScreen> {
   bool _checkedPendingNav = false;
   bool _installing = false;
+  bool _autoInstallStarted = false;
 
   @override
   void didChangeDependencies() {
@@ -36,6 +38,15 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
       if (!mounted || pending == null || !pending.startsWith('/')) return;
       await ref.read(localSessionStoreProvider).clearPendingNav();
       if (mounted) context.go(pending);
+    });
+  }
+
+  void _maybeAutoInstall(List<Home> homes) {
+    if (_autoInstallStarted || _installing) return;
+    if (homes.any((home) => home.name == demoStudioHomeName)) return;
+    _autoInstallStarted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadDemoStudio();
     });
   }
 
@@ -134,6 +145,7 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
           onRetry: () => ref.invalidate(homesListProvider),
         ),
         data: (list) {
+          _maybeAutoInstall(list);
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(homesListProvider),
             child: CustomScrollView(
