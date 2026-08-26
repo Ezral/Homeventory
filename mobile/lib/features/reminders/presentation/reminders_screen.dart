@@ -142,9 +142,16 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (canEdit && reminder.enabled)
-          TextButton(
+          IconButton(
+            tooltip: 'Complete',
             onPressed: completing ? null : () => _complete(reminder),
-            child: Text(completing ? '…' : 'Complete'),
+            icon: completing
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.checklist),
           ),
         if (canEdit)
           Switch(
