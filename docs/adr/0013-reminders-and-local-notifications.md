@@ -18,12 +18,17 @@ Households need repeating cleanup alarms with their own wording (“Weekly Clean
 
 ## Decision
 
-**Postgres `reminders` is the source of truth.** Rows are home-scoped. Members can read; editors create, update, and disable. Two kinds:
+**Postgres `reminders` is the source of truth.** Rows are home-scoped. Members can read; editors create, update, disable, complete, and archive. Two kinds:
 
 | Kind | Meaning |
 | --- | --- |
-| `MANUAL` | User title + optional notes. Repeat: once, daily, weekly, monthly, or every N days. |
+| `MANUAL` | User title + optional notes. Repeat: once, daily, weekly, monthly, or every N days. **Must** link to one `inventory_node`. |
 | `USAGE_REFILL` | Tied to one `inventory_node`. Client estimates daily Use (USE ledger only, not TRANSFER_REFILL) and sets `next_fire_at` to (quantity / daily rate) minus `lead_days`. |
+
+`inventory_node_id` is `NOT NULL` for every row. Completing an enabled schedule:
+
+- **Repeating** (`DAILY` / `WEEKLY` / `MONTHLY` / `CUSTOM_DAYS`): skip the current fire and write the next `next_fire_at`; set `last_completed_at`.
+- **One-off** (`ONCE`, including refill): set `archived_at` and `enabled = false`. Archived rows are hidden from the active Schedule list.
 
 **Delivery**
 
@@ -65,13 +70,15 @@ RLS: `can_view_home` select; `can_edit_inventory` write; insert `created_by_user
 
 ## Database Impact
 
-Migration: `20260826000100_reminders.sql`
+Migration: `20260826000100_reminders.sql`  
+Follow-up: `20260826000200_schedule_complete_and_activity.sql` (`inventory_node_id` required; `archived_at` / `last_completed_at`; Schedule Complete)
 
 ## UI Impact
 
 - `/homes/:homeId/schedule` list + create/edit form (`/reminders` redirects here)
 - Home overview tile, desktop sidebar, phone bottom-nav Schedule tab, Settings link per home
 - Item create/edit: notification schedule panel; item detail: “Add to schedule”
+- Linked item is mandatory on the schedule form; active rows have **Complete**
 
 ## References
 

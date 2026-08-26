@@ -126,6 +126,41 @@ void main() {
     });
   });
 
+  group('completeSchedule', () {
+    test('once archives', () {
+      final result = completeSchedule(
+        repeat: ReminderRepeat.once,
+        fireMinute: minutesFromMidnight(hour: 9, minute: 0),
+        currentNext: DateTime(2026, 8, 20, 9),
+        now: DateTime(2026, 8, 26, 12),
+      );
+      expect(result.archive, isTrue);
+      expect(result.nextFireAt, isNull);
+    });
+
+    test('weekly early complete skips the current fire', () {
+      final result = completeSchedule(
+        repeat: ReminderRepeat.weekly,
+        fireMinute: minutesFromMidnight(hour: 9, minute: 0),
+        currentNext: DateTime(2026, 9, 2, 9),
+        now: DateTime(2026, 8, 26, 12),
+      );
+      expect(result.archive, isFalse);
+      expect(result.nextFireAt, DateTime(2026, 9, 9, 9));
+    });
+
+    test('weekly due complete advances from now', () {
+      final result = completeSchedule(
+        repeat: ReminderRepeat.weekly,
+        fireMinute: minutesFromMidnight(hour: 9, minute: 0),
+        currentNext: DateTime(2026, 8, 20, 9),
+        now: DateTime(2026, 8, 26, 12),
+      );
+      expect(result.archive, isFalse);
+      expect(result.nextFireAt, DateTime(2026, 8, 27, 9));
+    });
+  });
+
   group('Reminder', () {
     test('fromJson maps clothing-style node embed and due state', () {
       final reminder = Reminder.fromJson({
@@ -146,6 +181,8 @@ void main() {
           'name': 'Bathroom soap',
           'quantity': 80,
           'quantity_unit': 'CC',
+          'room_id': 'room-1',
+          'is_container': false,
         },
       });
       expect(reminder.kind, ReminderKind.usageRefill);
@@ -153,6 +190,32 @@ void main() {
       expect(reminder.fireHour, 9);
       expect(reminder.isDue, isTrue);
       expect(reminder.repeatSummary, 'Once');
+      expect(reminder.isArchived, isFalse);
+      expect(reminder.itemRoute, '/homes/h1/rooms/room-1/nodes/n1/details');
+    });
+
+    test('archived reminders are not due', () {
+      final reminder = Reminder.fromJson({
+        'id': 'r2',
+        'home_id': 'h1',
+        'created_by_user_id': 'u1',
+        'kind': 'MANUAL',
+        'title': 'Once',
+        'repeat': 'ONCE',
+        'fire_minute': 540,
+        'next_fire_at': '2020-01-01T09:00:00Z',
+        'inventory_node_id': 'n1',
+        'enabled': false,
+        'archived_at': '2026-08-26T09:00:00Z',
+        'inventory_nodes': {
+          'name': 'Cabinet',
+          'room_id': 'room-1',
+          'is_container': true,
+        },
+      });
+      expect(reminder.isArchived, isTrue);
+      expect(reminder.isDue, isFalse);
+      expect(reminder.itemRoute, '/homes/h1/rooms/room-1/nodes/n1');
     });
   });
 

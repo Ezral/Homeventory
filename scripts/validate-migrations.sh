@@ -190,8 +190,41 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
 select set_config('request.jwt.claim.role', 'authenticated', true);
 set local role authenticated;
 
+insert into public.inventory_nodes (
+  id, home_id, room_id, node_kind, name, is_container, created_by_user_id
+) values (
+  '44444444-4444-4444-4444-444444444444',
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222',
+  'ITEM',
+  'Soap',
+  false,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+);
+
+do $$
+begin
+  begin
+    insert into public.reminders (
+      home_id, created_by_user_id, kind, title, repeat, fire_minute, next_fire_at
+    ) values (
+      '11111111-1111-1111-1111-111111111111',
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      'MANUAL',
+      'No item',
+      'ONCE',
+      540,
+      timezone('utc', now())
+    );
+    raise exception 'reminder without an item should fail';
+  exception
+    when not_null_violation then null;
+  end;
+end $$;
+
 insert into public.reminders (
-  id, home_id, created_by_user_id, kind, title, repeat, fire_minute, next_fire_at
+  id, home_id, created_by_user_id, kind, title, repeat, fire_minute, next_fire_at,
+  inventory_node_id
 ) values (
   '33333333-3333-3333-3333-333333333333',
   '11111111-1111-1111-1111-111111111111',
@@ -200,8 +233,14 @@ insert into public.reminders (
   'Weekly Clean-up',
   'WEEKLY',
   540,
-  timezone('utc', now()) + interval '7 days'
+  timezone('utc', now()) + interval '7 days',
+  '44444444-4444-4444-4444-444444444444'
 );
+
+update public.reminders
+set last_completed_at = timezone('utc', now()),
+    next_fire_at = timezone('utc', now()) + interval '7 days'
+where id = '33333333-3333-3333-3333-333333333333';
 
 do $$
 begin
@@ -209,6 +248,59 @@ begin
       where home_id = '11111111-1111-1111-1111-111111111111') <> 1 then
     raise exception 'owner should insert a reminder';
   end if;
+
+  if not exists (
+    select 1 from public.activity_events
+    where home_id = '11111111-1111-1111-1111-111111111111'
+      and action = 'CREATE_HOME'
+  ) then
+    raise exception 'creating a home should log activity';
+  end if;
+  if not exists (
+    select 1 from public.activity_events
+    where action = 'CREATE_ROOM'
+  ) then
+    raise exception 'creating a room should log activity';
+  end if;
+  if not exists (
+    select 1 from public.activity_events
+    where action = 'JOIN_HOME'
+  ) then
+    raise exception 'joining a home should log activity';
+  end if;
+  if not exists (
+    select 1 from public.activity_events
+    where action = 'CREATE_NODE'
+  ) then
+    raise exception 'adding an item should log activity';
+  end if;
+  if not exists (
+    select 1 from public.activity_events
+    where action = 'CREATE_SCHEDULE'
+  ) then
+    raise exception 'creating a schedule should log activity';
+  end if;
+  if not exists (
+    select 1 from public.activity_events
+    where action = 'COMPLETE_SCHEDULE'
+  ) then
+    raise exception 'completing a schedule should log activity';
+  end if;
+end $$;
+
+do $$
+begin
+  begin
+    insert into public.activity_events (home_id, action, summary)
+    values (
+      '11111111-1111-1111-1111-111111111111',
+      'FORGED',
+      'should not work'
+    );
+    raise exception 'authenticated must not insert activity_events';
+  exception
+    when insufficient_privilege then null;
+  end;
 end $$;
 
 reset role;

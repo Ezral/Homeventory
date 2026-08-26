@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homeventory/core/config/app_config.dart';
 import 'package:homeventory/core/utils/invite_token.dart';
+import 'package:homeventory/shared/models/activity_event.dart';
 import 'package:homeventory/shared/models/enums.dart';
 import 'package:homeventory/shared/models/home.dart';
 import 'package:homeventory/shared/models/inventory_node.dart';
@@ -300,6 +301,26 @@ void main() {
       expect(summary.packedKg, closeTo(3.4, 0.0001));
       expect(summary.availableKg, closeTo(19.6, 0.0001));
       expect(summary.isOverAllowance, isFalse);
+    });
+  });
+
+  group('ActivityEvent', () {
+    test('fromJson maps summary and metadata', () {
+      final event = ActivityEvent.fromJson({
+        'id': 'a1',
+        'home_id': 'h1',
+        'actor_user_id': 'u1',
+        'action': 'CREATE_ROOM',
+        'entity_type': 'ROOM',
+        'entity_id': 'r1',
+        'summary': 'Alice added room Kitchen',
+        'metadata': {'name': 'Kitchen'},
+        'created_at': '2026-08-26T09:00:00Z',
+      });
+      expect(event.action, 'CREATE_ROOM');
+      expect(event.summary, 'Alice added room Kitchen');
+      expect(event.metadata['name'], 'Kitchen');
+      expect(event.createdAt.isUtc, isTrue);
     });
   });
 }

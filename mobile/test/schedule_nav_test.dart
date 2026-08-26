@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:homeventory/features/reminders/presentation/edit_reminder_screen.dart';
 import 'package:homeventory/features/reminders/presentation/item_schedule_panel.dart';
 import 'package:homeventory/shared/widgets/home_shell_bottom_nav.dart';
 
@@ -56,5 +57,22 @@ void main() {
 
     expect(find.text('Notification title'), findsOneWidget);
     expect(find.text('Alarm (your text and repeat)'), findsOneWidget);
+  });
+
+  testWidgets('new schedule form requires a linked item', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: EditReminderScreen(homeId: 'home-1')),
+      ),
+    );
+
+    expect(find.text('LINKED ITEM'), findsOneWidget);
+    expect(find.textContaining('Every alarm is tied'), findsOneWidget);
+    expect(find.text('Search by name…'), findsOneWidget);
   });
 }

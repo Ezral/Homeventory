@@ -122,7 +122,7 @@ Invite QR codes are **not** implemented yet (planning only).
 
 - Short-code alphabet omits ambiguous characters (`I`, `O`, `0`, `1`) — good; document if changing.
 - Missing index solely on `upper(short_code)` — lookup uses `upper(short_code) = upper(input)`; may not use a simple unique index efficiently at scale (observe if Homes grow large invite volume).
-- No audit log of who invited whom beyond columns on `invitations` / `home_members`.
+- No audit log of who invited whom beyond columns on `invitations` / `home_members` until `activity_events.INVITE_MEMBER` ([ADR-0014](0014-home-activity-events.md)).
 
 ---
 

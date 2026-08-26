@@ -2,13 +2,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/reminder.dart';
+import '../../../shared/utils/reminder_schedule.dart';
 
 class RemindersRepository {
   RemindersRepository(this._client);
 
   final SupabaseClient _client;
 
-  static const _select = '*, inventory_nodes(name, quantity, quantity_unit)';
+  static const _select =
+      '*, inventory_nodes(name, quantity, quantity_unit, room_id, is_container)';
 
   String get _userId {
     final id = _client.auth.currentUser?.id;
@@ -25,6 +27,7 @@ class RemindersRepository {
         .select(_select)
         .eq('home_id', homeId)
         .eq('inventory_node_id', nodeId)
+        .filter('archived_at', 'is', null)
         .order('enabled', ascending: false)
         .order('created_at', ascending: false);
     return (rows as List)
@@ -37,6 +40,7 @@ class RemindersRepository {
         .from('reminders')
         .select(_select)
         .eq('home_id', homeId)
+        .filter('archived_at', 'is', null)
         .order('enabled', ascending: false)
         .order('next_fire_at');
     return (rows as List)
@@ -62,7 +66,7 @@ class RemindersRepository {
     int? intervalDays,
     required int fireMinute,
     required DateTime nextFireAt,
-    String? inventoryNodeId,
+    required String inventoryNodeId,
     int leadDays = 2,
     bool enabled = true,
   }) async {
@@ -102,6 +106,8 @@ class RemindersRepository {
     String? inventoryNodeId,
     int? leadDays,
     bool? enabled,
+    DateTime? archivedAt,
+    DateTime? lastCompletedAt,
   }) async {
     final payload = <String, dynamic>{
       'updated_at': DateTime.now().toUtc().toIso8601String(),
@@ -124,6 +130,12 @@ class RemindersRepository {
     if (inventoryNodeId != null) payload['inventory_node_id'] = inventoryNodeId;
     if (leadDays != null) payload['lead_days'] = leadDays;
     if (enabled != null) payload['enabled'] = enabled;
+    if (archivedAt != null) {
+      payload['archived_at'] = archivedAt.toUtc().toIso8601String();
+    }
+    if (lastCompletedAt != null) {
+      payload['last_completed_at'] = lastCompletedAt.toUtc().toIso8601String();
+    }
 
     final row = await _client
         .from('reminders')
@@ -132,6 +144,30 @@ class RemindersRepository {
         .select(_select)
         .single();
     return Reminder.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<Reminder> completeReminder(Reminder reminder, {DateTime? now}) async {
+    final at = now ?? DateTime.now();
+    final result = completeSchedule(
+      repeat: reminder.repeat,
+      fireMinute: reminder.fireMinute,
+      intervalDays: reminder.intervalDays,
+      currentNext: reminder.nextFireAt,
+      now: at,
+    );
+    if (result.archive) {
+      return updateReminder(
+        reminderId: reminder.id,
+        enabled: false,
+        archivedAt: at,
+        lastCompletedAt: at,
+      );
+    }
+    return updateReminder(
+      reminderId: reminder.id,
+      nextFireAt: result.nextFireAt,
+      lastCompletedAt: at,
+    );
   }
 
   Future<void> deleteReminder(String reminderId) async {

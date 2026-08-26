@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/layout/web_layout.dart';
+import '../features/activity/presentation/activity_screen.dart';
 import '../features/auth/presentation/auth_providers.dart';
 import '../features/auth/presentation/sign_in_screen.dart';
 import '../features/homes/presentation/create_home_screen.dart';
@@ -121,6 +122,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/homes/:homeId/schedule',
             builder: (context, state) =>
                 RemindersScreen(homeId: state.pathParameters['homeId']!),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/activity',
+            builder: (context, state) =>
+                ActivityScreen(homeId: state.pathParameters['homeId']!),
           ),
           GoRoute(
             path: '/homes/:homeId/schedule/new',

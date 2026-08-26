@@ -162,6 +162,20 @@ class HomeDetailScreen extends ConsumerWidget {
                           onTap: () => context.go('/homes/$homeId/schedule'),
                         ),
                         const SizedBox(height: 20),
+                        const SectionLabel('Activity'),
+                        const SizedBox(height: 10),
+                        SoftTile(
+                          leading: const Icon(
+                            Icons.history,
+                            color: AppColors.mossDeep,
+                          ),
+                          title: 'Household activity',
+                          subtitle:
+                              'Creates, joins, rooms, items, and completed schedules',
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.go('/homes/$homeId/activity'),
+                        ),
+                        const SizedBox(height: 20),
                         const SectionLabel('Rooms'),
                         const SizedBox(height: 10),
                       ],

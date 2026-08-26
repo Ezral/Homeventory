@@ -16,9 +16,13 @@ class Reminder {
     this.leadDays = 2,
     this.enabled = true,
     this.lastNotifiedAt,
+    this.archivedAt,
+    this.lastCompletedAt,
     this.nodeName,
     this.nodeQuantity,
     this.nodeQuantityUnit,
+    this.nodeRoomId,
+    this.nodeIsContainer = false,
   });
 
   final String id;
@@ -35,15 +39,32 @@ class Reminder {
   final int leadDays;
   final bool enabled;
   final DateTime? lastNotifiedAt;
+  final DateTime? archivedAt;
+  final DateTime? lastCompletedAt;
   final String? nodeName;
   final double? nodeQuantity;
   final String? nodeQuantityUnit;
+  final String? nodeRoomId;
+  final bool nodeIsContainer;
 
   int get fireHour => fireMinute ~/ 60;
   int get fireMinuteOfHour => fireMinute % 60;
 
+  bool get isArchived => archivedAt != null;
+
+  bool get isRepeating => repeat != ReminderRepeat.once;
+
+  /// Browse or detail path for the linked item, if room metadata is present.
+  String? get itemRoute {
+    final nodeId = inventoryNodeId;
+    final roomId = nodeRoomId;
+    if (nodeId == null || roomId == null) return null;
+    final base = '/homes/$homeId/rooms/$roomId/nodes/$nodeId';
+    return nodeIsContainer ? base : '$base/details';
+  }
+
   bool get isDue {
-    if (!enabled) return false;
+    if (!enabled || isArchived) return false;
     return !nextFireAt.isAfter(DateTime.now());
   }
 
@@ -81,9 +102,17 @@ class Reminder {
       lastNotifiedAt: json['last_notified_at'] != null
           ? DateTime.tryParse(json['last_notified_at'] as String)
           : null,
+      archivedAt: json['archived_at'] != null
+          ? DateTime.tryParse(json['archived_at'] as String)
+          : null,
+      lastCompletedAt: json['last_completed_at'] != null
+          ? DateTime.tryParse(json['last_completed_at'] as String)
+          : null,
       nodeName: nodeMap?['name'] as String?,
       nodeQuantity: (nodeMap?['quantity'] as num?)?.toDouble(),
       nodeQuantityUnit: nodeMap?['quantity_unit'] as String?,
+      nodeRoomId: nodeMap?['room_id'] as String?,
+      nodeIsContainer: nodeMap?['is_container'] as bool? ?? false,
     );
   }
 }
