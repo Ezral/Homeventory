@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router.dart';
 import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/reminders/presentation/reminders_providers.dart';
 import 'shared/providers/supabase_provider.dart';
 
 Future<void> main() async {
@@ -29,9 +30,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [
-        appConfigProvider.overrideWithValue(config),
-      ],
+      overrides: [appConfigProvider.overrideWithValue(config)],
       child: const HomeventoryApp(),
     ),
   );
@@ -43,9 +42,7 @@ class HomeventoryApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final config = ref.watch(appConfigProvider);
-    final router = config.isConfigured
-        ? ref.watch(routerProvider)
-        : null;
+    final router = config.isConfigured ? ref.watch(routerProvider) : null;
 
     // When Supabase is not initialized, avoid watching providers that touch
     // Supabase.instance. Use a dedicated router for setup only.
@@ -58,6 +55,7 @@ class HomeventoryApp extends ConsumerWidget {
       );
     }
 
+    ref.watch(reminderAlarmSyncProvider);
     return MaterialApp.router(
       title: 'Homeventory',
       debugShowCheckedModeBanner: false,
