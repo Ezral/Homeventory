@@ -48,6 +48,8 @@ class WebAppShell extends ConsumerWidget {
         homeId != null &&
         (location.startsWith('/homes/$homeId/schedule') ||
             location.startsWith('/homes/$homeId/reminders'));
+    final onActivity =
+        homeId != null && location.startsWith('/homes/$homeId/activity');
     final onTrips =
         homeId != null && location.startsWith('/homes/$homeId/trips');
 
@@ -65,6 +67,7 @@ class WebAppShell extends ConsumerWidget {
             onHomeOverview: onHomeOverview,
             onSearch: onSearch,
             onSchedule: onSchedule,
+            onActivity: onActivity,
             onTrips: onTrips,
           ),
           Expanded(
@@ -100,6 +103,7 @@ class _Sidebar extends ConsumerWidget {
     required this.onHomeOverview,
     required this.onSearch,
     required this.onSchedule,
+    required this.onActivity,
     required this.onTrips,
   });
 
@@ -112,6 +116,7 @@ class _Sidebar extends ConsumerWidget {
   final bool onHomeOverview;
   final bool onSearch;
   final bool onSchedule;
+  final bool onActivity;
   final bool onTrips;
 
   @override
@@ -192,6 +197,13 @@ class _Sidebar extends ConsumerWidget {
               label: 'Schedule',
               selected: onSchedule,
               onTap: () => context.go('/homes/$homeId/schedule'),
+            ),
+            _NavTile(
+              icon: Icons.history,
+              selectedIcon: Icons.history,
+              label: 'Activity',
+              selected: onActivity,
+              onTap: () => context.go('/homes/$homeId/activity'),
             ),
             _NavTile(
               icon: Icons.luggage_outlined,

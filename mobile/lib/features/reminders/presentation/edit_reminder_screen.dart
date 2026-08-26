@@ -96,7 +96,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       final node = await ref.read(inventoryRepositoryProvider).getNode(nodeId);
       if (!mounted) return;
       setState(() => _node = node);
-      if (_title.text.trim().isEmpty || _title.text == 'Refill reminder') {
+      if (_kind == ReminderKind.usageRefill &&
+          (_title.text.trim().isEmpty || _title.text == 'Refill reminder')) {
         _title.text = 'Refill ${node.name}';
       }
       await _refreshForecast(node);
@@ -155,9 +156,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_kind == ReminderKind.usageRefill && _node == null) {
+    if (_node == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a container or item to watch.')),
+        const SnackBar(content: Text('Pick the item this schedule is for.')),
       );
       return;
     }
@@ -186,7 +187,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           intervalDays: interval,
           fireMinute: fireMinute,
           nextFireAt: _computedNextFire,
-          inventoryNodeId: _node?.id,
+          inventoryNodeId: _node!.id,
           leadDays: lead,
           enabled: true,
         );
@@ -202,7 +203,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           intervalDays: interval,
           fireMinute: fireMinute,
           nextFireAt: _computedNextFire,
-          inventoryNodeId: _node?.id,
+          inventoryNodeId: _node!.id,
           leadDays: lead,
         );
       }
@@ -372,72 +373,78 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               trailing: const Icon(Icons.schedule),
               onTap: _pickTime,
             ),
-            if (_kind == ReminderKind.usageRefill) ...[
-              const SizedBox(height: 8),
-              const SectionLabel('Container or item'),
-              const SizedBox(height: 8),
-              if (_node != null)
-                SoftTile(
-                  title: _node!.name,
-                  subtitle: [
-                    _node!.kindLabel,
-                    if (_node!.quantity != null)
-                      '${_node!.quantity} ${_node!.quantityUnit ?? ''}'.trim(),
-                  ].join(' · '),
-                  trailing: IconButton(
-                    tooltip: 'Clear',
-                    onPressed: () => setState(() {
-                      _node = null;
-                      _forecast = null;
-                    }),
-                    icon: const Icon(Icons.close),
-                  ),
-                )
-              else ...[
-                TextField(
-                  controller: _nodeSearch,
-                  decoration: const InputDecoration(
-                    hintText: 'Search by name…',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (v) => setState(() => _nodeQuery = v),
+            const SizedBox(height: 8),
+            const SectionLabel('Linked item'),
+            const SizedBox(height: 8),
+            Text(
+              'Every alarm is tied to an item or container in this home.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            if (_node != null)
+              SoftTile(
+                title: _node!.name,
+                subtitle: [
+                  _node!.kindLabel,
+                  if (_node!.quantity != null)
+                    '${_node!.quantity} ${_node!.quantityUnit ?? ''}'.trim(),
+                ].join(' · '),
+                trailing: IconButton(
+                  tooltip: 'Change',
+                  onPressed: () => setState(() {
+                    _node = null;
+                    _forecast = null;
+                  }),
+                  icon: const Icon(Icons.swap_horiz),
                 ),
-                const SizedBox(height: 8),
-                if (search != null)
-                  search.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                    error: (e, _) => Text(e.toString()),
-                    data: (nodes) {
-                      if (nodes.isEmpty) {
-                        return const Text('No matches.');
-                      }
-                      return Column(
-                        children: [
-                          for (final node in nodes.take(8))
-                            SoftTile(
-                              title: node.name,
-                              subtitle: node.kindLabel,
-                              onTap: () async {
-                                setState(() {
-                                  _node = node;
-                                  _nodeQuery = '';
-                                  _nodeSearch.clear();
-                                  if (_title.text.trim().isEmpty ||
-                                      _title.text == 'Refill reminder') {
-                                    _title.text = 'Refill ${node.name}';
-                                  }
-                                });
-                                await _refreshForecast(node);
-                              },
-                            ),
-                        ],
-                      );
-                    },
+              )
+            else ...[
+              TextField(
+                controller: _nodeSearch,
+                decoration: const InputDecoration(
+                  hintText: 'Search by name…',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onChanged: (v) => setState(() => _nodeQuery = v),
+              ),
+              const SizedBox(height: 8),
+              if (search != null)
+                search.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
-              ],
+                  error: (e, _) => Text(e.toString()),
+                  data: (nodes) {
+                    if (nodes.isEmpty) {
+                      return const Text('No matches.');
+                    }
+                    return Column(
+                      children: [
+                        for (final node in nodes.take(8))
+                          SoftTile(
+                            title: node.name,
+                            subtitle: node.kindLabel,
+                            onTap: () async {
+                              setState(() {
+                                _node = node;
+                                _nodeQuery = '';
+                                _nodeSearch.clear();
+                                if (_kind == ReminderKind.usageRefill &&
+                                    (_title.text.trim().isEmpty ||
+                                        _title.text == 'Refill reminder')) {
+                                  _title.text = 'Refill ${node.name}';
+                                }
+                              });
+                              await _refreshForecast(node);
+                            },
+                          ),
+                      ],
+                    );
+                  },
+                ),
+            ],
+            if (_kind == ReminderKind.usageRefill) ...[
               const SizedBox(height: 12),
               TextFormField(
                 controller: _leadDays,

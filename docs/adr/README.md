@@ -28,6 +28,7 @@ The source code remains the source of truth for **how**.
 | [0011](0011-flutter-web-github-pages.md) | Flutter web client on GitHub Pages | Accepted |
 | [0012](0012-inventory-bulk-select.md) | Inventory bulk add and multi-select actions | Accepted |
 | [0013](0013-reminders-and-local-notifications.md) | Reminders and local Android notifications | Accepted |
+| [0014](0014-home-activity-events.md) | Home activity events | Accepted |
 
 ## Not yet documented (not implemented)
 
@@ -44,5 +45,5 @@ Still without ADRs (not implemented or not landed as architecture):
 - Full product / multi-reserve catalog model
 - Consumption predictions (refill *reminders* from Use rate shipped in ADR-0013; full Phase 8 prediction table is not)
 - Notifications / FCM (local Android reminder alerts shipped in ADR-0013; FCM inbox is not)
-- Permission / access audit log subsystem
+- Permission / access audit log subsystem (household activity trail shipped in ADR-0014; permission-decision audit is not)
 - Page-ready image loading strategy

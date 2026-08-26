@@ -58,6 +58,39 @@ DateTime nextFireAt({
   return candidate;
 }
 
+/// Result of tapping Complete on a schedule.
+class ReminderCompletion {
+  const ReminderCompletion({required this.archive, this.nextFireAt});
+
+  final bool archive;
+  final DateTime? nextFireAt;
+}
+
+/// Completing a one-off archives it. Completing a repeating alarm skips the
+/// current fire and sets the following occurrence.
+ReminderCompletion completeSchedule({
+  required ReminderRepeat repeat,
+  required int fireMinute,
+  int? intervalDays,
+  required DateTime currentNext,
+  required DateTime now,
+}) {
+  if (repeat == ReminderRepeat.once) {
+    return const ReminderCompletion(archive: true);
+  }
+  final from = currentNext.isAfter(now) ? currentNext : now;
+  return ReminderCompletion(
+    archive: false,
+    nextFireAt: nextFireAt(
+      from: from,
+      repeat: repeat,
+      fireMinute: fireMinute,
+      intervalDays: intervalDays,
+      firstAt: currentNext,
+    ),
+  );
+}
+
 class UsageForecast {
   const UsageForecast({
     required this.sampleCount,

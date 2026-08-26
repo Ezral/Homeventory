@@ -93,7 +93,7 @@ Node detail: Use / Restock / Adjust / Dispose + history. Create/edit: dispenser 
 ## Architecture Notes
 
 - MOVE type exists for pack/unpack trail; move UI may not always write MOVE yet when using `move_inventory_node` alone.
-- Global `audit_logs` still deferred.
+- Household activity (create/join home, rooms, items, schedules) is in `activity_events` ([ADR-0014](0014-home-activity-events.md)). Phase J permission-decision `audit_logs` is still deferred.
 
 ---
 

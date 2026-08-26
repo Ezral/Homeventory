@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/layout/web_layout.dart';
@@ -14,13 +15,22 @@ import '../data/notification_scheduler.dart';
 import 'edit_reminder_screen.dart';
 import 'reminders_providers.dart';
 
-class RemindersScreen extends ConsumerWidget {
+class RemindersScreen extends ConsumerStatefulWidget {
   const RemindersScreen({super.key, required this.homeId});
 
   final String homeId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RemindersScreen> createState() => _RemindersScreenState();
+}
+
+class _RemindersScreenState extends ConsumerState<RemindersScreen> {
+  String? _completingId;
+
+  String get homeId => widget.homeId;
+
+  @override
+  Widget build(BuildContext context) {
     final canEdit = ref
         .watch(homeProvider(homeId))
         .maybeWhen(
@@ -51,7 +61,7 @@ class RemindersScreen extends ConsumerWidget {
       ),
       floatingActionButton: desktop && canEdit
           ? FloatingActionButton.extended(
-              onPressed: () => _openEditor(context, ref),
+              onPressed: () => _openEditor(),
               backgroundColor: AppColors.moss,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
@@ -70,7 +80,7 @@ class RemindersScreen extends ConsumerWidget {
                 canEdit: canEdit,
                 addDeniedMessage:
                     'You do not have permission to add schedules.',
-                onAdd: () => _openEditor(context, ref),
+                onAdd: () => _openEditor(),
               ),
             ),
       body: remindersAsync.when(
@@ -85,10 +95,10 @@ class RemindersScreen extends ConsumerWidget {
               icon: Icons.schedule,
               title: 'Nothing scheduled yet',
               message: canEdit
-                  ? 'Add a weekly or monthly alarm with your own text, or a refill from Use history. You can also set this when editing an item.'
+                  ? 'Add an alarm on a linked item, or a refill from Use history. You can also set this when editing an item.'
                   : 'An editor can add cleanup alarms and refill notifications for this home.',
               actionLabel: canEdit ? 'Add schedule' : null,
-              onAction: canEdit ? () => _openEditor(context, ref) : null,
+              onAction: canEdit ? () => _openEditor() : null,
             );
           }
           return ListView(
@@ -114,15 +124,8 @@ class RemindersScreen extends ConsumerWidget {
                   title: reminder.title,
                   subtitle: _subtitle(reminder, dateFormat),
                   dimmed: !reminder.enabled,
-                  onTap: canEdit
-                      ? () => _openEditor(context, ref, reminder: reminder)
-                      : null,
-                  trailing: canEdit
-                      ? Switch(
-                          value: reminder.enabled,
-                          onChanged: (v) => _setEnabled(ref, reminder, v),
-                        )
-                      : null,
+                  onTap: canEdit ? () => _openEditor(reminder: reminder) : null,
+                  trailing: _trailing(reminder, canEdit),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -133,13 +136,36 @@ class RemindersScreen extends ConsumerWidget {
     );
   }
 
+  Widget _trailing(Reminder reminder, bool canEdit) {
+    final completing = _completingId == reminder.id;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (canEdit && reminder.enabled)
+          TextButton(
+            onPressed: completing ? null : () => _complete(reminder),
+            child: Text(completing ? '…' : 'Complete'),
+          ),
+        if (canEdit)
+          Switch(
+            value: reminder.enabled,
+            onChanged: completing ? null : (v) => _setEnabled(reminder, v),
+          ),
+        if (reminder.itemRoute != null)
+          IconButton(
+            tooltip: 'Open item',
+            onPressed: () => context.push(reminder.itemRoute!),
+            icon: const Icon(Icons.open_in_new),
+          ),
+      ],
+    );
+  }
+
   String _subtitle(Reminder reminder, DateFormat dateFormat) {
     final parts = <String>[
+      if (reminder.nodeName != null) reminder.nodeName!,
       reminder.kind.label,
       reminder.repeatSummary,
-      if (reminder.kind == ReminderKind.usageRefill &&
-          reminder.nodeName != null)
-        reminder.nodeName!,
       reminder.enabled
           ? (reminder.isDue
                 ? 'Due now'
@@ -149,22 +175,40 @@ class RemindersScreen extends ConsumerWidget {
     return parts.join(' · ');
   }
 
-  Future<void> _setEnabled(
-    WidgetRef ref,
-    Reminder reminder,
-    bool enabled,
-  ) async {
+  Future<void> _setEnabled(Reminder reminder, bool enabled) async {
     await ref
         .read(remindersRepositoryProvider)
         .updateReminder(reminderId: reminder.id, enabled: enabled);
     ref.invalidate(homeRemindersProvider(homeId));
   }
 
-  Future<void> _openEditor(
-    BuildContext context,
-    WidgetRef ref, {
-    Reminder? reminder,
-  }) async {
+  Future<void> _complete(Reminder reminder) async {
+    if (_completingId != null) return;
+    setState(() => _completingId = reminder.id);
+    try {
+      await ref.read(remindersRepositoryProvider).completeReminder(reminder);
+      ref.invalidate(homeRemindersProvider(homeId));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            reminder.isRepeating
+                ? 'Done. Next time is scheduled.'
+                : 'Archived this one-off schedule.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _completingId = null);
+    }
+  }
+
+  Future<void> _openEditor({Reminder? reminder}) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => EditReminderScreen(homeId: homeId, existing: reminder),

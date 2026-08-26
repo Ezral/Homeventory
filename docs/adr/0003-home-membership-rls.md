@@ -138,7 +138,7 @@ Table grants for `authenticated` are asserted in `20260712000300_homes_rls_grant
 ## Architecture Notes
 
 - `can_admin_home` is OWNER-only; ADMIN cannot update home row settings today even if product text sometimes groups “admins.”
-- No audit_logs table yet; membership removals are not separately audited.
+- Household membership activity (join, invite, remove) is logged in `activity_events` ([ADR-0014](0014-home-activity-events.md)). Phase J permission-decision audit is still deferred.
 - Duplicate authorization logic exists in Flutter (`HomeRole.canEditInventory`) — acceptable for UX, but server policies must stay stricter or equal.
 
 ---
