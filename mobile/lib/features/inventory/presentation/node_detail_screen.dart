@@ -410,6 +410,13 @@ class NodeDetailScreen extends ConsumerWidget {
                       icon: const Icon(Icons.delete_outline),
                       label: const Text('Dispose'),
                     ),
+                    OutlinedButton.icon(
+                      onPressed: () => context.push(
+                        '/homes/$homeId/reminders/new?kind=USAGE_REFILL&node=$nodeId',
+                      ),
+                      icon: const Icon(Icons.notifications_outlined),
+                      label: const Text('Remind when low'),
+                    ),
                   ],
                 ),
               ],

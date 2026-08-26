@@ -165,6 +165,20 @@ class HomeDetailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const SectionLabel('Reminders'),
+                        const SizedBox(height: 10),
+                        SoftTile(
+                          leading: const Icon(
+                            Icons.notifications_outlined,
+                            color: AppColors.mossDeep,
+                          ),
+                          title: 'Alarms and refill reminders',
+                          subtitle:
+                              'Weekly clean-up, monthly tasks, or notify before a container runs out',
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.push('/homes/$homeId/reminders'),
+                        ),
+                        const SizedBox(height: 20),
                         const SectionLabel('Rooms'),
                         const SizedBox(height: 10),
                       ],
@@ -214,8 +228,12 @@ class HomeDetailScreen extends ConsumerWidget {
                       orElse: () => const <String, String>{},
                     );
                     return SliverPadding(
-                      padding:
-                          EdgeInsets.fromLTRB(20, 0, 20, desktop ? 32 : 100),
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        0,
+                        20,
+                        desktop ? 32 : 100,
+                      ),
                       sliver: SliverGrid(
                         // 3∶2 landscape cover cards.
                         gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
@@ -224,17 +242,14 @@ class HomeDetailScreen extends ConsumerWidget {
                           crossAxisSpacing: 14,
                           childAspectRatio: 3 / 2,
                         ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final room = rooms[index];
-                            return _RoomCoverCard(
-                              homeId: homeId,
-                              room: room,
-                              imageUrl: thumbs[room.id],
-                            );
-                          },
-                          childCount: rooms.length,
-                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final room = rooms[index];
+                          return _RoomCoverCard(
+                            homeId: homeId,
+                            room: room,
+                            imageUrl: thumbs[room.id],
+                          );
+                        }, childCount: rooms.length),
                       ),
                     );
                   },
@@ -293,16 +308,16 @@ Future<void> _confirmArchiveHome({
     ref.invalidate(hiddenHomesListProvider);
     ref.invalidate(activeHomeIdProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$homeName is archived')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$homeName is archived')));
       context.go('/');
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 }
@@ -366,10 +381,7 @@ class _RoomCoverCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Color(0xCC1B3A2F),
-                    ],
+                    colors: [Colors.transparent, Color(0xCC1B3A2F)],
                     stops: [0.45, 1],
                   ),
                 ),
@@ -383,9 +395,9 @@ class _RoomCoverCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -556,9 +568,9 @@ class _InlineHomeStats extends StatelessWidget {
     return Text(
       parts.join(' · '),
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.mossDeep,
-            fontWeight: FontWeight.w600,
-          ),
+        color: AppColors.mossDeep,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }
@@ -579,8 +591,7 @@ class _MembersManageSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(homeMembersProvider(homeId));
-    final myUserId =
-        ref.watch(supabaseClientProvider).auth.currentUser?.id;
+    final myUserId = ref.watch(supabaseClientProvider).auth.currentUser?.id;
 
     return membersAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -604,12 +615,13 @@ class _MembersManageSection extends ConsumerWidget {
                     leading: CircleAvatar(
                       backgroundColor: AppColors.mossSoft,
                       foregroundColor: AppColors.mossDeep,
-                      backgroundImage: member.avatarUrl != null &&
+                      backgroundImage:
+                          member.avatarUrl != null &&
                               member.avatarUrl!.isNotEmpty
                           ? NetworkImage(member.avatarUrl!)
                           : null,
-                      child: member.avatarUrl == null ||
-                              member.avatarUrl!.isEmpty
+                      child:
+                          member.avatarUrl == null || member.avatarUrl!.isEmpty
                           ? Text(member.initials)
                           : null,
                     ),
@@ -692,11 +704,7 @@ class _MembersManageSection extends ConsumerWidget {
     WidgetRef ref,
     HomeMember member,
   ) async {
-    final roles = [
-      HomeRole.admin,
-      HomeRole.editor,
-      HomeRole.viewer,
-    ];
+    final roles = [HomeRole.admin, HomeRole.editor, HomeRole.viewer];
     final chosen = await showDialog<HomeRole>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -717,11 +725,9 @@ class _MembersManageSection extends ConsumerWidget {
     );
     if (chosen == null || chosen == member.role || !context.mounted) return;
     try {
-      await ref.read(homesRepositoryProvider).setMemberRole(
-            homeId: homeId,
-            userId: member.userId,
-            role: chosen,
-          );
+      await ref
+          .read(homesRepositoryProvider)
+          .setMemberRole(homeId: homeId, userId: member.userId, role: chosen);
       ref.invalidate(homeMembersProvider(homeId));
       ref.invalidate(homeProvider(homeId));
       if (context.mounted) {
@@ -731,19 +737,19 @@ class _MembersManageSection extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
 
   String _roleHint(HomeRole role) => switch (role) {
-        HomeRole.admin => 'Invite members and manage access',
-        HomeRole.editor => 'Add and edit inventory',
-        HomeRole.viewer => 'View only',
-        HomeRole.owner => 'Full control',
-      };
+    HomeRole.admin => 'Invite members and manage access',
+    HomeRole.editor => 'Add and edit inventory',
+    HomeRole.viewer => 'View only',
+    HomeRole.owner => 'Full control',
+  };
 
   Future<void> _confirmTransfer(
     BuildContext context,
@@ -773,25 +779,22 @@ class _MembersManageSection extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     try {
-      await ref.read(homesRepositoryProvider).transferOwnership(
-            homeId: homeId,
-            userId: member.userId,
-          );
+      await ref
+          .read(homesRepositoryProvider)
+          .transferOwnership(homeId: homeId, userId: member.userId);
       ref.invalidate(homeMembersProvider(homeId));
       ref.invalidate(homeProvider(homeId));
       ref.invalidate(homesListProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ownership transferred to ${member.label}'),
-          ),
+          SnackBar(content: Text('Ownership transferred to ${member.label}')),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }

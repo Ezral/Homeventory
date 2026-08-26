@@ -13,11 +13,7 @@ import 'user_menu_button.dart';
 /// Only used when [isWebDesktopLayout] is true. Mobile web and Android
 /// render child screens unchanged (with bottom nav).
 class WebAppShell extends ConsumerWidget {
-  const WebAppShell({
-    super.key,
-    required this.location,
-    required this.child,
-  });
+  const WebAppShell({super.key, required this.location, required this.child});
 
   final String location;
   final Widget child;
@@ -25,29 +21,31 @@ class WebAppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeId = homeIdFromLocation(location);
-    final homeAsync =
-        homeId == null ? null : ref.watch(homeProvider(homeId));
-    final canEdit = homeAsync?.maybeWhen(
+    final homeAsync = homeId == null ? null : ref.watch(homeProvider(homeId));
+    final canEdit =
+        homeAsync?.maybeWhen(
           data: (h) => h.myRole?.canEditInventory ?? false,
           orElse: () => false,
         ) ??
         false;
-    final canInvite = homeAsync?.maybeWhen(
+    final canInvite =
+        homeAsync?.maybeWhen(
           data: (h) => h.myRole?.canManageMembers ?? false,
           orElse: () => false,
         ) ??
         false;
     final homeName = homeAsync?.maybeWhen(
-          data: (h) => h.name,
-          orElse: () => null,
-        );
+      data: (h) => h.name,
+      orElse: () => null,
+    );
 
     final onHomes = location == '/';
     final onJoin = location.startsWith('/homes/join');
-    final onHomeOverview =
-        homeId != null && location == '/homes/$homeId';
+    final onHomeOverview = homeId != null && location == '/homes/$homeId';
     final onSearch =
         homeId != null && location.startsWith('/homes/$homeId/search');
+    final onReminders =
+        homeId != null && location.startsWith('/homes/$homeId/reminders');
     final onTrips =
         homeId != null && location.startsWith('/homes/$homeId/trips');
 
@@ -64,6 +62,7 @@ class WebAppShell extends ConsumerWidget {
             onJoin: onJoin,
             onHomeOverview: onHomeOverview,
             onSearch: onSearch,
+            onReminders: onReminders,
             onTrips: onTrips,
           ),
           Expanded(
@@ -98,6 +97,7 @@ class _Sidebar extends ConsumerWidget {
     required this.onJoin,
     required this.onHomeOverview,
     required this.onSearch,
+    required this.onReminders,
     required this.onTrips,
   });
 
@@ -109,6 +109,7 @@ class _Sidebar extends ConsumerWidget {
   final bool onJoin;
   final bool onHomeOverview;
   final bool onSearch;
+  final bool onReminders;
   final bool onTrips;
 
   @override
@@ -128,9 +129,9 @@ class _Sidebar extends ConsumerWidget {
             child: Text(
               'Homeventory',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           Padding(
@@ -138,8 +139,8 @@ class _Sidebar extends ConsumerWidget {
             child: Text(
               'Map of everything at home',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
             ),
           ),
           _NavTile(
@@ -164,9 +165,9 @@ class _Sidebar extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      letterSpacing: 0.4,
-                    ),
+                  color: Colors.white.withValues(alpha: 0.55),
+                  letterSpacing: 0.4,
+                ),
               ),
             ),
             _NavTile(
@@ -182,6 +183,13 @@ class _Sidebar extends ConsumerWidget {
               label: 'Search',
               selected: onSearch,
               onTap: () => context.go('/homes/$homeId/search'),
+            ),
+            _NavTile(
+              icon: Icons.notifications_outlined,
+              selectedIcon: Icons.notifications,
+              label: 'Reminders',
+              selected: onReminders,
+              onTap: () => context.go('/homes/$homeId/reminders'),
             ),
             _NavTile(
               icon: Icons.luggage_outlined,
@@ -201,10 +209,10 @@ class _Sidebar extends ConsumerWidget {
                 onPressed: !canInvite
                     ? null
                     : () => showHomeInviteSheet(
-                          context: context,
-                          ref: ref,
-                          homeId: homeId!,
-                        ),
+                        context: context,
+                        ref: ref,
+                        homeId: homeId!,
+                      ),
                 icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
                 label: const Text('Invite'),
               ),
@@ -288,10 +296,9 @@ class _NavTile extends StatelessWidget {
                   child: Text(
                     label,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
-                        ),
+                      color: Colors.white,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

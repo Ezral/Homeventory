@@ -186,6 +186,32 @@ begin
 end $$;
 
 reset role;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+set local role authenticated;
+
+insert into public.reminders (
+  id, home_id, created_by_user_id, kind, title, repeat, fire_minute, next_fire_at
+) values (
+  '33333333-3333-3333-3333-333333333333',
+  '11111111-1111-1111-1111-111111111111',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'MANUAL',
+  'Weekly Clean-up',
+  'WEEKLY',
+  540,
+  timezone('utc', now()) + interval '7 days'
+);
+
+do $$
+begin
+  if (select count(*) from public.reminders
+      where home_id = '11111111-1111-1111-1111-111111111111') <> 1 then
+    raise exception 'owner should insert a reminder';
+  end if;
+end $$;
+
+reset role;
 do $$ begin raise notice 'Smoke assertions passed'; end $$;
 rollback;
 SQL

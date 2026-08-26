@@ -32,10 +32,7 @@ class PreferencesScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
           children: [
-            Text(
-              'Homes',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Homes', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 6),
             Text(
               'Archive a home to remove it from your homes list. '
@@ -78,6 +75,44 @@ class PreferencesScreen extends ConsumerWidget {
                   ],
                 );
               },
+            ),
+            const SizedBox(height: 24),
+            const SectionLabel('Reminders'),
+            const SizedBox(height: 6),
+            Text(
+              'Cleanup alarms and refill reminders live on each home. '
+              'Android can notify in the background; the browser list is the same source of truth.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 10),
+            visibleAsync.maybeWhen(
+              data: (homes) {
+                if (homes.isEmpty) {
+                  return Text(
+                    'Open a home to add reminders.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final home in homes) ...[
+                      SoftTile(
+                        leading: const Icon(
+                          Icons.notifications_outlined,
+                          color: AppColors.mossDeep,
+                        ),
+                        title: home.name,
+                        subtitle: 'Alarms and refill reminders',
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.push('/homes/${home.id}/reminders'),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
+                );
+              },
+              orElse: () => const SizedBox.shrink(),
             ),
             const SizedBox(height: 24),
             const SectionLabel('Archived homes'),
@@ -149,9 +184,8 @@ class _HomeArchiveTile extends ConsumerWidget {
       ].join(' · '),
       trailing: canArchive
           ? TextButton(
-              onPressed: () => archived
-                  ? _unarchive(context, ref)
-                  : _archive(context, ref),
+              onPressed: () =>
+                  archived ? _unarchive(context, ref) : _archive(context, ref),
               child: Text(archived ? 'Restore' : 'Archive'),
             )
           : Tooltip(
@@ -192,9 +226,9 @@ class _HomeArchiveTile extends ConsumerWidget {
       ref.invalidate(activeHomeIdProvider);
       onChanged();
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${home.name} is archived')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${home.name} is archived')));
       // If we were inside that home, go back to the homes list.
       final loc = GoRouterState.of(context).uri.path;
       if (loc.contains(home.id)) {
@@ -202,9 +236,9 @@ class _HomeArchiveTile extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -214,15 +248,15 @@ class _HomeArchiveTile extends ConsumerWidget {
       await ref.read(homesRepositoryProvider).unarchiveHome(home.id);
       onChanged();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${home.name} is restored')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${home.name} is restored')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
