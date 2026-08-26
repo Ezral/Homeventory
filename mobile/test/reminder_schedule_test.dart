@@ -217,6 +217,26 @@ void main() {
       expect(reminder.isDue, isFalse);
       expect(reminder.itemRoute, '/homes/h1/rooms/room-1/nodes/n1');
     });
+
+    test('fromJson maps a room target', () {
+      final reminder = Reminder.fromJson({
+        'id': 'r3',
+        'home_id': 'h1',
+        'created_by_user_id': 'u1',
+        'kind': 'MANUAL',
+        'title': 'Kitchen wipe-down',
+        'repeat': 'WEEKLY',
+        'fire_minute': 540,
+        'next_fire_at': '2026-09-02T09:00:00Z',
+        'room_id': 'room-1',
+        'enabled': true,
+        'rooms': {'name': 'Kitchen'},
+      });
+      expect(reminder.roomId, 'room-1');
+      expect(reminder.targetName, 'Kitchen');
+      expect(reminder.targetRoute, '/homes/h1/rooms/room-1');
+      expect(reminder.itemRoute, isNull);
+    });
   });
 
   test('notification ids stay in the signed 32-bit range', () {

@@ -59,7 +59,7 @@ void main() {
     expect(find.text('Alarm (your text and repeat)'), findsOneWidget);
   });
 
-  testWidgets('new schedule form requires a linked item', (tester) async {
+  testWidgets('new schedule form can link an item or a room', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -71,8 +71,10 @@ void main() {
       ),
     );
 
-    expect(find.text('LINKED ITEM'), findsOneWidget);
-    expect(find.textContaining('Every alarm is tied'), findsOneWidget);
+    expect(find.text('LINKED TO'), findsOneWidget);
+    expect(find.text('Item'), findsOneWidget);
+    expect(find.text('Room'), findsOneWidget);
+    expect(find.textContaining('room or an item'), findsOneWidget);
     expect(find.text('Search by name…'), findsOneWidget);
   });
 }

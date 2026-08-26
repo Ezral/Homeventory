@@ -10,7 +10,7 @@ class RemindersRepository {
   final SupabaseClient _client;
 
   static const _select =
-      '*, inventory_nodes(name, quantity, quantity_unit, room_id, is_container)';
+      '*, inventory_nodes(name, quantity, quantity_unit, room_id, is_container), rooms(name)';
 
   String get _userId {
     final id = _client.auth.currentUser?.id;
@@ -27,6 +27,23 @@ class RemindersRepository {
         .select(_select)
         .eq('home_id', homeId)
         .eq('inventory_node_id', nodeId)
+        .filter('archived_at', 'is', null)
+        .order('enabled', ascending: false)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((r) => Reminder.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
+
+  Future<List<Reminder>> listForRoom({
+    required String homeId,
+    required String roomId,
+  }) async {
+    final rows = await _client
+        .from('reminders')
+        .select(_select)
+        .eq('home_id', homeId)
+        .eq('room_id', roomId)
         .filter('archived_at', 'is', null)
         .order('enabled', ascending: false)
         .order('created_at', ascending: false);
@@ -66,10 +83,14 @@ class RemindersRepository {
     int? intervalDays,
     required int fireMinute,
     required DateTime nextFireAt,
-    required String inventoryNodeId,
+    String? inventoryNodeId,
+    String? roomId,
     int leadDays = 2,
     bool enabled = true,
   }) async {
+    if ((inventoryNodeId == null) == (roomId == null)) {
+      throw ArgumentError('Link the schedule to an item or a room.');
+    }
     final row = await _client
         .from('reminders')
         .insert({
@@ -85,6 +106,7 @@ class RemindersRepository {
           'fire_minute': fireMinute,
           'next_fire_at': nextFireAt.toUtc().toIso8601String(),
           'inventory_node_id': inventoryNodeId,
+          'room_id': roomId,
           'lead_days': leadDays,
           'enabled': enabled,
         })
@@ -104,6 +126,8 @@ class RemindersRepository {
     int? fireMinute,
     DateTime? nextFireAt,
     String? inventoryNodeId,
+    String? roomId,
+    bool setTarget = false,
     int? leadDays,
     bool? enabled,
     DateTime? archivedAt,
@@ -127,7 +151,15 @@ class RemindersRepository {
     if (nextFireAt != null) {
       payload['next_fire_at'] = nextFireAt.toUtc().toIso8601String();
     }
-    if (inventoryNodeId != null) payload['inventory_node_id'] = inventoryNodeId;
+    if (setTarget) {
+      payload['inventory_node_id'] = inventoryNodeId;
+      payload['room_id'] = roomId;
+    } else {
+      if (inventoryNodeId != null) {
+        payload['inventory_node_id'] = inventoryNodeId;
+      }
+      if (roomId != null) payload['room_id'] = roomId;
+    }
     if (leadDays != null) payload['lead_days'] = leadDays;
     if (enabled != null) payload['enabled'] = enabled;
     if (archivedAt != null) {
