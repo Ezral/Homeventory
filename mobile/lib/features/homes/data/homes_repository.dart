@@ -7,10 +7,7 @@ import '../../../shared/providers/supabase_provider.dart';
 import 'exchange_rate_service.dart';
 
 class HomesRepository {
-  HomesRepository({
-    required this.client,
-    required this.localSessionStore,
-  });
+  HomesRepository({required this.client, required this.localSessionStore});
 
   final SupabaseClient client;
   final LocalSessionStore localSessionStore;
@@ -36,10 +33,7 @@ class HomesRepository {
       if (!includeHidden && archived) continue;
       if (includeHidden && !archived) continue;
       homes.add(
-        Home.fromJson(
-          homeJson,
-          myRole: HomeRole.fromDb(map['role'] as String),
-        ),
+        Home.fromJson(homeJson, myRole: HomeRole.fromDb(map['role'] as String)),
       );
     }
     homes.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -116,8 +110,10 @@ class HomesRepository {
         .select()
         .single();
 
-    final role =
-        await client.rpc('home_role_of', params: {'p_home_id': homeId});
+    final role = await client.rpc(
+      'home_role_of',
+      params: {'p_home_id': homeId},
+    );
     return Home.fromJson(
       Map<String, dynamic>.from(updated),
       myRole: role == null ? null : HomeRole.fromDb(role as String),
@@ -130,7 +126,8 @@ class HomesRepository {
       'home_item_currencies',
       params: {'p_home_id': homeId},
     );
-    final foreignList = (foreign as List?)
+    final foreignList =
+        (foreign as List?)
             ?.map((e) => e.toString())
             .where((e) => e.isNotEmpty)
             .toList() ??
@@ -155,8 +152,10 @@ class HomesRepository {
 
   Future<Home> getHome(String homeId) async {
     final row = await client.from('homes').select().eq('id', homeId).single();
-    final role =
-        await client.rpc('home_role_of', params: {'p_home_id': homeId});
+    final role = await client.rpc(
+      'home_role_of',
+      params: {'p_home_id': homeId},
+    );
     return Home.fromJson(
       Map<String, dynamic>.from(row),
       myRole: role == null ? null : HomeRole.fromDb(role as String),
@@ -165,9 +164,10 @@ class HomesRepository {
 
   /// Soft-archive a home from lists (owners). Data is retained.
   Future<void> archiveHome(String homeId) async {
-    await client.from('homes').update({
-      'archived_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', homeId);
+    await client
+        .from('homes')
+        .update({'archived_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', homeId);
     final active = await localSessionStore.readActiveHomeId();
     if (active == homeId) {
       await localSessionStore.clearActiveHomeId();
@@ -176,9 +176,7 @@ class HomesRepository {
 
   /// Restore a previously archived home.
   Future<void> unarchiveHome(String homeId) async {
-    await client.from('homes').update({
-      'archived_at': null,
-    }).eq('id', homeId);
+    await client.from('homes').update({'archived_at': null}).eq('id', homeId);
   }
 
   /// Permanently delete an archived home (owners). Cannot be undone.
@@ -254,10 +252,7 @@ class HomesRepository {
   }) async {
     await client.rpc(
       'remove_home_member',
-      params: {
-        'p_home_id': homeId,
-        'p_user_id': userId,
-      },
+      params: {'p_home_id': homeId, 'p_user_id': userId},
     );
   }
 
@@ -287,10 +282,7 @@ class HomesRepository {
   }) async {
     await client.rpc(
       'transfer_home_ownership',
-      params: {
-        'p_home_id': homeId,
-        'p_new_owner_user_id': userId,
-      },
+      params: {'p_home_id': homeId, 'p_new_owner_user_id': userId},
     );
   }
 

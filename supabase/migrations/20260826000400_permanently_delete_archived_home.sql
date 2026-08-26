@@ -31,7 +31,9 @@ begin
   if p_home_id is null then
     raise exception 'home id is required';
   end if;
-  if not public.can_admin_home(p_home_id) then
+  -- can_admin_home is null (not false) when the caller has no role; IF NOT
+  -- would then skip this check. Require an explicit true.
+  if public.can_admin_home(p_home_id) is not true then
     raise exception 'not authorized to delete this home';
   end if;
 

@@ -6,9 +6,7 @@ void main() {
   Future<void> pumpDialog(WidgetTester tester, {required String homeName}) {
     return tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: PermanentDeleteHomeDialog(homeName: homeName),
-        ),
+        home: Scaffold(body: PermanentDeleteHomeDialog(homeName: homeName)),
       ),
     );
   }

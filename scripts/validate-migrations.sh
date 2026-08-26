@@ -64,6 +64,25 @@ end $$;
 
 grant usage on schema public to authenticated;
 grant usage on schema auth to authenticated;
+
+create schema if not exists storage;
+create table if not exists storage.buckets (
+  id text primary key,
+  name text,
+  public boolean,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
+create table if not exists storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text,
+  name text not null,
+  owner uuid,
+  created_at timestamptz default now()
+);
+alter table storage.objects enable row level security;
+grant usage on schema storage to authenticated;
+grant select, insert, update, delete on storage.buckets, storage.objects to authenticated;
 SQL
 
 echo "==> Applying migrations"
@@ -429,6 +448,16 @@ update public.homes
 set archived_at = timezone('utc', now())
 where id = 'aaaaaaaa-0000-0000-0000-000000000001';
 
+reset role;
+insert into storage.objects (bucket_id, name)
+values (
+  'home-images',
+  'aaaaaaaa-0000-0000-0000-000000000001/HOME/aaaaaaaa-0000-0000-0000-000000000001/cover.jpg'
+);
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+set local role authenticated;
+
 select public.permanently_delete_archived_home(
   'aaaaaaaa-0000-0000-0000-000000000001'
 );
@@ -450,6 +479,12 @@ begin
     where home_id = 'aaaaaaaa-0000-0000-0000-000000000001'
   ) then
     raise exception 'inventory of a permanently deleted home should be gone';
+  end if;
+  if exists (
+    select 1 from storage.objects
+    where name like 'aaaaaaaa-0000-0000-0000-000000000001/%'
+  ) then
+    raise exception 'storage objects of a permanently deleted home should be gone';
   end if;
 end $$;
 

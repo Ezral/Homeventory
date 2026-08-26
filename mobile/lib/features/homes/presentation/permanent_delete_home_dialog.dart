@@ -64,9 +64,7 @@ class _PermanentDeleteHomeDialogState extends State<PermanentDeleteHomeDialog> {
           TextField(
             controller: _controller,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Home name',
-            ),
+            decoration: const InputDecoration(labelText: 'Home name'),
             onSubmitted: (_) {
               if (_nameMatches) Navigator.pop(context, true);
             },
