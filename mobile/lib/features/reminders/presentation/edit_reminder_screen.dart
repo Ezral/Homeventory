@@ -284,6 +284,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             DropdownButtonFormField<ReminderKind>(
               // ignore: deprecated_member_use
               value: _kind,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Kind'),
               items: [
                 for (final kind in ReminderKind.values)
@@ -330,6 +331,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               DropdownButtonFormField<ReminderRepeat>(
                 // ignore: deprecated_member_use
                 value: _repeat,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Repeat'),
                 items: [
                   for (final repeat in ReminderRepeat.values)

@@ -251,15 +251,22 @@ class ItemSchedulePanelState extends ConsumerState<ItemSchedulePanel> {
           DropdownButtonFormField<ReminderKind>(
             // ignore: deprecated_member_use
             value: _kind,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Schedule type'),
             items: [
               DropdownMenuItem(
                 value: ReminderKind.manual,
-                child: const Text('Alarm (your text and repeat)'),
+                child: const Text(
+                  'Alarm (your text and repeat)',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               DropdownMenuItem(
                 value: ReminderKind.usageRefill,
-                child: const Text('Refill from usage'),
+                child: const Text(
+                  'Refill from usage',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
             onChanged: (v) {
@@ -299,10 +306,14 @@ class ItemSchedulePanelState extends ConsumerState<ItemSchedulePanel> {
             DropdownButtonFormField<ReminderRepeat>(
               // ignore: deprecated_member_use
               value: _repeat,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Repeat'),
               items: [
                 for (final repeat in ReminderRepeat.values)
-                  DropdownMenuItem(value: repeat, child: Text(repeat.label)),
+                  DropdownMenuItem(
+                    value: repeat,
+                    child: Text(repeat.label, overflow: TextOverflow.ellipsis),
+                  ),
               ],
               onChanged: (v) {
                 if (v != null) setState(() => _repeat = v);
