@@ -18,7 +18,7 @@ Demos need a furnished home that matches a real 24 m² Bangkok studio: three r
 
 ## Decision
 
-Ship a **client-side installer**. After sign-in, **Your homes** creates **Bangkok studio** if that home is not already in the list (timezone `Asia/Bangkok`, currency THB). The same action is also a **Demo studio** control. The app reads bundled `assets/demo_studio/catalog.json` and the six apartment JPEGs, then uploads photos through the existing private `home-images` bucket. The signed-in user is `created_by_user_id` and therefore **OWNER**.
+Ship a **client-side installer** in the repo (`assets/demo_studio/`). It is **not** launched on sign-in. Auto-install was removed after it kept creating copies when the demo home was renamed away from **Bangkok studio**. If a home named **Demo Studio** exists, leftover **Bangkok studio** rows created by the old installer are archived.
 
 Inventory follows ADR-0005:
 
@@ -34,7 +34,7 @@ The spreadsheet remains at [`docs/demo/Homeventory_Demo_Studio_Inventory.xlsx`](
 
 - Each demoist gets their own home under their Google user; no shared production fixture.
 - Photos stay private like any other household image.
-- Re-running the action creates another copy, which is fine for a second walkthrough.
+- Re-running the installer would create another copy; the homes list no longer auto-runs it.
 
 ## Alternatives Considered
 
@@ -63,8 +63,7 @@ None. No migration.
 
 ## UI Impact
 
-- Homes list: **Demo studio** control; auto-creates **Bangkok studio** when missing
-- Empty homes list: **Load demo studio**
+- Homes list does not auto-install. Leftover **Bangkok studio** homes are archived when **Demo Studio** is present.
 
 ## References
 
