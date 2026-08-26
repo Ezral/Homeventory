@@ -130,7 +130,7 @@ Migration: `20260712000400_images_barcodes.sql`
 
 ## Architecture Notes
 
-- Polymorphic images lack referential integrity — orphan metadata possible if entity deleted without cascading image cleanup (inventory delete/archive does not auto-remove storage objects today).
+- Polymorphic images lack referential integrity — orphan metadata possible if entity deleted without cascading image cleanup (inventory delete/archive does not auto-remove storage objects today). Permanent delete of an archived home removes Storage objects under `{home_id}/` via `permanently_delete_archived_home`.
 - `storage_home_id` returns null for non-UUID paths; policies require non-null — good.
 - HEIC listed in bucket MIME allow-list; client upload path currently favors jpeg/png/webp extensions.
 - Thumbnail loading signs one URL per entity (latest by `created_at`); room-scale lists are fine, revisit if homes grow huge.

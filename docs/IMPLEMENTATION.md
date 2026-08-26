@@ -60,7 +60,7 @@ Do not build predictions or push notifications before Home authorization is trus
 **Goal:** Multi-Home collaboration with roles and invite codes.
 
 - [x] Schema: `homes`, `home_members`, `invitations`
-- [x] Create / edit / archive Home (create + edit UI + photo; archive API)
+- [x] Create / edit / archive Home (create + edit UI + photo; archive API; owner can permanently delete archived homes)
 - [x] Home selector UI
 - [x] Invite via token + short code (hashed, single-use, expiring; QR later)
 - [x] Accept invitation → ACTIVE membership (token **or** short code)

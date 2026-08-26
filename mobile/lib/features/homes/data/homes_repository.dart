@@ -181,6 +181,18 @@ class HomesRepository {
     }).eq('id', homeId);
   }
 
+  /// Permanently delete an archived home (owners). Cannot be undone.
+  Future<void> permanentlyDeleteArchivedHome(String homeId) async {
+    await client.rpc(
+      'permanently_delete_archived_home',
+      params: {'p_home_id': homeId},
+    );
+    final active = await localSessionStore.readActiveHomeId();
+    if (active == homeId) {
+      await localSessionStore.clearActiveHomeId();
+    }
+  }
+
   @Deprecated('Use archiveHome')
   Future<void> hideHome(String homeId) => archiveHome(homeId);
 

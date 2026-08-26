@@ -40,13 +40,15 @@ Home lifecycle today:
 - Any authenticated user may **insert** a `homes` row with `created_by_user_id = auth.uid()`.
 - Trigger `handle_new_home` inserts the creator as **OWNER** / **ACTIVE**.
 - Extra SELECT policy `homes_select_creator` allows `INSERT … RETURNING` before membership-based select would otherwise fail.
-- Updates/deletes on homes are OWNER-only via `can_admin_home`.
-- Soft archive uses `archived_at` (client filters archived homes out of lists).
+- Updates on homes are OWNER-only via `can_admin_home`.
+- Soft archive uses `archived_at` (client filters archived homes out of lists). Owners restore from Settings.
+- **Permanent delete** of an archived home is OWNER-only via `permanently_delete_archived_home`. Direct `DELETE` on `homes` is denied; the RPC tears down mixed-cascade children (inventory, rooms, trips, ledger) and Storage objects. Active homes cannot be hard-deleted.
 
 Membership changes that must be atomic use RPCs:
 
 - `remove_home_member`
 - `leave_home`
+- `permanently_delete_archived_home`
 
 Table grants for `authenticated` are asserted in `20260712000300_homes_rls_grants.sql` because hosted migrations do not always inherit dashboard defaults.
 
@@ -109,14 +111,14 @@ Table grants for `authenticated` are asserted in `20260712000300_homes_rls_grant
 
 **Triggers:** `on_home_created` → OWNER membership.
 
-**Migrations:** foundation + invite/members + homes RLS grants.
+**Migrations:** foundation + invite/members + homes RLS grants + `permanently_delete_archived_home`.
 
 ---
 
 ## API Impact
 
 - Direct PostgREST on `homes` / `home_members` where policies allow.
-- RPC: `home_role_of`, `remove_home_member`, `leave_home`, invitation RPCs (see ADR-0004).
+- RPC: `home_role_of`, `remove_home_member`, `leave_home`, `permanently_delete_archived_home`, invitation RPCs (see ADR-0004).
 
 ---
 
@@ -125,13 +127,13 @@ Table grants for `authenticated` are asserted in `20260712000300_homes_rls_grant
 - Homes list from memberships join.
 - Home detail gates invite / add-room / inventory edit on `myRole`.
 - Join Home screen accepts invitation token or short code.
+- Settings lists archived homes with Restore and owner-only permanent Delete.
 
 ---
 
 ## Future Considerations
 
 - Ownership transfer and change-role UI are planned; should extend RPCs rather than loosening RLS.
-- Restore-from-archive flows are not built yet.
 
 ---
 
@@ -140,6 +142,7 @@ Table grants for `authenticated` are asserted in `20260712000300_homes_rls_grant
 - `can_admin_home` is OWNER-only; ADMIN cannot update home row settings today even if product text sometimes groups “admins.”
 - Household membership activity (join, invite, remove) is logged in `activity_events` ([ADR-0014](0014-home-activity-events.md)). Phase J permission-decision audit is still deferred.
 - Duplicate authorization logic exists in Flutter (`HomeRole.canEditInventory`) — acceptable for UX, but server policies must stay stricter or equal.
+- Hard delete of a home is irreversible and drops the household activity trail with the row. Archive remains the default “remove from list” action.
 
 ---
 
@@ -148,7 +151,9 @@ Table grants for `authenticated` are asserted in `20260712000300_homes_rls_grant
 - [`supabase/migrations/20260712000100_foundation.sql`](../../supabase/migrations/20260712000100_foundation.sql)
 - [`supabase/migrations/20260712000200_invite_members_integration.sql`](../../supabase/migrations/20260712000200_invite_members_integration.sql)
 - [`supabase/migrations/20260712000300_homes_rls_grants.sql`](../../supabase/migrations/20260712000300_homes_rls_grants.sql)
+- [`supabase/migrations/20260826000400_permanently_delete_archived_home.sql`](../../supabase/migrations/20260826000400_permanently_delete_archived_home.sql)
 - [`supabase/tests/rls_cross_home.test.sql`](../../supabase/tests/rls_cross_home.test.sql)
 - [`mobile/lib/features/homes/data/homes_repository.dart`](../../mobile/lib/features/homes/data/homes_repository.dart)
+- [`mobile/lib/features/homes/presentation/preferences_screen.dart`](../../mobile/lib/features/homes/presentation/preferences_screen.dart)
 - PRs: [#1](https://github.com/Ezral/Homeventory/pull/1), [#11](https://github.com/Ezral/Homeventory/pull/11)
 - Related: [ADR-0004](0004-hashed-home-invitations.md)
