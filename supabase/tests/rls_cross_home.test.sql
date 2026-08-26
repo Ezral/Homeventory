@@ -3,7 +3,7 @@
 -- These tests assert that membership is required and UUID guessing fails.
 
 begin;
-select plan(11);
+select plan(16);
 
 create extension if not exists pgtap;
 
@@ -192,6 +192,53 @@ select throws_ok(
   null,
   'cyclic containment is not allowed',
   'moving a node into its descendant is rejected'
+);
+
+select throws_ok(
+  $$select public.permanently_delete_archived_home(
+    '11111111-1111-1111-1111-111111111111'
+  )$$,
+  null,
+  'home must be archived before it can be permanently deleted',
+  'owner cannot permanently delete an active home'
+);
+
+reset role;
+
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+set local role authenticated;
+
+select throws_ok(
+  $$select public.permanently_delete_archived_home(
+    '11111111-1111-1111-1111-111111111111'
+  )$$,
+  null,
+  'not authorized to delete this home',
+  'non-owner cannot permanently delete a home'
+);
+
+reset role;
+
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+set local role authenticated;
+
+update public.homes
+set archived_at = timezone('utc', now())
+where id = '11111111-1111-1111-1111-111111111111';
+
+select lives_ok(
+  $$select public.permanently_delete_archived_home(
+    '11111111-1111-1111-1111-111111111111'
+  )$$,
+  'owner can permanently delete an archived home with nested inventory'
+);
+
+select is(
+  (select count(*)::int from public.homes where id = '11111111-1111-1111-1111-111111111111'),
+  0,
+  'permanently deleted home and cascaded rows are gone'
 );
 
 select * from finish();

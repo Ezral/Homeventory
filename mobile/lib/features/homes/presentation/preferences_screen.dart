@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/home.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import 'homes_providers.dart';
+import 'permanent_delete_home_dialog.dart';
 
 /// App settings: archive/restore homes (and later currency / notifications).
 class PreferencesScreen extends ConsumerWidget {
@@ -37,7 +38,7 @@ class PreferencesScreen extends ConsumerWidget {
             Text(
               'Archive a home to remove it from your homes list. '
               'Inventory stays saved — you can restore it anytime. '
-              'Only the home owner can archive or restore a home.',
+              'The owner can permanently delete an archived home; that cannot be undone.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
@@ -183,13 +184,29 @@ class _HomeArchiveTile extends ConsumerWidget {
         if (archived) 'Archived',
       ].join(' · '),
       trailing: canArchive
-          ? TextButton(
-              onPressed: () =>
-                  archived ? _unarchive(context, ref) : _archive(context, ref),
-              child: Text(archived ? 'Restore' : 'Archive'),
+          ? OverflowBar(
+              spacing: 0,
+              children: [
+                TextButton(
+                  onPressed: () => archived
+                      ? _unarchive(context, ref)
+                      : _archive(context, ref),
+                  child: Text(archived ? 'Restore' : 'Archive'),
+                ),
+                if (archived)
+                  TextButton(
+                    onPressed: () => _permanentlyDelete(context, ref),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.danger,
+                    ),
+                    child: const Text('Delete'),
+                  ),
+              ],
             )
           : Tooltip(
-              message: 'Only the home owner can archive homes',
+              message: archived
+                  ? 'Only the home owner can restore or delete archived homes'
+                  : 'Only the home owner can archive homes',
               child: Text(
                 archived ? 'Archived' : '',
                 style: Theme.of(context).textTheme.bodySmall,
@@ -251,6 +268,36 @@ class _HomeArchiveTile extends ConsumerWidget {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('${home.name} is restored')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _permanentlyDelete(BuildContext context, WidgetRef ref) async {
+    final ok = await showPermanentDeleteHomeDialog(
+      context: context,
+      homeName: home.name,
+    );
+    if (ok != true || !context.mounted) return;
+
+    try {
+      await ref
+          .read(homesRepositoryProvider)
+          .permanentlyDeleteArchivedHome(home.id);
+      ref.invalidate(activeHomeIdProvider);
+      onChanged();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${home.name} is deleted')));
+      final loc = GoRouterState.of(context).uri.path;
+      if (loc.contains(home.id)) {
+        context.go('/');
       }
     } catch (e) {
       if (context.mounted) {
