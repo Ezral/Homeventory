@@ -10,6 +10,8 @@ import '../../../shared/widgets/bulk_edit_dialog.dart';
 import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/inventory_row_card.dart';
 import '../../../shared/widgets/selection_action_bar.dart';
+import '../../../shared/widgets/home_shell_bottom_nav.dart';
+import '../../../shared/widgets/user_menu_button.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
@@ -213,17 +215,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             onPressed: _scanBarcode,
             icon: const Icon(Icons.qr_code_scanner),
           ),
+          if (!desktop) const UserMenuButton(),
         ],
       ),
-      bottomNavigationBar: _bulkSelected.isEmpty
-          ? null
-          : SelectionActionBar(
+      bottomNavigationBar: _bulkSelected.isNotEmpty
+          ? SelectionActionBar(
               count: _bulkSelected.length,
               onClear: () => setState(_bulkSelected.clear),
               onEdit: _bulkEdit,
               onMove: _bulkMove,
               onDispose: _bulkDispose,
               onPack: _bulkPack,
+            )
+          : desktop
+          ? null
+          : HomeShellBottomNav(
+              selectedIndex: HomeShellNav.search,
+              addLabel: 'Add room',
+              onSelect: (index) => handleHomeShellSelect(
+                context: context,
+                homeId: widget.homeId,
+                index: index,
+                canEdit: canEdit,
+                addDeniedMessage: 'You do not have permission to add rooms.',
+                onAdd: () async {
+                  await context.push('/homes/${widget.homeId}/rooms/new');
+                  ref.invalidate(roomsListProvider(widget.homeId));
+                },
+              ),
             ),
       body: Column(
         children: [

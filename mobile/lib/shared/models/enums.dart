@@ -280,3 +280,43 @@ enum TripItemStatus {
     TripItemStatus.unpacked => 'Unpacked',
   };
 }
+
+enum ReminderKind {
+  manual('MANUAL'),
+  usageRefill('USAGE_REFILL');
+
+  const ReminderKind(this.dbValue);
+  final String dbValue;
+
+  static ReminderKind fromDb(String value) => ReminderKind.values.firstWhere(
+    (e) => e.dbValue == value,
+    orElse: () => ReminderKind.manual,
+  );
+
+  String get label => switch (this) {
+    ReminderKind.manual => 'Alarm',
+    ReminderKind.usageRefill => 'Refill from usage',
+  };
+}
+
+enum ReminderRepeat {
+  once('ONCE'),
+  daily('DAILY'),
+  weekly('WEEKLY'),
+  monthly('MONTHLY'),
+  customDays('CUSTOM_DAYS');
+
+  const ReminderRepeat(this.dbValue);
+  final String dbValue;
+
+  static ReminderRepeat fromDb(String value) => ReminderRepeat.values
+      .firstWhere((e) => e.dbValue == value, orElse: () => ReminderRepeat.once);
+
+  String get label => switch (this) {
+    ReminderRepeat.once => 'Once',
+    ReminderRepeat.daily => 'Daily',
+    ReminderRepeat.weekly => 'Weekly',
+    ReminderRepeat.monthly => 'Monthly',
+    ReminderRepeat.customDays => 'Every N days',
+  };
+}

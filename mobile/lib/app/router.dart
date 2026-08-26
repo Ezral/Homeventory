@@ -14,11 +14,14 @@ import '../features/inventory/presentation/barcode_scan_screen.dart';
 import '../features/inventory/presentation/create_node_screen.dart';
 import '../features/inventory/presentation/move_node_screen.dart';
 import '../features/inventory/presentation/node_detail_screen.dart';
+import '../features/reminders/presentation/edit_reminder_screen.dart';
+import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/rooms/presentation/create_room_screen.dart';
 import '../features/rooms/presentation/room_detail_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/trips/presentation/trip_detail_screen.dart';
 import '../features/trips/presentation/trips_list_screen.dart';
+import '../shared/models/enums.dart';
 import '../shared/providers/supabase_provider.dart';
 import '../shared/widgets/web_app_shell.dart';
 
@@ -113,6 +116,34 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/homes/:homeId/search',
             builder: (context, state) =>
                 SearchScreen(homeId: state.pathParameters['homeId']!),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/schedule',
+            builder: (context, state) =>
+                RemindersScreen(homeId: state.pathParameters['homeId']!),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/schedule/new',
+            builder: (context, state) => EditReminderScreen(
+              homeId: state.pathParameters['homeId']!,
+              initialKind: state.uri.queryParameters['kind'] == 'USAGE_REFILL'
+                  ? ReminderKind.usageRefill
+                  : ReminderKind.manual,
+              initialNodeId: state.uri.queryParameters['node'],
+            ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/reminders',
+            redirect: (context, state) =>
+                '/homes/${state.pathParameters['homeId']}/schedule',
+          ),
+          GoRoute(
+            path: '/homes/:homeId/reminders/new',
+            redirect: (context, state) {
+              final homeId = state.pathParameters['homeId']!;
+              final q = state.uri.query;
+              return '/homes/$homeId/schedule/new${q.isEmpty ? '' : '?$q'}';
+            },
           ),
           GoRoute(
             path: '/homes/:homeId/trips',

@@ -30,7 +30,7 @@ The Flutter app under `mobile/` uses:
 | Config | `AppConfig.fromEnvironment()` via `--dart-define` |
 | Local private state | `FlutterSecureStorage` through `LocalSessionStore` (active home id; cleared on logout) |
 | Theming | Central `buildHomeventoryTheme()` |
-| Feature layout | `lib/features/{auth,homes,rooms,inventory,search}/` + `lib/shared/` |
+| Feature layout | `lib/features/{auth,homes,rooms,inventory,search,trips,reminders}/` + `lib/shared/` |
 
 Navigation pattern for create/edit flows: **`context.push` / `context.pop`** so the previous screen remains on the stack (not `go` that replaces the stack for those flows).
 
@@ -111,6 +111,7 @@ Current primary screens:
 - Create/edit room, room/container inventory browse, bulk add names + multi-select
 - Create/edit node, node detail (photos/barcodes)
 - Search + barcode scan; result cards match inventory browse (responsive grid, up to 4 columns); bulk select on cards
+- Reminders: manual repeating alarms and usage-based refill alerts (Android local notifications)
 
 ---
 
