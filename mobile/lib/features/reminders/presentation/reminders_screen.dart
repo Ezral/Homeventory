@@ -141,28 +141,24 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (canEdit && reminder.enabled)
+        if (reminder.targetRoute != null)
           IconButton(
-            tooltip: 'Complete',
-            onPressed: completing ? null : () => _complete(reminder),
-            icon: completing
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.checklist),
+            tooltip: reminder.roomId != null ? 'Open room' : 'Open item',
+            onPressed: () => context.push(reminder.targetRoute!),
+            icon: const Icon(Icons.open_in_new),
           ),
         if (canEdit)
           Switch(
             value: reminder.enabled,
             onChanged: completing ? null : (v) => _setEnabled(reminder, v),
           ),
-        if (reminder.targetRoute != null)
-          IconButton(
-            tooltip: reminder.roomId != null ? 'Open room' : 'Open item',
-            onPressed: () => context.push(reminder.targetRoute!),
-            icon: const Icon(Icons.open_in_new),
+        if (canEdit && reminder.enabled)
+          Tooltip(
+            message: 'Complete',
+            child: Checkbox(
+              value: completing,
+              onChanged: completing ? null : (_) => _complete(reminder),
+            ),
           ),
       ],
     );

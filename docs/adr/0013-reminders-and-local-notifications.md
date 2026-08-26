@@ -79,7 +79,7 @@ Follow-up: `20260826000300_reminder_room_target.sql` (item **or** room target)
 - `/homes/:homeId/schedule` list + create/edit form (`/reminders` redirects here)
 - Home overview tile, desktop sidebar, phone bottom-nav Schedule tab, Settings link per home
 - Item create/edit: notification schedule panel; item detail: “Add to schedule”; room detail: “Add to schedule”
-- Linked item **or** room is mandatory on the schedule form; refill still requires an item; active rows have a checklist **Complete** control
+- Linked item **or** room is mandatory on the schedule form; refill still requires an item; active rows have a Complete checkbox on the right
 
 ## References
 
