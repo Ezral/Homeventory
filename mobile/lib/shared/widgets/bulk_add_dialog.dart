@@ -79,6 +79,7 @@ class _BulkAddHost extends ConsumerWidget {
     );
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final table = BulkAddTable(
+      key: ValueKey('$roomId|$parentNodeId'),
       currencyLabel: currency,
       defaultPlacement: defaultPlacement,
       pickLocation: (context, current) => showLocationPickerDialog(
@@ -177,7 +178,12 @@ class _BulkAddTableState extends State<BulkAddTable> {
       ];
     } else {
       final count = widget.initialRowCount < 1 ? 1 : widget.initialRowCount;
-      _rows = List<_BulkRow>.generate(count, (_) => _BulkRow());
+      _rows = List<_BulkRow>.generate(
+        count,
+        (_) => _BulkRow(
+          initial: BulkNodeDraft(name: '', placement: widget.defaultPlacement),
+        ),
+      );
     }
     for (final row in _rows) {
       row.name.addListener(_onNameChanged);
@@ -260,6 +266,14 @@ class _BulkAddTableState extends State<BulkAddTable> {
 
   int get _selectedCount => _rows.where((row) => row.selected).length;
 
+  String get _locationHint {
+    final label = widget.defaultPlacement?.label.trim() ?? '';
+    if (label.isNotEmpty) {
+      return 'Items are added in $label unless you pick another location. ';
+    }
+    return 'Assign a location in the options row to place items in a room or container. ';
+  }
+
   bool? get _selectAllValue {
     if (_rows.isEmpty) return false;
     final selected = _selectedCount;
@@ -328,7 +342,9 @@ class _BulkAddTableState extends State<BulkAddTable> {
 
   void _addRow() {
     setState(() {
-      final row = _BulkRow();
+      final row = _BulkRow(
+        initial: BulkNodeDraft(name: '', placement: widget.defaultPlacement),
+      );
       row.name.addListener(_onNameChanged);
       _rows.add(row);
     });
@@ -345,7 +361,7 @@ class _BulkAddTableState extends State<BulkAddTable> {
         _rows.first.type = InventoryTypeChoice.item;
         _rows.first.selected = false;
         _rows.first.photos.clear();
-        _rows.first.placement = null;
+        _rows.first.placement = widget.defaultPlacement;
       });
       return;
     }
@@ -429,8 +445,8 @@ class _BulkAddTableState extends State<BulkAddTable> {
                           'Add photos on any row — they all upload together when you save. '
                           '${kIsWeb ? 'Check a row, then paste (Ctrl+V) or drop an image onto a row. ' : ''}'
                           'Check rows only if you want to apply the same type, qty, price, brand, or weight to several at once.'
-                    : 'Check rows, then edit the shared fields and Apply. '
-                          'Assign a location in the options row to place items in a room or container. '
+                    : '$_locationHint'
+                          'Check rows, then edit the shared fields and Apply. '
                           'Mixed values stay blank until you type a new one. '
                           'With none checked, Apply updates every row. '
                           'Blank names are skipped. Photos on a row upload when you add.'

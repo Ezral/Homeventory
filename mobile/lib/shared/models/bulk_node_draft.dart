@@ -51,6 +51,23 @@ String formatBulkPlacementLabel({
   return (roomId: placement.roomId, parentNodeId: placement.parentNodeId);
 }
 
+/// Parent container for Add / Add several from the current browse view.
+///
+/// The list's [listParentNodeId] is the room (null) or the container whose
+/// contents occupy the left list. On desktop, selecting furniture or drilling
+/// into nested storage should nest new items in that viewed container instead.
+String? bulkAddParentId({
+  required String? listParentNodeId,
+  String? selectedId,
+  bool selectedIsContainer = false,
+  List<String> nestedContainerPath = const [],
+  String? nestedItemId,
+}) {
+  if (nestedContainerPath.isNotEmpty) return nestedContainerPath.last;
+  if (selectedIsContainer && selectedId != null) return selectedId;
+  return listParentNodeId;
+}
+
 /// A photo attached to a bulk-add / bulk-edit row, uploaded on save.
 class BulkPendingPhoto {
   const BulkPendingPhoto({

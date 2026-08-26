@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/models/bulk_node_draft.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -43,9 +44,14 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
   String? _selectedId;
   final Map<String, InventoryNode> _bulkSelected = {};
 
+  /// Desktop: container whose contents occupy the detail pane (furniture or
+  /// nested storage). Null means add at the left-list level.
+  String? _desktopViewedContainerId;
+
   String get homeId => widget.homeId;
   String get roomId => widget.roomId;
   String? get parentNodeId => widget.parentNodeId;
+  String? get _addParentId => _desktopViewedContainerId ?? parentNodeId;
 
   @override
   void didUpdateWidget(covariant RoomDetailScreen oldWidget) {
@@ -54,6 +60,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
         oldWidget.roomId != widget.roomId) {
       _selectedId = null;
       _bulkSelected.clear();
+      _desktopViewedContainerId = null;
     }
   }
 
@@ -67,11 +74,25 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
       return;
     }
     await context.push(
-      parentNodeId == null
+      _addParentId == null
           ? '/homes/$homeId/rooms/$roomId/nodes/new'
-          : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parentNodeId',
+          : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$_addParentId',
     );
     ref.invalidate(inventoryChildrenProvider(scope));
+    _invalidateAddParentChildren();
+  }
+
+  void _invalidateAddParentChildren() {
+    if (_addParentId == null || _addParentId == parentNodeId) return;
+    ref.invalidate(
+      inventoryChildrenProvider(
+        InventoryScope(
+          homeId: homeId,
+          roomId: roomId,
+          parentNodeId: _addParentId,
+        ),
+      ),
+    );
   }
 
   void _toggleBulk(InventoryNode node) {
@@ -89,10 +110,11 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
       context: context,
       homeId: homeId,
       roomId: roomId,
-      parentNodeId: parentNodeId,
+      parentNodeId: _addParentId,
     );
     if (count == null || count <= 0) return;
     ref.invalidate(inventoryChildrenProvider(scope));
+    _invalidateAddParentChildren();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -420,6 +442,10 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
                   canEdit: canEdit,
                   bulkSelected: _bulkSelected,
                   onToggleBulk: _toggleBulk,
+                  onViewedAddParentChanged: (id) {
+                    if (_desktopViewedContainerId == id) return;
+                    setState(() => _desktopViewedContainerId = id);
+                  },
                 ),
               ),
             ],
@@ -624,6 +650,7 @@ class _DesktopDetailPane extends ConsumerStatefulWidget {
     required this.canEdit,
     required this.bulkSelected,
     required this.onToggleBulk,
+    required this.onViewedAddParentChanged,
   });
 
   final String homeId;
@@ -633,6 +660,7 @@ class _DesktopDetailPane extends ConsumerStatefulWidget {
   final bool canEdit;
   final Map<String, InventoryNode> bulkSelected;
   final ValueChanged<InventoryNode> onToggleBulk;
+  final ValueChanged<String?> onViewedAddParentChanged;
 
   @override
   ConsumerState<_DesktopDetailPane> createState() => _DesktopDetailPaneState();
@@ -652,6 +680,37 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
       _containerPath.clear();
       _nestedItemId = null;
     }
+    if (oldWidget.selectedId != widget.selectedId ||
+        oldWidget.scope != widget.scope) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _emitAddParent());
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _emitAddParent());
+  }
+
+  bool _selectedIsContainer() {
+    final id = widget.selectedId;
+    if (id == null) return false;
+    return ref
+        .read(inventoryNodeProvider(id))
+        .maybeWhen(data: (node) => node.isContainer, orElse: () => false);
+  }
+
+  void _emitAddParent() {
+    if (!mounted) return;
+    widget.onViewedAddParentChanged(
+      bulkAddParentId(
+        listParentNodeId: widget.scope.parentNodeId,
+        selectedId: widget.selectedId,
+        selectedIsContainer: _selectedIsContainer(),
+        nestedContainerPath: List<String>.from(_containerPath),
+        nestedItemId: _nestedItemId,
+      ),
+    );
   }
 
   void _openNestedContainer(InventoryNode child) {
@@ -659,10 +718,12 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
       _nestedItemId = null;
       _containerPath.add(child.id);
     });
+    _emitAddParent();
   }
 
   void _openItem(InventoryNode item) {
     setState(() => _nestedItemId = item.id);
+    _emitAddParent();
   }
 
   void _popDrill() {
@@ -672,10 +733,12 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
         _containerPath.removeLast();
       }
     });
+    _emitAddParent();
   }
 
   void _backFromItem() {
     setState(() => _nestedItemId = null);
+    _emitAddParent();
   }
 
   /// Id whose contents/details occupy the middle column (null = single pane).
@@ -693,7 +756,14 @@ class _DesktopDetailPaneState extends ConsumerState<_DesktopDetailPane> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.selectedId == null) {
+    final selectedId = widget.selectedId;
+    if (selectedId != null) {
+      ref.listen(inventoryNodeProvider(selectedId), (prev, next) {
+        next.whenData((_) => _emitAddParent());
+      });
+    }
+
+    if (selectedId == null) {
       return const EmptyState(
         icon: Icons.view_sidebar_outlined,
         title: 'Select an object',
@@ -1014,6 +1084,29 @@ class _DesktopContainerContents extends ConsumerWidget {
                   ],
                 ),
               ),
+              if (canEdit)
+                IconButton(
+                  tooltip: 'Add several items',
+                  onPressed: () async {
+                    final count = await showBulkAddItemsSheet(
+                      context: context,
+                      homeId: homeId,
+                      roomId: roomId,
+                      parentNodeId: container.id,
+                    );
+                    if (count == null || count <= 0) return;
+                    ref.invalidate(inventoryChildrenProvider(childScope));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Added $count ${count == 1 ? 'entry' : 'entries'}',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.playlist_add),
+                ),
               if (canEdit)
                 IconButton(
                   tooltip: 'Edit',

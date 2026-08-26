@@ -180,6 +180,52 @@ void main() {
       );
     });
 
+    test('bulkAddParentId uses the viewed furniture or nested storage', () {
+      expect(bulkAddParentId(listParentNodeId: null), isNull);
+      expect(
+        bulkAddParentId(
+          listParentNodeId: null,
+          selectedId: 'wardrobe',
+          selectedIsContainer: true,
+        ),
+        'wardrobe',
+      );
+      expect(
+        bulkAddParentId(
+          listParentNodeId: null,
+          selectedId: 'lamp',
+          selectedIsContainer: false,
+        ),
+        isNull,
+      );
+      expect(
+        bulkAddParentId(
+          listParentNodeId: 'wardrobe',
+          selectedId: 'drawer',
+          selectedIsContainer: true,
+        ),
+        'drawer',
+      );
+      expect(
+        bulkAddParentId(
+          listParentNodeId: null,
+          selectedId: 'wardrobe',
+          selectedIsContainer: true,
+          nestedContainerPath: const ['bin'],
+        ),
+        'bin',
+      );
+      expect(
+        bulkAddParentId(
+          listParentNodeId: null,
+          selectedId: 'wardrobe',
+          selectedIsContainer: true,
+          nestedItemId: 'socks',
+        ),
+        'wardrobe',
+      );
+    });
+
     test('bulkCreateTarget prefers the draft placement', () {
       const draft = BulkNodeDraft(
         name: 'Lamp',
@@ -866,6 +912,44 @@ void main() {
       expect(saved, hasLength(2));
       expect(saved![0].placement, closet);
       expect(saved![1].placement, kitchen);
+    });
+
+    testWidgets('default location is the viewed container without picking', (
+      tester,
+    ) async {
+      await useWideSurface(tester);
+      List<BulkNodeDraft>? saved;
+      const wardrobe = BulkPlacement(
+        roomId: 'r1',
+        parentNodeId: 'furn-1',
+        label: 'Bedroom › Wardrobe',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BulkAddTable(
+              initialRowCount: 2,
+              defaultPlacement: wardrobe,
+              pickLocation: (context, current) async => current,
+              onClose: () {},
+              onSave: (drafts) async => saved = drafts,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Bedroom › Wardrobe'), findsWidgets);
+      await tester.enterText(
+        find.byKey(const ValueKey('bulk-name-0')),
+        'Socks',
+      );
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const ValueKey('bulk-save')));
+      await tester.tap(find.byKey(const ValueKey('bulk-save')));
+      await tester.pumpAndSettle();
+
+      expect(saved, hasLength(1));
+      expect(saved!.first.placement, wardrobe);
     });
   });
 }
