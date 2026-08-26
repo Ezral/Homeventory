@@ -65,6 +65,11 @@ class InventoryNode {
 
   bool get isArchived => archivedAt != null;
 
+  InventoryTypeChoice get typeChoice => InventoryTypeChoice.fromNode(
+    nodeKind: nodeKind,
+    itemCategory: itemCategory,
+  );
+
   DispenserMode get effectiveDispenserMode =>
       dispenserMode ?? DispenserMode.single;
 

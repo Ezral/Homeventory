@@ -117,6 +117,13 @@ enum InventoryTypeChoice {
     }
     return InventoryTypeChoice.item;
   }
+
+  bool matches({
+    required InventoryNodeKind nodeKind,
+    ItemCategory? itemCategory,
+  }) {
+    return fromNode(nodeKind: nodeKind, itemCategory: itemCategory) == this;
+  }
 }
 
 enum ItemCategory {

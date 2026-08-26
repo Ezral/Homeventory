@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeventory/core/layout/web_layout.dart';
+import 'package:homeventory/features/search/presentation/search_screen.dart';
+import 'package:homeventory/shared/models/enums.dart';
 import 'package:homeventory/shared/utils/inventory_labels.dart';
 import 'package:homeventory/shared/widgets/inventory_row_card.dart';
 
@@ -53,5 +55,41 @@ void main() {
     expect(find.byType(Checkbox), findsOneWidget);
     await tester.tap(find.byType(Checkbox));
     expect(checked, isTrue);
+  });
+
+  testWidgets('search type chips select clothing and can clear', (tester) async {
+    InventoryTypeChoice? selected;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              return SearchTypeFilterBar(
+                selected: selected,
+                onChanged: (type) => setState(() => selected = type),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Furniture'), findsOneWidget);
+    expect(find.text('Storage'), findsOneWidget);
+    expect(find.text('Item'), findsOneWidget);
+    expect(find.text('Clothing'), findsOneWidget);
+
+    await tester.tap(find.text('Clothing'));
+    await tester.pump();
+    expect(selected, InventoryTypeChoice.clothing);
+
+    final clothingChip = tester.widget<FilterChip>(
+      find.widgetWithText(FilterChip, 'Clothing'),
+    );
+    expect(clothingChip.selected, isTrue);
+
+    await tester.tap(find.text('Clothing'));
+    await tester.pump();
+    expect(selected, isNull);
   });
 }

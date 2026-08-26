@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/models/room.dart';
 import '../../../shared/providers/supabase_provider.dart';
@@ -125,10 +126,13 @@ final entityThumbnailsProvider = FutureProvider.autoDispose
     });
 
 final inventorySearchProvider = FutureProvider.autoDispose
-    .family<List<InventoryNode>, ({String homeId, String query})>((ref, args) {
+    .family<
+      List<InventoryNode>,
+      ({String homeId, String query, InventoryTypeChoice? type})
+    >((ref, args) {
       return ref
           .watch(inventoryRepositoryProvider)
-          .search(homeId: args.homeId, query: args.query);
+          .search(homeId: args.homeId, query: args.query, type: args.type);
     });
 
 /// Batch location paths keyed by node id. [idsKey] is comma-joined ids.
