@@ -21,6 +21,7 @@ class HomesScreen extends ConsumerStatefulWidget {
 
 class _HomesScreenState extends ConsumerState<HomesScreen> {
   bool _checkedPendingNav = false;
+  bool _installing = false;
 
   @override
   void didChangeDependencies() {
@@ -29,12 +30,63 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
     _checkedPendingNav = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final pending =
-          await ref.read(localSessionStoreProvider).readPendingNav();
+      final pending = await ref
+          .read(localSessionStoreProvider)
+          .readPendingNav();
       if (!mounted || pending == null || !pending.startsWith('/')) return;
       await ref.read(localSessionStoreProvider).clearPendingNav();
       if (mounted) context.go(pending);
     });
+  }
+
+  Future<void> _loadDemoStudio() async {
+    if (_installing) return;
+    setState(() => _installing = true);
+    final status = ValueNotifier('Creating Bangkok studio…');
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: ValueListenableBuilder<String>(
+              valueListenable: status,
+              builder: (context, text, _) {
+                return Row(
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(width: 20),
+                    Expanded(child: Text(text)),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+    try {
+      final home = await ref
+          .read(demoStudioInstallerProvider)
+          .install(onProgress: (text) => status.value = text);
+      ref.invalidate(homesListProvider);
+      await ref.read(activeHomeIdProvider.notifier).setActive(home.id);
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      context.go('/homes/${home.id}');
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      status.dispose();
+      if (mounted) setState(() => _installing = false);
+    }
   }
 
   @override
@@ -47,6 +99,18 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
       appBar: AppBar(
         title: const Text('Your homes'),
         actions: [
+          if (desktop)
+            TextButton.icon(
+              onPressed: _installing ? null : _loadDemoStudio,
+              icon: const Icon(Icons.apartment_outlined),
+              label: const Text('Demo studio'),
+            )
+          else
+            IconButton(
+              tooltip: 'Load demo studio',
+              onPressed: _installing ? null : _loadDemoStudio,
+              icon: const Icon(Icons.apartment_outlined),
+            ),
           if (!desktop)
             IconButton(
               tooltip: 'Join with invite',
@@ -89,13 +153,17 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
                   ),
                 ),
                 if (list.isEmpty)
-                  const SliverFillRemaining(
+                  SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.home_work_outlined,
                       title: 'No homes yet',
                       message:
-                          'Create your first Home, or join one with an invite from the sidebar (or the QR icon on mobile).',
+                          'Load the Bangkok demo studio, create a home, or join with an invite.',
+                      actionLabel: _installing
+                          ? 'Loading…'
+                          : 'Load demo studio',
+                      onAction: _installing ? null : _loadDemoStudio,
                     ),
                   )
                 else if (desktop)
@@ -104,18 +172,15 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
                     sliver: SliverGrid(
                       gridDelegate:
                           const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 300,
-                        mainAxisSpacing: 14,
-                        crossAxisSpacing: 14,
-                        childAspectRatio: 0.95,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final home = list[index];
-                          return _HomeCoverCard(home: home);
-                        },
-                        childCount: list.length,
-                      ),
+                            maxCrossAxisExtent: 300,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.95,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final home = list[index];
+                        return _HomeCoverCard(home: home);
+                      }, childCount: list.length),
                     ),
                   )
                 else
@@ -149,13 +214,11 @@ class _HomeCoverCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final thumbsAsync = ref.watch(
-      entityThumbnailsProvider(
-        (
-          homeId: home.id,
-          entityType: 'HOME',
-          idsKey: home.id,
-        ),
-      ),
+      entityThumbnailsProvider((
+        homeId: home.id,
+        entityType: 'HOME',
+        idsKey: home.id,
+      )),
     );
     final thumbUrl = thumbsAsync.maybeWhen(
       data: (m) => m[home.id],
@@ -213,16 +276,18 @@ class _HomeCoverCard extends ConsumerWidget {
               ColoredBox(
                 color: AppColors.mossDeep,
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   child: Text(
                     home.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

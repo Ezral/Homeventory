@@ -4,12 +4,21 @@ import '../../../shared/models/home.dart';
 import '../../../shared/providers/supabase_provider.dart';
 import '../../inventory/data/inventory_repository.dart';
 import '../../rooms/presentation/rooms_providers.dart';
+import '../data/demo_studio_installer.dart';
 import '../data/homes_repository.dart';
 
 final homesRepositoryProvider = Provider<HomesRepository>((ref) {
   return HomesRepository(
     client: ref.watch(supabaseClientProvider),
     localSessionStore: ref.watch(localSessionStoreProvider),
+  );
+});
+
+final demoStudioInstallerProvider = Provider<DemoStudioInstaller>((ref) {
+  return DemoStudioInstaller(
+    homes: ref.watch(homesRepositoryProvider),
+    rooms: ref.watch(roomsRepositoryProvider),
+    inventory: ref.watch(inventoryRepositoryProvider),
   );
 });
 
@@ -21,34 +30,34 @@ final hiddenHomesListProvider = FutureProvider.autoDispose<List<Home>>((ref) {
   return ref.watch(homesRepositoryProvider).listHiddenHomes();
 });
 
-final homeProvider =
-    FutureProvider.autoDispose.family<Home, String>((ref, homeId) {
+final homeProvider = FutureProvider.autoDispose.family<Home, String>((
+  ref,
+  homeId,
+) {
   return ref.watch(homesRepositoryProvider).getHome(homeId);
 });
 
-final homeMembersProvider =
-    FutureProvider.autoDispose.family<List<HomeMember>, String>((ref, homeId) {
-  return ref.watch(homesRepositoryProvider).listMembers(homeId);
-});
+final homeMembersProvider = FutureProvider.autoDispose
+    .family<List<HomeMember>, String>((ref, homeId) {
+      return ref.watch(homesRepositoryProvider).listMembers(homeId);
+    });
 
 final homeImagesProvider = FutureProvider.autoDispose
     .family<List<EntityImage>, String>((ref, homeId) {
-  return ref.watch(inventoryRepositoryProvider).listImages(
-        homeId: homeId,
-        entityType: 'HOME',
-        entityId: homeId,
-      );
-});
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .listImages(homeId: homeId, entityType: 'HOME', entityId: homeId);
+    });
 
 final homeDashboardStatsProvider = FutureProvider.autoDispose
     .family<HomeDashboardStats, String>((ref, homeId) {
-  return ref.watch(homesRepositoryProvider).dashboardStats(homeId);
-});
+      return ref.watch(homesRepositoryProvider).dashboardStats(homeId);
+    });
 
 final activeHomeIdProvider =
     AsyncNotifierProvider<ActiveHomeIdController, String?>(
-  ActiveHomeIdController.new,
-);
+      ActiveHomeIdController.new,
+    );
 
 class ActiveHomeIdController extends AsyncNotifier<String?> {
   @override
