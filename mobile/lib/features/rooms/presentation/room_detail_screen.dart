@@ -261,6 +261,13 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
         actions: [
           if (canEdit && parentNodeId == null)
             IconButton(
+              tooltip: 'Add to schedule',
+              onPressed: () =>
+                  context.push('/homes/$homeId/schedule/new?room=$roomId'),
+              icon: const Icon(Icons.schedule),
+            ),
+          if (canEdit && parentNodeId == null)
+            IconButton(
               tooltip: 'Edit room',
               onPressed: () async {
                 await context.push('/homes/$homeId/rooms/$roomId/edit');

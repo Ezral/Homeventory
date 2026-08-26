@@ -22,10 +22,10 @@ Households need repeating cleanup alarms with their own wording (“Weekly Clean
 
 | Kind | Meaning |
 | --- | --- |
-| `MANUAL` | User title + optional notes. Repeat: once, daily, weekly, monthly, or every N days. **Must** link to one `inventory_node`. |
+| `MANUAL` | User title + optional notes. Repeat: once, daily, weekly, monthly, or every N days. **Must** link to one `inventory_node` **or** one `room`. |
 | `USAGE_REFILL` | Tied to one `inventory_node`. Client estimates daily Use (USE ledger only, not TRANSFER_REFILL) and sets `next_fire_at` to (quantity / daily rate) minus `lead_days`. |
 
-`inventory_node_id` is `NOT NULL` for every row. Completing an enabled schedule:
+Exactly one of `inventory_node_id` or `room_id` is set. Completing an enabled schedule:
 
 - **Repeating** (`DAILY` / `WEEKLY` / `MONTHLY` / `CUSTOM_DAYS`): skip the current fire and write the next `next_fire_at`; set `last_completed_at`.
 - **One-off** (`ONCE`, including refill): set `archived_at` and `enabled = false`. Archived rows are hidden from the active Schedule list.
@@ -71,17 +71,19 @@ RLS: `can_view_home` select; `can_edit_inventory` write; insert `created_by_user
 ## Database Impact
 
 Migration: `20260826000100_reminders.sql`  
-Follow-up: `20260826000200_schedule_complete_and_activity.sql` (`inventory_node_id` required; `archived_at` / `last_completed_at`; Schedule Complete)
+Follow-up: `20260826000200_schedule_complete_and_activity.sql` (`archived_at` / `last_completed_at`; Schedule Complete)  
+Follow-up: `20260826000300_reminder_room_target.sql` (item **or** room target)
 
 ## UI Impact
 
 - `/homes/:homeId/schedule` list + create/edit form (`/reminders` redirects here)
 - Home overview tile, desktop sidebar, phone bottom-nav Schedule tab, Settings link per home
-- Item create/edit: notification schedule panel; item detail: “Add to schedule”
-- Linked item is mandatory on the schedule form; active rows have **Complete**
+- Item create/edit: notification schedule panel; item detail: “Add to schedule”; room detail: “Add to schedule”
+- Linked item **or** room is mandatory on the schedule form; refill still requires an item; active rows have **Complete**
 
 ## References
 
 - [`supabase/migrations/20260826000100_reminders.sql`](../../supabase/migrations/20260826000100_reminders.sql)
+- [`supabase/migrations/20260826000300_reminder_room_target.sql`](../../supabase/migrations/20260826000300_reminder_room_target.sql)
 - [`mobile/lib/features/reminders/`](../../mobile/lib/features/reminders/)
 - Related: [ADR-0008](0008-inventory-transactions.md), [ADR-0001](0001-flutter-supabase-platform.md) (FCM still not runtime)

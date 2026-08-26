@@ -95,7 +95,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               icon: Icons.schedule,
               title: 'Nothing scheduled yet',
               message: canEdit
-                  ? 'Add an alarm on a linked item, or a refill from Use history. You can also set this when editing an item.'
+                  ? 'Add an alarm on a room or item, or a refill from Use history. You can also set this when editing an item.'
                   : 'An editor can add cleanup alarms and refill notifications for this home.',
               actionLabel: canEdit ? 'Add schedule' : null,
               onAction: canEdit ? () => _openEditor() : null,
@@ -151,10 +151,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             value: reminder.enabled,
             onChanged: completing ? null : (v) => _setEnabled(reminder, v),
           ),
-        if (reminder.itemRoute != null)
+        if (reminder.targetRoute != null)
           IconButton(
-            tooltip: 'Open item',
-            onPressed: () => context.push(reminder.itemRoute!),
+            tooltip: reminder.roomId != null ? 'Open room' : 'Open item',
+            onPressed: () => context.push(reminder.targetRoute!),
             icon: const Icon(Icons.open_in_new),
           ),
       ],
@@ -163,7 +163,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   String _subtitle(Reminder reminder, DateFormat dateFormat) {
     final parts = <String>[
-      if (reminder.nodeName != null) reminder.nodeName!,
+      if (reminder.targetName != null) reminder.targetName!,
       reminder.kind.label,
       reminder.repeatSummary,
       reminder.enabled

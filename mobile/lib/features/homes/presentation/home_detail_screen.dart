@@ -157,7 +157,7 @@ class HomeDetailScreen extends ConsumerWidget {
                           ),
                           title: 'Notification schedule',
                           subtitle:
-                              'Weekly clean-up, monthly tasks, or notify before a container runs out',
+                              'Weekly clean-up, monthly tasks, or notify before a container runs out. Alarms can target a room or an item.',
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => context.go('/homes/$homeId/schedule'),
                         ),

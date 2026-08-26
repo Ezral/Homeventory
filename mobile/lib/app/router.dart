@@ -136,6 +136,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ? ReminderKind.usageRefill
                   : ReminderKind.manual,
               initialNodeId: state.uri.queryParameters['node'],
+              initialRoomId: state.uri.queryParameters['room'],
             ),
           ),
           GoRoute(

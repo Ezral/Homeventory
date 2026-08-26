@@ -13,6 +13,7 @@ class Reminder {
     required this.fireMinute,
     required this.nextFireAt,
     this.inventoryNodeId,
+    this.roomId,
     this.leadDays = 2,
     this.enabled = true,
     this.lastNotifiedAt,
@@ -23,6 +24,7 @@ class Reminder {
     this.nodeQuantityUnit,
     this.nodeRoomId,
     this.nodeIsContainer = false,
+    this.roomName,
   });
 
   final String id;
@@ -36,6 +38,7 @@ class Reminder {
   final int fireMinute;
   final DateTime nextFireAt;
   final String? inventoryNodeId;
+  final String? roomId;
   final int leadDays;
   final bool enabled;
   final DateTime? lastNotifiedAt;
@@ -46,6 +49,7 @@ class Reminder {
   final String? nodeQuantityUnit;
   final String? nodeRoomId;
   final bool nodeIsContainer;
+  final String? roomName;
 
   int get fireHour => fireMinute ~/ 60;
   int get fireMinuteOfHour => fireMinute % 60;
@@ -54,14 +58,25 @@ class Reminder {
 
   bool get isRepeating => repeat != ReminderRepeat.once;
 
-  /// Browse or detail path for the linked item, if room metadata is present.
-  String? get itemRoute {
+  String? get targetName => nodeName ?? roomName;
+
+  /// Browse path for the linked item or room.
+  String? get targetRoute {
     final nodeId = inventoryNodeId;
-    final roomId = nodeRoomId;
-    if (nodeId == null || roomId == null) return null;
-    final base = '/homes/$homeId/rooms/$roomId/nodes/$nodeId';
-    return nodeIsContainer ? base : '$base/details';
+    final nodeRoom = nodeRoomId;
+    if (nodeId != null && nodeRoom != null) {
+      final base = '/homes/$homeId/rooms/$nodeRoom/nodes/$nodeId';
+      return nodeIsContainer ? base : '$base/details';
+    }
+    final linkedRoomId = roomId;
+    if (linkedRoomId != null) {
+      return '/homes/$homeId/rooms/$linkedRoomId';
+    }
+    return null;
   }
+
+  /// Browse or detail path for the linked item, if room metadata is present.
+  String? get itemRoute => inventoryNodeId == null ? null : targetRoute;
 
   bool get isDue {
     if (!enabled || isArchived) return false;
@@ -85,6 +100,11 @@ class Reminder {
     if (node is Map) {
       nodeMap = Map<String, dynamic>.from(node);
     }
+    final room = json['rooms'];
+    Map<String, dynamic>? roomMap;
+    if (room is Map) {
+      roomMap = Map<String, dynamic>.from(room);
+    }
     return Reminder(
       id: json['id'] as String,
       homeId: json['home_id'] as String,
@@ -97,6 +117,7 @@ class Reminder {
       fireMinute: (json['fire_minute'] as num?)?.toInt() ?? 540,
       nextFireAt: DateTime.parse(json['next_fire_at'] as String),
       inventoryNodeId: json['inventory_node_id'] as String?,
+      roomId: json['room_id'] as String?,
       leadDays: (json['lead_days'] as num?)?.toInt() ?? 2,
       enabled: json['enabled'] as bool? ?? true,
       lastNotifiedAt: json['last_notified_at'] != null
@@ -113,6 +134,7 @@ class Reminder {
       nodeQuantityUnit: nodeMap?['quantity_unit'] as String?,
       nodeRoomId: nodeMap?['room_id'] as String?,
       nodeIsContainer: nodeMap?['is_container'] as bool? ?? false,
+      roomName: roomMap?['name'] as String?,
     );
   }
 }

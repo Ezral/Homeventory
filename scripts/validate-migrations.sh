@@ -218,7 +218,7 @@ begin
     );
     raise exception 'reminder without an item should fail';
   exception
-    when not_null_violation then null;
+    when check_violation then null;
   end;
 end $$;
 
@@ -237,6 +237,43 @@ insert into public.reminders (
   '44444444-4444-4444-4444-444444444444'
 );
 
+insert into public.reminders (
+  id, home_id, created_by_user_id, kind, title, repeat, fire_minute, next_fire_at,
+  room_id
+) values (
+  '55555555-5555-5555-5555-555555555555',
+  '11111111-1111-1111-1111-111111111111',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'MANUAL',
+  'Kitchen wipe-down',
+  'WEEKLY',
+  540,
+  timezone('utc', now()) + interval '7 days',
+  '22222222-2222-2222-2222-222222222222'
+);
+
+do $$
+begin
+  begin
+    insert into public.reminders (
+      home_id, created_by_user_id, kind, title, repeat, fire_minute, next_fire_at,
+      room_id
+    ) values (
+      '11111111-1111-1111-1111-111111111111',
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      'USAGE_REFILL',
+      'Refill kitchen',
+      'ONCE',
+      540,
+      timezone('utc', now()),
+      '22222222-2222-2222-2222-222222222222'
+    );
+    raise exception 'refill reminder on a room should fail';
+  exception
+    when check_violation then null;
+  end;
+end $$;
+
 update public.reminders
 set last_completed_at = timezone('utc', now()),
     next_fire_at = timezone('utc', now()) + interval '7 days'
@@ -245,8 +282,8 @@ where id = '33333333-3333-3333-3333-333333333333';
 do $$
 begin
   if (select count(*) from public.reminders
-      where home_id = '11111111-1111-1111-1111-111111111111') <> 1 then
-    raise exception 'owner should insert a reminder';
+      where home_id = '11111111-1111-1111-1111-111111111111') <> 2 then
+    raise exception 'owner should insert item and room reminders';
   end if;
 
   if not exists (

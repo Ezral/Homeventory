@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/models/reminder.dart';
+import '../../../shared/models/room.dart';
 import '../../../shared/utils/reminder_schedule.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../rooms/presentation/rooms_providers.dart';
@@ -19,16 +20,20 @@ class EditReminderScreen extends ConsumerStatefulWidget {
     this.existing,
     this.initialKind,
     this.initialNodeId,
+    this.initialRoomId,
   });
 
   final String homeId;
   final Reminder? existing;
   final ReminderKind? initialKind;
   final String? initialNodeId;
+  final String? initialRoomId;
 
   @override
   ConsumerState<EditReminderScreen> createState() => _EditReminderScreenState();
 }
+
+enum _LinkKind { item, room }
 
 class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   final _formKey = GlobalKey<FormState>();
@@ -43,6 +48,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   late TimeOfDay _time;
   late DateTime _firstDate;
   InventoryNode? _node;
+  Room? _room;
+  _LinkKind _linkKind = _LinkKind.item;
   String _nodeQuery = '';
   bool _busy = false;
   UsageForecast? _forecast;
@@ -76,7 +83,11 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       }
     }
     final nodeId = existing?.inventoryNodeId ?? widget.initialNodeId;
-    if (nodeId != null) {
+    final roomId = existing?.roomId ?? widget.initialRoomId;
+    if (roomId != null && nodeId == null) {
+      _linkKind = _LinkKind.room;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadRoom(roomId));
+    } else if (nodeId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadNode(nodeId));
     }
   }
@@ -101,6 +112,19 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
         _title.text = 'Refill ${node.name}';
       }
       await _refreshForecast(node);
+    } catch (_) {}
+  }
+
+  Future<void> _loadRoom(String roomId) async {
+    try {
+      final room = await ref.read(roomsRepositoryProvider).getRoom(roomId);
+      if (!mounted) return;
+      setState(() {
+        _room = room;
+        _linkKind = _LinkKind.room;
+        _node = null;
+        _forecast = null;
+      });
     } catch (_) {}
   }
 
@@ -156,9 +180,15 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_node == null) {
+    if (_kind == ReminderKind.usageRefill && _node == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick the item this schedule is for.')),
+        const SnackBar(content: Text('Pick the item this refill is for.')),
+      );
+      return;
+    }
+    if (_node == null && _room == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a room or item for this schedule.')),
       );
       return;
     }
@@ -187,7 +217,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           intervalDays: interval,
           fireMinute: fireMinute,
           nextFireAt: _computedNextFire,
-          inventoryNodeId: _node!.id,
+          inventoryNodeId: _node?.id,
+          roomId: _room?.id,
+          setTarget: true,
           leadDays: lead,
           enabled: true,
         );
@@ -203,7 +235,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           intervalDays: interval,
           fireMinute: fireMinute,
           nextFireAt: _computedNextFire,
-          inventoryNodeId: _node!.id,
+          inventoryNodeId: _node?.id,
+          roomId: _room?.id,
           leadDays: lead,
         );
       }
@@ -297,6 +330,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                   _kind = v;
                   if (v == ReminderKind.usageRefill) {
                     _repeat = ReminderRepeat.once;
+                    _linkKind = _LinkKind.item;
+                    _room = null;
                     if (_title.text == 'Weekly Clean-up') {
                       _title.text = 'Refill reminder';
                     }
@@ -374,75 +409,151 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               onTap: _pickTime,
             ),
             const SizedBox(height: 8),
-            const SectionLabel('Linked item'),
+            const SectionLabel('Linked to'),
             const SizedBox(height: 8),
             Text(
-              'Every alarm is tied to an item or container in this home.',
+              _kind == ReminderKind.usageRefill
+                  ? 'Refill reminders watch Use history on one item.'
+                  : 'Every alarm is tied to a room or an item in this home.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 8),
-            if (_node != null)
-              SoftTile(
-                title: _node!.name,
-                subtitle: [
-                  _node!.kindLabel,
-                  if (_node!.quantity != null)
-                    '${_node!.quantity} ${_node!.quantityUnit ?? ''}'.trim(),
-                ].join(' · '),
-                trailing: IconButton(
-                  tooltip: 'Change',
-                  onPressed: () => setState(() {
-                    _node = null;
-                    _forecast = null;
-                  }),
-                  icon: const Icon(Icons.swap_horiz),
-                ),
-              )
-            else ...[
-              TextField(
-                controller: _nodeSearch,
-                decoration: const InputDecoration(
-                  hintText: 'Search by name…',
-                  prefixIcon: Icon(Icons.search),
-                ),
-                onChanged: (v) => setState(() => _nodeQuery = v),
-              ),
-              const SizedBox(height: 8),
-              if (search != null)
-                search.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Text(e.toString()),
-                  data: (nodes) {
-                    if (nodes.isEmpty) {
-                      return const Text('No matches.');
-                    }
-                    return Column(
-                      children: [
-                        for (final node in nodes.take(8))
-                          SoftTile(
-                            title: node.name,
-                            subtitle: node.kindLabel,
-                            onTap: () async {
-                              setState(() {
-                                _node = node;
-                                _nodeQuery = '';
-                                _nodeSearch.clear();
-                                if (_kind == ReminderKind.usageRefill &&
-                                    (_title.text.trim().isEmpty ||
-                                        _title.text == 'Refill reminder')) {
-                                  _title.text = 'Refill ${node.name}';
-                                }
-                              });
-                              await _refreshForecast(node);
-                            },
-                          ),
-                      ],
-                    );
+            Wrap(
+              spacing: 8,
+              children: [
+                FilterChip(
+                  label: const Text('Item'),
+                  selected: _linkKind == _LinkKind.item,
+                  onSelected: (selected) {
+                    if (!selected) return;
+                    setState(() {
+                      _linkKind = _LinkKind.item;
+                      _room = null;
+                    });
                   },
                 ),
+                FilterChip(
+                  label: const Text('Room'),
+                  selected: _linkKind == _LinkKind.room,
+                  onSelected: _kind == ReminderKind.usageRefill
+                      ? null
+                      : (selected) {
+                          if (!selected) return;
+                          setState(() {
+                            _linkKind = _LinkKind.room;
+                            _node = null;
+                            _forecast = null;
+                          });
+                        },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_linkKind == _LinkKind.item) ...[
+              if (_node != null)
+                SoftTile(
+                  title: _node!.name,
+                  subtitle: [
+                    _node!.kindLabel,
+                    if (_node!.quantity != null)
+                      '${_node!.quantity} ${_node!.quantityUnit ?? ''}'.trim(),
+                  ].join(' · '),
+                  trailing: IconButton(
+                    tooltip: 'Change',
+                    onPressed: () => setState(() {
+                      _node = null;
+                      _forecast = null;
+                    }),
+                    icon: const Icon(Icons.swap_horiz),
+                  ),
+                )
+              else ...[
+                TextField(
+                  controller: _nodeSearch,
+                  decoration: const InputDecoration(
+                    hintText: 'Search by name…',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: (v) => setState(() => _nodeQuery = v),
+                ),
+                const SizedBox(height: 8),
+                if (search != null)
+                  search.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (e, _) => Text(e.toString()),
+                    data: (nodes) {
+                      if (nodes.isEmpty) {
+                        return const Text('No matches.');
+                      }
+                      return Column(
+                        children: [
+                          for (final node in nodes.take(8))
+                            SoftTile(
+                              title: node.name,
+                              subtitle: node.kindLabel,
+                              onTap: () async {
+                                setState(() {
+                                  _node = node;
+                                  _room = null;
+                                  _nodeQuery = '';
+                                  _nodeSearch.clear();
+                                  if (_kind == ReminderKind.usageRefill &&
+                                      (_title.text.trim().isEmpty ||
+                                          _title.text == 'Refill reminder')) {
+                                    _title.text = 'Refill ${node.name}';
+                                  }
+                                });
+                                await _refreshForecast(node);
+                              },
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+              ],
+            ] else ...[
+              if (_room != null)
+                SoftTile(
+                  title: _room!.name,
+                  subtitle: 'Room',
+                  trailing: IconButton(
+                    tooltip: 'Change',
+                    onPressed: () => setState(() => _room = null),
+                    icon: const Icon(Icons.swap_horiz),
+                  ),
+                )
+              else
+                ref
+                    .watch(roomsListProvider(widget.homeId))
+                    .when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (e, _) => Text(e.toString()),
+                      data: (rooms) {
+                        if (rooms.isEmpty) {
+                          return const Text('No rooms yet.');
+                        }
+                        return Column(
+                          children: [
+                            for (final room in rooms)
+                              SoftTile(
+                                title: room.name,
+                                subtitle: 'Room',
+                                onTap: () => setState(() {
+                                  _room = room;
+                                  _node = null;
+                                  _forecast = null;
+                                }),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
             ],
             if (_kind == ReminderKind.usageRefill) ...[
               const SizedBox(height: 12),
