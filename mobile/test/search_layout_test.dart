@@ -57,7 +57,9 @@ void main() {
     expect(checked, isTrue);
   });
 
-  testWidgets('search type chips select clothing and can clear', (tester) async {
+  testWidgets('search type chips select clothing and can clear', (
+    tester,
+  ) async {
     InventoryTypeChoice? selected;
     await tester.pumpWidget(
       MaterialApp(
