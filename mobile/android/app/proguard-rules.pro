@@ -15,3 +15,7 @@
 -dontwarn com.google.mlkit.**
 -dontwarn com.google.android.gms.internal.mlkit_vision_barcode.**
 -dontwarn com.google.android.gms.internal.mlkit_vision_barcode_bundled.**
+
+# Scheduled local notifications (flutter_local_notifications receivers + payload).
+-keep class com.dexterous.** { *; }
+-dontwarn com.dexterous.**

@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../../shared/models/enums.dart';
 import 'notification_scheduler.dart';
 import 'notification_scheduler_stub.dart';
+import 'timezone_name.dart';
 
 class AndroidReminderNotificationScheduler
     implements ReminderNotificationScheduler {
@@ -15,6 +16,7 @@ class AndroidReminderNotificationScheduler
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
+  final Set<int> _shownDueIds = {};
 
   static const _channel = AndroidNotificationDetails(
     'homeventory_reminders',
@@ -22,6 +24,9 @@ class AndroidReminderNotificationScheduler
     channelDescription: 'Cleanup alarms and refill reminders',
     importance: Importance.high,
     priority: Priority.high,
+    playSound: true,
+    enableVibration: true,
+    icon: '@drawable/ic_stat_notify',
   );
 
   @override
@@ -37,14 +42,21 @@ class AndroidReminderNotificationScheduler
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
       tzdata.initializeTimeZones();
-      final name = await FlutterTimezone.getLocalTimezone();
+      final raw = await FlutterTimezone.getLocalTimezone();
+      final name = resolveTimeZoneName(
+        raw,
+        knownNames: tz.timeZoneDatabase.locations.keys,
+      );
       tz.setLocalLocation(tz.getLocation(name));
-      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidInit = AndroidInitializationSettings(
+        '@drawable/ic_stat_notify',
+      );
       await _plugin.initialize(
         const InitializationSettings(android: androidInit),
       );
       _ready = true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Reminder notifications failed to initialize: $e\n$st');
       _ready = false;
     }
   }
@@ -65,16 +77,17 @@ class AndroidReminderNotificationScheduler
   Future<void> sync(List<ScheduledReminderAlert> alerts) async {
     await initialize();
     if (!_ready) return;
+    if (alerts.isNotEmpty) {
+      await requestPermission();
+    }
     await _plugin.cancelAll();
-    final now = DateTime.now();
+    _shownDueIds.clear();
     for (final alert in alerts) {
-      if (alert.fireAt.isBefore(now.subtract(const Duration(minutes: 1))) &&
-          alert.repeat == ReminderRepeat.once) {
-        continue;
-      }
       try {
         await _schedule(alert);
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Failed to schedule reminder ${alert.id}: $e\n$st');
+      }
     }
   }
 
@@ -83,13 +96,22 @@ class AndroidReminderNotificationScheduler
     if (!_ready) return;
     try {
       await _plugin.cancel(notificationIdFor(reminderId));
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to cancel reminder $reminderId: $e');
+    }
   }
 
   Future<void> _schedule(ScheduledReminderAlert alert) async {
-    var when = tz.TZDateTime.from(alert.fireAt.toLocal(), tz.local);
+    final id = notificationIdFor(alert.id);
+    final details = const NotificationDetails(android: _channel);
+    var when = _zonedFrom(alert.fireAt);
     final now = tz.TZDateTime.now(tz.local);
+
     if (!when.isAfter(now)) {
+      if (!_shownDueIds.contains(id)) {
+        await _plugin.show(id, alert.title, alert.body, details);
+        _shownDueIds.add(id);
+      }
       if (alert.repeat == ReminderRepeat.once) return;
       when = when.add(const Duration(days: 1));
       while (!when.isAfter(now)) {
@@ -111,13 +133,26 @@ class AndroidReminderNotificationScheduler
     }
 
     await _plugin.zonedSchedule(
-      notificationIdFor(alert.id),
+      id,
       alert.title,
       alert.body,
       when,
-      const NotificationDetails(android: _channel),
+      details,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: match,
+    );
+  }
+
+  tz.TZDateTime _zonedFrom(DateTime fireAt) {
+    final local = fireAt.toLocal();
+    return tz.TZDateTime(
+      tz.local,
+      local.year,
+      local.month,
+      local.day,
+      local.hour,
+      local.minute,
+      local.second,
     );
   }
 }
