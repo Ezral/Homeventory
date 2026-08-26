@@ -11,7 +11,6 @@ import '../../../shared/utils/image_pick.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/image_ingest_region.dart';
-import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
@@ -42,10 +41,6 @@ class NodeDetailScreen extends ConsumerWidget {
     final dateFormat = DateFormat.yMMMd();
     final canEdit = homeAsync.maybeWhen(
       data: (h) => h.myRole?.canEditInventory ?? false,
-      orElse: () => false,
-    );
-    final canInvite = homeAsync.maybeWhen(
-      data: (h) => h.myRole?.canManageMembers ?? false,
       orElse: () => false,
     );
     final desktop = isWebDesktopLayout(context);
@@ -88,67 +83,39 @@ class NodeDetailScreen extends ConsumerWidget {
       bottomNavigationBar: desktop
           ? null
           : HomeShellBottomNav(
-              selectedIndex: 2,
+              selectedIndex: HomeShellNav.home,
               addLabel: 'Add object',
-              onSelect: (index) async {
-                switch (index) {
-                  case 0:
-                    await context.push('/homes/$homeId/search');
-                  case 1:
-                    await context.push('/homes/$homeId/trips');
-                  case 2:
-                    context.go('/homes/$homeId');
-                  case 3:
-                    if (canInvite) {
-                      await showHomeInviteSheet(
-                        context: context,
-                        ref: ref,
-                        homeId: homeId,
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Only owners and admins can invite members.',
-                          ),
+              onSelect: (index) => handleHomeShellSelect(
+                context: context,
+                homeId: homeId,
+                index: index,
+                canEdit: canEdit,
+                addDeniedMessage: 'You do not have permission to add objects.',
+                onAdd: () async {
+                  final node = nodeAsync.asData?.value;
+                  final parent =
+                      node != null &&
+                          (node.isContainer || node.isMobileContainer)
+                      ? nodeId
+                      : null;
+                  await context.push(
+                    parent == null
+                        ? '/homes/$homeId/rooms/$roomId/nodes/new'
+                        : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parent',
+                  );
+                  if (parent != null) {
+                    ref.invalidate(
+                      inventoryChildrenProvider(
+                        InventoryScope(
+                          homeId: homeId,
+                          roomId: roomId,
+                          parentNodeId: parent,
                         ),
-                      );
-                    }
-                  case 4:
-                    if (!canEdit) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'You do not have permission to add objects.',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-                    final node = nodeAsync.asData?.value;
-                    final parent =
-                        node != null &&
-                            (node.isContainer || node.isMobileContainer)
-                        ? nodeId
-                        : null;
-                    await context.push(
-                      parent == null
-                          ? '/homes/$homeId/rooms/$roomId/nodes/new'
-                          : '/homes/$homeId/rooms/$roomId/nodes/new?parent=$parent',
+                      ),
                     );
-                    if (parent != null) {
-                      ref.invalidate(
-                        inventoryChildrenProvider(
-                          InventoryScope(
-                            homeId: homeId,
-                            roomId: roomId,
-                            parentNodeId: parent,
-                          ),
-                        ),
-                      );
-                    }
-                }
-              },
+                  }
+                },
+              ),
             ),
       body: nodeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -412,10 +379,10 @@ class NodeDetailScreen extends ConsumerWidget {
                     ),
                     OutlinedButton.icon(
                       onPressed: () => context.push(
-                        '/homes/$homeId/reminders/new?kind=USAGE_REFILL&node=$nodeId',
+                        '/homes/$homeId/schedule/new?kind=USAGE_REFILL&node=$nodeId',
                       ),
-                      icon: const Icon(Icons.notifications_outlined),
-                      label: const Text('Remind when low'),
+                      icon: const Icon(Icons.schedule),
+                      label: const Text('Add to schedule'),
                     ),
                   ],
                 ),

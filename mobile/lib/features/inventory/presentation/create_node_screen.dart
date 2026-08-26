@@ -10,6 +10,8 @@ import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/image_ingest_region.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../../inventory/data/inventory_repository.dart';
+import '../../reminders/presentation/item_schedule_panel.dart';
+import '../../reminders/presentation/reminders_providers.dart';
 import '../../rooms/presentation/rooms_providers.dart';
 
 class CreateNodeScreen extends ConsumerStatefulWidget {
@@ -34,6 +36,7 @@ class CreateNodeScreen extends ConsumerStatefulWidget {
 
 class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _scheduleKey = GlobalKey<ItemSchedulePanelState>();
   final _name = TextEditingController();
   final _description = TextEditingController();
   final _quantity = TextEditingController();
@@ -215,6 +218,13 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
 
   Future<void> _submit({bool addAnother = false}) async {
     if (!_formKey.currentState!.validate()) return;
+    final scheduleError = _scheduleKey.currentState?.validate();
+    if (scheduleError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scheduleError)));
+      return;
+    }
     setState(() => _busy = true);
     try {
       final qty = _quantity.text.trim().isEmpty
@@ -314,6 +324,9 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
           extension: _pendingImage!.extension,
         );
       }
+
+      await _scheduleKey.currentState?.saveForNode(node);
+      ref.invalidate(homeRemindersProvider(widget.homeId));
 
       ref.invalidate(
         inventoryChildrenProvider(
@@ -803,6 +816,13 @@ class _CreateNodeScreenState extends ConsumerState<CreateNodeScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 28),
+                  ItemSchedulePanel(
+                    key: _scheduleKey,
+                    homeId: widget.homeId,
+                    nodeId: widget.existingNodeId,
+                    itemName: _name.text,
                   ),
                   const SizedBox(height: 28),
                   FilledButton(

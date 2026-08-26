@@ -77,11 +77,12 @@ class PreferencesScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 24),
-            const SectionLabel('Reminders'),
+            const SectionLabel('Schedule'),
             const SizedBox(height: 6),
             Text(
-              'Cleanup alarms and refill reminders live on each home. '
-              'Android can notify in the background; the browser list is the same source of truth.',
+              'Cleanup alarms and refill notifications live on each home. '
+              'Android can notify in the background; the browser list is the same source of truth. '
+              'You can also set a schedule when adding or editing an item.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 10),
@@ -89,7 +90,7 @@ class PreferencesScreen extends ConsumerWidget {
               data: (homes) {
                 if (homes.isEmpty) {
                   return Text(
-                    'Open a home to add reminders.',
+                    'Open a home to add a schedule.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   );
                 }
@@ -98,14 +99,13 @@ class PreferencesScreen extends ConsumerWidget {
                     for (final home in homes) ...[
                       SoftTile(
                         leading: const Icon(
-                          Icons.notifications_outlined,
+                          Icons.schedule,
                           color: AppColors.mossDeep,
                         ),
                         title: home.name,
-                        subtitle: 'Alarms and refill reminders',
+                        subtitle: 'Alarms and refill notifications',
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () =>
-                            context.push('/homes/${home.id}/reminders'),
+                        onTap: () => context.push('/homes/${home.id}/schedule'),
                       ),
                       const SizedBox(height: 8),
                     ],

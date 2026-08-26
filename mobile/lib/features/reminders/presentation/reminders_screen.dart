@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/reminder.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/home_shell_bottom_nav.dart';
+import '../../../shared/widgets/user_menu_button.dart';
 import '../../homes/presentation/homes_providers.dart';
 import '../data/notification_scheduler.dart';
 import 'edit_reminder_screen.dart';
@@ -29,6 +31,7 @@ class RemindersScreen extends ConsumerWidget {
     final scheduler = ref.watch(reminderNotificationSchedulerProvider);
     scheduler.initialize();
     final dateFormat = DateFormat.yMMMd().add_jm();
+    final desktop = isWebDesktopLayout(context);
 
     ref.listen(homeRemindersProvider(homeId), (prev, next) {
       next.whenData((reminders) {
@@ -43,21 +46,33 @@ class RemindersScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reminders'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        title: const Text('Schedule'),
+        actions: [if (!desktop) const UserMenuButton()],
       ),
-      floatingActionButton: canEdit
+      floatingActionButton: desktop && canEdit
           ? FloatingActionButton.extended(
               onPressed: () => _openEditor(context, ref),
               backgroundColor: AppColors.moss,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
-              label: const Text('Add reminder'),
+              label: const Text('Add schedule'),
             )
           : null,
+      bottomNavigationBar: desktop
+          ? null
+          : HomeShellBottomNav(
+              selectedIndex: HomeShellNav.schedule,
+              addLabel: 'Add',
+              onSelect: (index) => handleHomeShellSelect(
+                context: context,
+                homeId: homeId,
+                index: index,
+                canEdit: canEdit,
+                addDeniedMessage:
+                    'You do not have permission to add schedules.',
+                onAdd: () => _openEditor(context, ref),
+              ),
+            ),
       body: remindersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
@@ -67,12 +82,12 @@ class RemindersScreen extends ConsumerWidget {
         data: (reminders) {
           if (reminders.isEmpty) {
             return EmptyState(
-              icon: Icons.notifications_outlined,
-              title: 'No reminders yet',
+              icon: Icons.schedule,
+              title: 'Nothing scheduled yet',
               message: canEdit
-                  ? 'Add a weekly or monthly alarm with your own text, or a refill reminder based on Use history.'
-                  : 'An editor can add cleanup alarms and refill reminders for this home.',
-              actionLabel: canEdit ? 'Add reminder' : null,
+                  ? 'Add a weekly or monthly alarm with your own text, or a refill from Use history. You can also set this when editing an item.'
+                  : 'An editor can add cleanup alarms and refill notifications for this home.',
+              actionLabel: canEdit ? 'Add schedule' : null,
               onAction: canEdit ? () => _openEditor(context, ref) : null,
             );
           }

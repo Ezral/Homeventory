@@ -16,6 +16,22 @@ class RemindersRepository {
     return id;
   }
 
+  Future<List<Reminder>> listForNode({
+    required String homeId,
+    required String nodeId,
+  }) async {
+    final rows = await _client
+        .from('reminders')
+        .select(_select)
+        .eq('home_id', homeId)
+        .eq('inventory_node_id', nodeId)
+        .order('enabled', ascending: false)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((r) => Reminder.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
+
   Future<List<Reminder>> listReminders(String homeId) async {
     final rows = await _client
         .from('reminders')

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/layout/web_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/widgets/home_shell_bottom_nav.dart';
+import '../../../shared/widgets/user_menu_button.dart';
 import '../../homes/presentation/homes_providers.dart';
 import 'trips_providers.dart';
 
@@ -20,10 +23,14 @@ class TripsListScreen extends ConsumerWidget {
       data: (home) => home.myRole?.canEditInventory ?? false,
       orElse: () => false,
     );
+    final desktop = isWebDesktopLayout(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trips')),
-      floatingActionButton: canEdit
+      appBar: AppBar(
+        title: const Text('Trips'),
+        actions: [if (!desktop) const UserMenuButton()],
+      ),
+      floatingActionButton: desktop && canEdit
           ? FloatingActionButton.extended(
               onPressed: () => _createTrip(context, ref),
               backgroundColor: AppColors.moss,
@@ -32,6 +39,20 @@ class TripsListScreen extends ConsumerWidget {
               label: const Text('Create trip'),
             )
           : null,
+      bottomNavigationBar: desktop
+          ? null
+          : HomeShellBottomNav(
+              selectedIndex: HomeShellNav.trips,
+              addLabel: 'Add trip',
+              onSelect: (index) => handleHomeShellSelect(
+                context: context,
+                homeId: homeId,
+                index: index,
+                canEdit: canEdit,
+                addDeniedMessage: 'You do not have permission to add trips.',
+                onAdd: () => _createTrip(context, ref),
+              ),
+            ),
       body: tripsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
@@ -145,10 +166,7 @@ class TripsListScreen extends ConsumerWidget {
                       );
                       return;
                     }
-                    Navigator.pop(
-                      context,
-                      (name: value, allowance: allowance),
-                    );
+                    Navigator.pop(context, (name: value, allowance: allowance));
                   },
                   child: const Text('Create'),
                 ),
@@ -163,7 +181,9 @@ class TripsListScreen extends ConsumerWidget {
     if (created == null || !context.mounted) return;
 
     try {
-      final trip = await ref.read(tripsRepositoryProvider).createTrip(
+      final trip = await ref
+          .read(tripsRepositoryProvider)
+          .createTrip(
             homeId: homeId,
             name: created.name,
             luggageAllowanceKg: created.allowance,

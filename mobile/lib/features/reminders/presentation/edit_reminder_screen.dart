@@ -231,7 +231,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete this reminder?'),
+        title: const Text('Delete this schedule?'),
         content: Text(existing.title),
         actions: [
           TextButton(
@@ -262,7 +262,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_editing ? 'Edit reminder' : 'New reminder'),
+        title: Text(_editing ? 'Edit schedule' : 'New schedule'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -459,7 +459,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save reminder'),
+              child: Text(_busy ? 'Saving…' : 'Save schedule'),
             ),
           ],
         ),

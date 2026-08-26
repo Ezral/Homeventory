@@ -28,7 +28,7 @@ Households need repeating cleanup alarms with their own wording (“Weekly Clean
 **Delivery**
 
 - **Android:** `flutter_local_notifications` schedules local alerts from `next_fire_at`. Daily / weekly / monthly use OS repeating components. Custom-interval and refill alerts are one-shots, then rescheduled when the app opens. POST_NOTIFICATIONS is requested when the user first saves a reminder. Exact-alarm permission is not required; schedules use inexact-allow-while-idle so a few minutes of drift is acceptable.
-- **Web / all platforms:** the same Reminders screen lists, creates, edits, and turns off reminders. Browser tabs do not get reliable background alarms without FCM/service workers. Due items show in the list; if the tab is open and notification permission is granted, a browser notification may fire for currently due rows.
+- **Web / all platforms:** the Schedule tab lists, creates, edits, and turns off the same rows. Item create/edit can set a notification schedule on the object. Browser tabs do not get reliable background alarms without FCM/service workers. Due items show in the list; if the tab is open and notification permission is granted, a browser notification may fire for currently due rows.
 - **FCM / Edge Functions / inbox table:** not in this change. Push while the Android app is uninstalled, or while a browser is fully closed, is out of scope.
 
 Refill math lives in the Flutter client (`forecastRefill`) so it is unit-tested and explainable (“2.4 CC/day from 6 Use actions over 14 days”). Confidence is withheld when there are fewer than two Use events spanning at least a day.
@@ -69,9 +69,9 @@ Migration: `20260826000100_reminders.sql`
 
 ## UI Impact
 
-- `/homes/:homeId/reminders` list + create/edit form
-- Home overview tile, desktop sidebar, Settings link per home
-- Item detail: “Remind when low” for stocked items
+- `/homes/:homeId/schedule` list + create/edit form (`/reminders` redirects here)
+- Home overview tile, desktop sidebar, phone bottom-nav Schedule tab, Settings link per home
+- Item create/edit: notification schedule panel; item detail: “Add to schedule”
 
 ## References
 

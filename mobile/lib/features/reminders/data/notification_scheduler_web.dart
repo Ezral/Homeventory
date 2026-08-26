@@ -11,7 +11,7 @@ class WebReminderNotificationScheduler
 
   @override
   String get platformNote =>
-      'On the browser, manage reminders here. Due items show in this list. '
+      'On the browser, manage the schedule here. Due items show in this list. '
       'Android can also notify in the background. Allow browser notifications '
       'to ping while this tab is open.';
 

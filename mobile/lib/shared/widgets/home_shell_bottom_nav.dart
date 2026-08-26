@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-/// Shared home-shell bottom nav:
-/// Search | Trips | Home | Invite | Add
+/// Bottom-nav indexes: Search | Schedule | Home | Trips | Add
+abstract final class HomeShellNav {
+  static const search = 0;
+  static const schedule = 1;
+  static const home = 2;
+  static const trips = 3;
+  static const add = 4;
+}
+
+/// Shared home-shell bottom nav.
 class HomeShellBottomNav extends StatelessWidget {
   const HomeShellBottomNav({
     super.key,
@@ -10,7 +19,6 @@ class HomeShellBottomNav extends StatelessWidget {
     this.addLabel = 'Add',
   });
 
-  /// 0 Search, 1 Trips, 2 Home, 3 Invite, 4 Add
   final int selectedIndex;
   final Future<void> Function(int index) onSelect;
   final String addLabel;
@@ -21,13 +29,11 @@ class HomeShellBottomNav extends StatelessWidget {
       selectedIndex: selectedIndex.clamp(0, 4),
       onDestinationSelected: (index) => onSelect(index),
       destinations: [
+        const NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
         const NavigationDestination(
-          icon: Icon(Icons.search),
-          label: 'Search',
-        ),
-        const NavigationDestination(
-          icon: Icon(Icons.luggage_outlined),
-          label: 'Trips',
+          icon: Icon(Icons.schedule),
+          selectedIcon: Icon(Icons.schedule),
+          label: 'Schedule',
         ),
         const NavigationDestination(
           icon: Icon(Icons.home_outlined),
@@ -35,8 +41,8 @@ class HomeShellBottomNav extends StatelessWidget {
           label: 'Home',
         ),
         const NavigationDestination(
-          icon: Icon(Icons.person_add_alt_1_outlined),
-          label: 'Invite',
+          icon: Icon(Icons.luggage_outlined),
+          label: 'Trips',
         ),
         NavigationDestination(
           icon: const Icon(Icons.add_circle_outline),
@@ -45,5 +51,34 @@ class HomeShellBottomNav extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+Future<void> handleHomeShellSelect({
+  required BuildContext context,
+  required String homeId,
+  required int index,
+  required bool canEdit,
+  Future<void> Function()? onAdd,
+  String addDeniedMessage = 'You do not have permission to add.',
+}) async {
+  switch (index) {
+    case HomeShellNav.search:
+      context.go('/homes/$homeId/search');
+    case HomeShellNav.schedule:
+      context.go('/homes/$homeId/schedule');
+    case HomeShellNav.home:
+      context.go('/homes/$homeId');
+    case HomeShellNav.trips:
+      context.go('/homes/$homeId/trips');
+    case HomeShellNav.add:
+      if (onAdd == null) return;
+      if (!canEdit) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(addDeniedMessage)));
+        return;
+      }
+      await onAdd();
   }
 }

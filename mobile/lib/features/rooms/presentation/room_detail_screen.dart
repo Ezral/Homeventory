@@ -12,7 +12,6 @@ import '../../../shared/widgets/bulk_edit_dialog.dart';
 import '../../../shared/widgets/bulk_pack_sheet.dart';
 import '../../../shared/widgets/entity_photo_gallery.dart';
 import '../../../shared/widgets/image_ingest_region.dart';
-import '../../../shared/widgets/home_invite_sheet.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/inventory_row_card.dart';
 import '../../../shared/widgets/selection_action_bar.dart';
@@ -250,10 +249,6 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
       data: (h) => h.myRole?.canEditInventory ?? false,
       orElse: () => false,
     );
-    final canInvite = homeAsync.maybeWhen(
-      data: (h) => h.myRole?.canManageMembers ?? false,
-      orElse: () => false,
-    );
     final desktop = isWebDesktopLayout(context);
 
     final title =
@@ -327,36 +322,16 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
           : desktop
           ? null
           : HomeShellBottomNav(
-              selectedIndex: 2,
+              selectedIndex: HomeShellNav.home,
               addLabel: 'Add object',
-              onSelect: (index) async {
-                switch (index) {
-                  case 0:
-                    await context.push('/homes/$homeId/search');
-                  case 1:
-                    await context.push('/homes/$homeId/trips');
-                  case 2:
-                    context.go('/homes/$homeId');
-                  case 3:
-                    if (canInvite) {
-                      await showHomeInviteSheet(
-                        context: context,
-                        ref: ref,
-                        homeId: homeId,
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Only owners and admins can invite members.',
-                          ),
-                        ),
-                      );
-                    }
-                  case 4:
-                    await _addObject(scope, canEdit);
-                }
-              },
+              onSelect: (index) => handleHomeShellSelect(
+                context: context,
+                homeId: homeId,
+                index: index,
+                canEdit: canEdit,
+                addDeniedMessage: 'You do not have permission to add objects.',
+                onAdd: () => _addObject(scope, canEdit),
+              ),
             ),
       body: childrenAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

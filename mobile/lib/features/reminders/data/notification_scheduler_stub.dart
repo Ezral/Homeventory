@@ -19,7 +19,7 @@ class StubReminderNotificationScheduler
 
   @override
   String get platformNote =>
-      'Reminders are saved for this home. Background alerts are not available here.';
+      'Schedules are saved for this home. Background alerts are not available here.';
 }
 
 ReminderNotificationScheduler createReminderNotificationScheduler() {

@@ -75,6 +75,16 @@ class HomeDetailScreen extends ConsumerWidget {
                   ),
                   icon: const Icon(Icons.archive_outlined),
                 ),
+              if (canInvite)
+                IconButton(
+                  tooltip: 'Invite',
+                  onPressed: () => showHomeInviteSheet(
+                    context: context,
+                    ref: ref,
+                    homeId: homeId,
+                  ),
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                ),
               if (!desktop) const UserMenuButton(),
             ],
           ),
@@ -94,48 +104,21 @@ class HomeDetailScreen extends ConsumerWidget {
           bottomNavigationBar: desktop
               ? null
               : HomeShellBottomNav(
-                  selectedIndex: 2,
+                  selectedIndex: HomeShellNav.home,
                   addLabel: 'Add room',
-                  onSelect: (index) async {
-                    switch (index) {
-                      case 0:
-                        await context.push('/homes/$homeId/search');
-                      case 1:
-                        await context.push('/homes/$homeId/trips');
-                      case 2:
-                        break;
-                      case 3:
-                        if (canInvite) {
-                          await showHomeInviteSheet(
-                            context: context,
-                            ref: ref,
-                            homeId: homeId,
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Only owners and admins can invite members.',
-                              ),
-                            ),
-                          );
-                        }
-                      case 4:
-                        if (!canEdit) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'You do not have permission to add rooms.',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-                        await context.push('/homes/$homeId/rooms/new');
-                        ref.invalidate(roomsListProvider(homeId));
-                        ref.invalidate(homeDashboardStatsProvider(homeId));
-                    }
-                  },
+                  onSelect: (index) => handleHomeShellSelect(
+                    context: context,
+                    homeId: homeId,
+                    index: index,
+                    canEdit: canEdit,
+                    addDeniedMessage:
+                        'You do not have permission to add rooms.',
+                    onAdd: () async {
+                      await context.push('/homes/$homeId/rooms/new');
+                      ref.invalidate(roomsListProvider(homeId));
+                      ref.invalidate(homeDashboardStatsProvider(homeId));
+                    },
+                  ),
                 ),
           body: RefreshIndicator(
             onRefresh: () async {
@@ -165,18 +148,18 @@ class HomeDetailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionLabel('Reminders'),
+                        const SectionLabel('Schedule'),
                         const SizedBox(height: 10),
                         SoftTile(
                           leading: const Icon(
-                            Icons.notifications_outlined,
+                            Icons.schedule,
                             color: AppColors.mossDeep,
                           ),
-                          title: 'Alarms and refill reminders',
+                          title: 'Notification schedule',
                           subtitle:
                               'Weekly clean-up, monthly tasks, or notify before a container runs out',
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/homes/$homeId/reminders'),
+                          onTap: () => context.go('/homes/$homeId/schedule'),
                         ),
                         const SizedBox(height: 20),
                         const SectionLabel('Rooms'),

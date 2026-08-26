@@ -44,8 +44,10 @@ class WebAppShell extends ConsumerWidget {
     final onHomeOverview = homeId != null && location == '/homes/$homeId';
     final onSearch =
         homeId != null && location.startsWith('/homes/$homeId/search');
-    final onReminders =
-        homeId != null && location.startsWith('/homes/$homeId/reminders');
+    final onSchedule =
+        homeId != null &&
+        (location.startsWith('/homes/$homeId/schedule') ||
+            location.startsWith('/homes/$homeId/reminders'));
     final onTrips =
         homeId != null && location.startsWith('/homes/$homeId/trips');
 
@@ -62,7 +64,7 @@ class WebAppShell extends ConsumerWidget {
             onJoin: onJoin,
             onHomeOverview: onHomeOverview,
             onSearch: onSearch,
-            onReminders: onReminders,
+            onSchedule: onSchedule,
             onTrips: onTrips,
           ),
           Expanded(
@@ -97,7 +99,7 @@ class _Sidebar extends ConsumerWidget {
     required this.onJoin,
     required this.onHomeOverview,
     required this.onSearch,
-    required this.onReminders,
+    required this.onSchedule,
     required this.onTrips,
   });
 
@@ -109,7 +111,7 @@ class _Sidebar extends ConsumerWidget {
   final bool onJoin;
   final bool onHomeOverview;
   final bool onSearch;
-  final bool onReminders;
+  final bool onSchedule;
   final bool onTrips;
 
   @override
@@ -185,11 +187,11 @@ class _Sidebar extends ConsumerWidget {
               onTap: () => context.go('/homes/$homeId/search'),
             ),
             _NavTile(
-              icon: Icons.notifications_outlined,
-              selectedIcon: Icons.notifications,
-              label: 'Reminders',
-              selected: onReminders,
-              onTap: () => context.go('/homes/$homeId/reminders'),
+              icon: Icons.schedule,
+              selectedIcon: Icons.schedule,
+              label: 'Schedule',
+              selected: onSchedule,
+              onTap: () => context.go('/homes/$homeId/schedule'),
             ),
             _NavTile(
               icon: Icons.luggage_outlined,

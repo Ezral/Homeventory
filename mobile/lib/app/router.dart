@@ -118,12 +118,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 SearchScreen(homeId: state.pathParameters['homeId']!),
           ),
           GoRoute(
-            path: '/homes/:homeId/reminders',
+            path: '/homes/:homeId/schedule',
             builder: (context, state) =>
                 RemindersScreen(homeId: state.pathParameters['homeId']!),
           ),
           GoRoute(
-            path: '/homes/:homeId/reminders/new',
+            path: '/homes/:homeId/schedule/new',
             builder: (context, state) => EditReminderScreen(
               homeId: state.pathParameters['homeId']!,
               initialKind: state.uri.queryParameters['kind'] == 'USAGE_REFILL'
@@ -131,6 +131,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                   : ReminderKind.manual,
               initialNodeId: state.uri.queryParameters['node'],
             ),
+          ),
+          GoRoute(
+            path: '/homes/:homeId/reminders',
+            redirect: (context, state) =>
+                '/homes/${state.pathParameters['homeId']}/schedule',
+          ),
+          GoRoute(
+            path: '/homes/:homeId/reminders/new',
+            redirect: (context, state) {
+              final homeId = state.pathParameters['homeId']!;
+              final q = state.uri.query;
+              return '/homes/$homeId/schedule/new${q.isEmpty ? '' : '?$q'}';
+            },
           ),
           GoRoute(
             path: '/homes/:homeId/trips',
