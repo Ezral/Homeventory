@@ -11,7 +11,6 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
 import '../../homes/presentation/homes_providers.dart';
-import '../data/notification_scheduler.dart';
 import 'edit_reminder_screen.dart';
 import 'reminders_providers.dart';
 
@@ -45,12 +44,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
     ref.listen(homeRemindersProvider(homeId), (prev, next) {
       next.whenData((reminders) {
-        scheduler.sync(
-          reminders
-              .where((r) => r.enabled)
-              .map(ScheduledReminderAlert.fromReminder)
-              .toList(),
-        );
+        syncReminderNotifications(ref, homeId: homeId, reminders: reminders);
       });
     });
 

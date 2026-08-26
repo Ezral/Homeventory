@@ -9,6 +9,7 @@ class ScheduledReminderAlert {
     required this.fireAt,
     required this.repeat,
     this.intervalDays,
+    this.imageUrl,
   });
 
   final String id;
@@ -17,8 +18,12 @@ class ScheduledReminderAlert {
   final DateTime fireAt;
   final ReminderRepeat repeat;
   final int? intervalDays;
+  final String? imageUrl;
 
-  factory ScheduledReminderAlert.fromReminder(Reminder reminder) {
+  factory ScheduledReminderAlert.fromReminder(
+    Reminder reminder, {
+    String? imageUrl,
+  }) {
     return ScheduledReminderAlert(
       id: reminder.id,
       title: reminder.title,
@@ -30,6 +35,7 @@ class ScheduledReminderAlert {
       fireAt: reminder.nextFireAt,
       repeat: reminder.repeat,
       intervalDays: reminder.intervalDays,
+      imageUrl: imageUrl,
     );
   }
 }
