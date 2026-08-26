@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeventory/features/homes/data/demo_studio_catalog.dart';
 import 'package:homeventory/shared/models/enums.dart';
+import 'package:homeventory/shared/models/home.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -97,4 +98,22 @@ void main() {
       expect(bytes[1], 0xD8);
     }
   });
+
+  test(
+    'leftover Bangkok studio homes are archived when Demo Studio exists',
+    () {
+      Home home(String id, String name) =>
+          Home(id: id, name: name, createdByUserId: 'u1');
+
+      expect(
+        leftoverInstallerHomes([
+          home('keep', 'Demo Studio'),
+          home('dupe', 'Bangkok studio'),
+        ]).map((h) => h.id),
+        ['dupe'],
+      );
+      expect(leftoverInstallerHomes([home('keep', 'Demo Studio')]), isEmpty);
+      expect(leftoverInstallerHomes([home('only', 'Bangkok studio')]), isEmpty);
+    },
+  );
 }

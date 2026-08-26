@@ -22,8 +22,7 @@ class HomesScreen extends ConsumerStatefulWidget {
 
 class _HomesScreenState extends ConsumerState<HomesScreen> {
   bool _checkedPendingNav = false;
-  bool _installing = false;
-  bool _autoInstallStarted = false;
+  bool _archiveStarted = false;
 
   @override
   void didChangeDependencies() {
@@ -41,63 +40,21 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
     });
   }
 
-  void _maybeAutoInstall(List<Home> homes) {
-    if (_autoInstallStarted || _installing) return;
-    if (homes.any((home) => home.name == demoStudioHomeName)) return;
-    _autoInstallStarted = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _loadDemoStudio();
-    });
-  }
-
-  Future<void> _loadDemoStudio() async {
-    if (_installing) return;
-    setState(() => _installing = true);
-    final status = ValueNotifier('Creating Bangkok studio…');
-    if (!mounted) return;
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return PopScope(
-          canPop: false,
-          child: AlertDialog(
-            content: ValueListenableBuilder<String>(
-              valueListenable: status,
-              builder: (context, text, _) {
-                return Row(
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(width: 20),
-                    Expanded(child: Text(text)),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-    try {
-      final home = await ref
-          .read(demoStudioInstallerProvider)
-          .install(onProgress: (text) => status.value = text);
-      ref.invalidate(homesListProvider);
-      await ref.read(activeHomeIdProvider.notifier).setActive(home.id);
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      context.go('/homes/${home.id}');
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+  void _maybeArchiveInstallerDuplicates(List<Home> homes) {
+    if (_archiveStarted) return;
+    final dupes = leftoverInstallerHomes(
+      homes,
+    ).where((home) => home.myRole?.isOwner ?? false).toList();
+    if (dupes.isEmpty) return;
+    _archiveStarted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      for (final home in dupes) {
+        try {
+          await ref.read(homesRepositoryProvider).archiveHome(home.id);
+        } catch (_) {}
       }
-    } finally {
-      status.dispose();
-      if (mounted) setState(() => _installing = false);
-    }
+      if (mounted) ref.invalidate(homesListProvider);
+    });
   }
 
   @override
@@ -110,18 +67,6 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
       appBar: AppBar(
         title: const Text('Your homes'),
         actions: [
-          if (desktop)
-            TextButton.icon(
-              onPressed: _installing ? null : _loadDemoStudio,
-              icon: const Icon(Icons.apartment_outlined),
-              label: const Text('Demo studio'),
-            )
-          else
-            IconButton(
-              tooltip: 'Load demo studio',
-              onPressed: _installing ? null : _loadDemoStudio,
-              icon: const Icon(Icons.apartment_outlined),
-            ),
           if (!desktop)
             IconButton(
               tooltip: 'Join with invite',
@@ -145,7 +90,7 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
           onRetry: () => ref.invalidate(homesListProvider),
         ),
         data: (list) {
-          _maybeAutoInstall(list);
+          _maybeArchiveInstallerDuplicates(list);
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(homesListProvider),
             child: CustomScrollView(
@@ -165,17 +110,13 @@ class _HomesScreenState extends ConsumerState<HomesScreen> {
                   ),
                 ),
                 if (list.isEmpty)
-                  SliverFillRemaining(
+                  const SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.home_work_outlined,
                       title: 'No homes yet',
                       message:
-                          'Load the Bangkok demo studio, create a home, or join with an invite.',
-                      actionLabel: _installing
-                          ? 'Loading…'
-                          : 'Load demo studio',
-                      onAction: _installing ? null : _loadDemoStudio,
+                          'Create your first Home, or join one with an invite from the sidebar (or the QR icon on mobile).',
                     ),
                   )
                 else if (desktop)

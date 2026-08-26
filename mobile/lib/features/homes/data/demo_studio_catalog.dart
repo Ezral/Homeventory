@@ -3,11 +3,30 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import '../../../shared/models/enums.dart';
+import '../../../shared/models/home.dart';
 
 const demoStudioCatalogAsset = 'assets/demo_studio/catalog.json';
 
-/// Display name created by the installer. Used to skip a second copy.
+/// Name the installer writes. Leftover copies are archived when a keeper exists.
 const demoStudioHomeName = 'Bangkok studio';
+
+/// User-renamed keeper for the furnished demo home.
+const demoStudioKeptHomeName = 'Demo Studio';
+
+bool _sameHomeName(String a, String b) =>
+    a.trim().toLowerCase() == b.trim().toLowerCase();
+
+/// Installer duplicates to hide after the demo was renamed to [demoStudioKeptHomeName].
+List<Home> leftoverInstallerHomes(Iterable<Home> homes) {
+  final list = homes.toList();
+  final hasKeeper = list.any(
+    (home) => _sameHomeName(home.name, demoStudioKeptHomeName),
+  );
+  if (!hasKeeper) return const [];
+  return list
+      .where((home) => _sameHomeName(home.name, demoStudioHomeName))
+      .toList();
+}
 
 class DemoStudioCatalog {
   const DemoStudioCatalog({
