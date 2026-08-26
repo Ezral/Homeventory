@@ -1,10 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:http/http.dart' as http;
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../shared/models/enums.dart';
+import '../../../shared/utils/notification_card.dart';
 import 'notification_scheduler.dart';
 import 'notification_scheduler_stub.dart';
 
@@ -16,13 +20,9 @@ class AndroidReminderNotificationScheduler
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
 
-  static const _channel = AndroidNotificationDetails(
-    'homeventory_reminders',
-    'Reminders',
-    channelDescription: 'Cleanup alarms and refill reminders',
-    importance: Importance.high,
-    priority: Priority.high,
-  );
+  static const _channelId = 'homeventory_reminders';
+  static const _channelName = 'Reminders';
+  static const _channelDescription = 'Cleanup alarms and refill reminders';
 
   @override
   bool get supportsBackgroundAlerts => true;
@@ -110,15 +110,53 @@ class AndroidReminderNotificationScheduler
         match = null;
     }
 
+    final photo = await _downloadPhoto(alert.imageUrl);
+    final card = await composeScheduleNotificationCard(
+      photoBytes: photo,
+      title: alert.title,
+      body: alert.body,
+    );
+
     await _plugin.zonedSchedule(
       notificationIdFor(alert.id),
       alert.title,
       alert.body,
       when,
-      const NotificationDetails(android: _channel),
+      NotificationDetails(android: _androidDetails(card)),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: match,
     );
+  }
+
+  /// Expanded shade is the composed card (photo left third, text right).
+  /// No `largeIcon`: Android would pin that thumbnail on the right.
+  AndroidNotificationDetails _androidDetails(Uint8List card) {
+    return AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      styleInformation: BigPictureStyleInformation(
+        ByteArrayAndroidBitmap(card),
+        hideExpandedLargeIcon: true,
+        contentTitle: '',
+        summaryText: '',
+      ),
+    );
+  }
+
+  Future<Uint8List?> _downloadPhoto(String? url) async {
+    if (url == null || url.trim().isEmpty) return null;
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+        return null;
+      }
+      return response.bodyBytes;
+    } catch (_) {
+      return null;
+    }
   }
 }
 
