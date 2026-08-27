@@ -128,7 +128,7 @@ Item detail columns present today include quantity fields, purchase price/curren
 - Room / container screens list children.
 - Create/edit node screen; detail screen for photos/barcodes/fields.
 - Containers open nested browse; info action opens details.
-- Search by name (and barcode — ADR-0006).
+- Search by name, barcode (ADR-0006), or type (Furniture, Storage, Item, Clothing). Type-only search lists every matching node in the home. Clothing is `ITEM` + category `CLOTHING`.
 
 ---
 

@@ -182,7 +182,11 @@ class _AddFromFurnitureSheetState extends ConsumerState<AddFromFurnitureSheet> {
     final search = _query.trim().isEmpty
         ? null
         : ref.watch(
-            inventorySearchProvider((homeId: widget.homeId, query: _query)),
+            inventorySearchProvider((
+              homeId: widget.homeId,
+              query: _query,
+              type: null,
+            )),
           );
 
     if (search == null) {

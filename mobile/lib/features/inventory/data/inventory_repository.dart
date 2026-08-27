@@ -274,44 +274,74 @@ class InventoryRepository {
   Future<List<InventoryNode>> search({
     required String homeId,
     required String query,
+    InventoryTypeChoice? type,
     int limit = 40,
   }) async {
     final trimmed = query.trim();
-    if (trimmed.isEmpty) return const [];
+    if (trimmed.isEmpty && type == null) return const [];
 
-    final byName = await _client
+    // Type-only browse ("all clothing") should return the full matching set.
+    final fetchLimit = trimmed.isEmpty && type != null ? 1000 : limit;
+
+    var nameQuery = _client
         .from('inventory_nodes')
         .select()
         .eq('home_id', homeId)
         .eq('is_disposed', false)
-        .isFilter('archived_at', null)
-        .ilike('name', '%$trimmed%')
-        .order('name')
-        .limit(limit);
+        .isFilter('archived_at', null);
 
-    final barcodeRows = await _client
-        .from('item_barcodes')
-        .select('inventory_node_id')
-        .eq('home_id', homeId)
-        .ilike('barcode_value', '%$trimmed%')
-        .limit(limit);
+    if (trimmed.isNotEmpty) {
+      nameQuery = nameQuery.ilike('name', '%$trimmed%');
+    }
+    if (type != null) {
+      nameQuery = nameQuery.eq('node_kind', type.nodeKind.dbValue);
+      switch (type) {
+        case InventoryTypeChoice.clothing:
+          nameQuery = nameQuery.eq(
+            'item_category',
+            ItemCategory.clothing.dbValue,
+          );
+        case InventoryTypeChoice.item:
+          nameQuery = nameQuery.or(
+            'item_category.is.null,item_category.neq.${ItemCategory.clothing.dbValue}',
+          );
+        case InventoryTypeChoice.furniture:
+        case InventoryTypeChoice.storage:
+          break;
+      }
+    }
 
-    final barcodeIds = (barcodeRows as List)
-        .map((r) => (r as Map)['inventory_node_id'] as String)
-        .toSet();
+    final byName = await nameQuery.order('name').limit(fetchLimit);
 
     final nodes = <String, InventoryNode>{};
     for (final r in byName as List) {
       final node = InventoryNode.fromJson(Map<String, dynamic>.from(r as Map));
       nodes[node.id] = node;
     }
-    for (final id in barcodeIds) {
-      if (nodes.containsKey(id)) continue;
-      try {
-        final node = await getNode(id);
-        if (!node.isDisposed && !node.isArchived) nodes[id] = node;
-      } catch (_) {}
+
+    if (trimmed.isNotEmpty) {
+      final barcodeRows = await _client
+          .from('item_barcodes')
+          .select('inventory_node_id')
+          .eq('home_id', homeId)
+          .ilike('barcode_value', '%$trimmed%')
+          .limit(limit);
+
+      final barcodeIds = (barcodeRows as List)
+          .map((r) => (r as Map)['inventory_node_id'] as String)
+          .toSet();
+
+      for (final id in barcodeIds) {
+        if (nodes.containsKey(id)) continue;
+        try {
+          final node = await getNode(id);
+          if (node.isDisposed || node.isArchived) continue;
+          if (type != null && node.typeChoice != type) continue;
+          nodes[id] = node;
+        } catch (_) {}
+      }
     }
+
     return nodes.values.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   }

@@ -93,6 +93,33 @@ void main() {
         ),
         InventoryTypeChoice.item,
       );
+      expect(
+        InventoryTypeChoice.clothing.matches(
+          nodeKind: InventoryNodeKind.item,
+          itemCategory: ItemCategory.clothing,
+        ),
+        isTrue,
+      );
+      expect(
+        InventoryTypeChoice.item.matches(
+          nodeKind: InventoryNodeKind.item,
+          itemCategory: ItemCategory.clothing,
+        ),
+        isFalse,
+      );
+      expect(
+        InventoryTypeChoice.item.matches(
+          nodeKind: InventoryNodeKind.item,
+          itemCategory: ItemCategory.electronics,
+        ),
+        isTrue,
+      );
+      expect(
+        InventoryTypeChoice.furniture.matches(
+          nodeKind: InventoryNodeKind.furniture,
+        ),
+        isTrue,
+      );
     });
   });
 
@@ -199,6 +226,7 @@ void main() {
         'created_by_user_id': 'u1',
       });
       expect(node.kindLabel, 'Clothing');
+      expect(node.typeChoice, InventoryTypeChoice.clothing);
     });
 
     test('DispenserProductAssignment.fillLabel shows chamber fill', () {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/layout/web_layout.dart';
+import '../../../shared/models/enums.dart';
 import '../../../shared/models/inventory_node.dart';
 import '../../../shared/utils/inventory_labels.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -29,7 +30,13 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   String _query = '';
+  InventoryTypeChoice? _type;
   final Map<String, InventoryNode> _bulkSelected = {};
+
+  ({String homeId, String query, InventoryTypeChoice? type}) get _searchArgs =>
+      (homeId: widget.homeId, query: _query, type: _type);
+
+  bool get _hasSearchCriteria => _query.trim().isNotEmpty || _type != null;
 
   @override
   void dispose() {
@@ -96,9 +103,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       nodes: selected,
     );
     if (count == null || count <= 0) return;
-    ref.invalidate(
-      inventorySearchProvider((homeId: widget.homeId, query: _query)),
-    );
+    ref.invalidate(inventorySearchProvider(_searchArgs));
     for (final node in selected) {
       ref.invalidate(inventoryNodeProvider(node.id));
     }
@@ -151,9 +156,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final count = await ref
           .read(inventoryRepositoryProvider)
           .disposeNodes(selected.map((n) => n.id).toList());
-      ref.invalidate(
-        inventorySearchProvider((homeId: widget.homeId, query: _query)),
-      );
+      ref.invalidate(inventorySearchProvider(_searchArgs));
       setState(_bulkSelected.clear);
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -200,11 +203,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           data: (h) => h.myRole?.canEditInventory ?? false,
           orElse: () => false,
         );
-    final results = _query.trim().isEmpty
-        ? null
-        : ref.watch(
-            inventorySearchProvider((homeId: widget.homeId, query: _query)),
-          );
+    final results = _hasSearchCriteria
+        ? ref.watch(inventorySearchProvider(_searchArgs))
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -259,13 +260,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: SearchTypeFilterBar(
+              selected: _type,
+              onChanged: (type) => setState(() => _type = type),
+            ),
+          ),
           Expanded(
             child: results == null
                 ? const EmptyState(
                     icon: Icons.search,
                     title: 'Search this home',
                     message:
-                        'Look up anything by name or barcode across rooms and nested containers.',
+                        'Look up anything by name or barcode, or pick a type to list everything of that kind.',
                   )
                 : results.when(
                     loading: () =>
@@ -273,10 +281,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     error: (e, _) => ErrorView(message: e.toString()),
                     data: (nodes) {
                       if (nodes.isEmpty) {
-                        return const EmptyState(
+                        final typeLabel = _type?.label.toLowerCase();
+                        return EmptyState(
                           title: 'No matches',
-                          message:
-                              'Try a different name, spelling, or barcode.',
+                          message: _type != null && _query.trim().isEmpty
+                              ? 'No $typeLabel in this home yet.'
+                              : 'Try a different name, type, spelling, or barcode.',
                         );
                       }
                       final idsKey = nodes.map((n) => n.id).join(',');
@@ -371,6 +381,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Type chips on Search. Selecting Clothing (with no name) lists every clothing item.
+class SearchTypeFilterBar extends StatelessWidget {
+  const SearchTypeFilterBar({
+    super.key,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final InventoryTypeChoice? selected;
+  final ValueChanged<InventoryTypeChoice?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final type in InventoryTypeChoice.values)
+          FilterChip(
+            label: Text(type.label),
+            selected: selected == type,
+            onSelected: (isSelected) => onChanged(isSelected ? type : null),
+          ),
+      ],
     );
   }
 }
