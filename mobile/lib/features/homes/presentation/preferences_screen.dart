@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/home.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../reminders/presentation/reminders_providers.dart';
 import 'homes_providers.dart';
 import 'permanent_delete_home_dialog.dart';
 
@@ -115,6 +117,48 @@ class PreferencesScreen extends ConsumerWidget {
               },
               orElse: () => const SizedBox.shrink(),
             ),
+            if (kDebugMode) ...[
+              const SizedBox(height: 24),
+              const SectionLabel('Developer'),
+              const SizedBox(height: 6),
+              Text(
+                'Posts a sample reminder in the system notification shade '
+                'so collapsed and expanded One UI layouts can be reviewed. '
+                'Not included in release builds.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 10),
+              SoftTile(
+                leading: const Icon(
+                  Icons.notifications_active_outlined,
+                  color: AppColors.mossDeep,
+                ),
+                title: 'Preview reminder notification',
+                subtitle: 'Clean the bedroom AC filter',
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final scheduler = ref.read(
+                    reminderNotificationSchedulerProvider,
+                  );
+                  try {
+                    await scheduler.previewSample();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Sample reminder posted. Pull down the notification shade, then expand it.',
+                        ),
+                      ),
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                },
+              ),
+            ],
             const SizedBox(height: 24),
             const SectionLabel('Archived homes'),
             const SizedBox(height: 10),

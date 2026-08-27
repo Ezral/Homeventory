@@ -20,7 +20,8 @@
 -keep class com.dexterous.** { *; }
 -dontwarn com.dexterous.**
 
-# Custom reminder notification layouts (photo on the left third).
+# Custom reminder notification layouts + action receivers.
 -keep class com.homeventory.homeventory.ReminderNotifications { *; }
 -keep class com.homeventory.homeventory.ReminderAlarmReceiver { *; }
+-keep class com.homeventory.homeventory.ReminderActionReceiver { *; }
 -keep class com.homeventory.homeventory.ReminderBootReceiver { *; }

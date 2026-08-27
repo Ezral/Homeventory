@@ -10,7 +10,7 @@ class RemindersRepository {
   final SupabaseClient _client;
 
   static const _select =
-      '*, inventory_nodes(name, quantity, quantity_unit, room_id, is_container), rooms(name)';
+      '*, inventory_nodes(name, quantity, quantity_unit, room_id, is_container, rooms(name)), rooms(name)';
 
   String get _userId {
     final id = _client.auth.currentUser?.id;

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="homeventory_navy">#12304A</color>
+    <color name="homeventory_coral">#FF6B4A</color>
+    <color name="notification_photo_placeholder_bg">#12304A</color>
+</resources>

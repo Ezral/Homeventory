@@ -211,11 +211,14 @@ void main() {
           'name': 'Cabinet',
           'room_id': 'room-1',
           'is_container': true,
+          'rooms': {'name': 'Kitchen'},
         },
       });
       expect(reminder.isArchived, isTrue);
       expect(reminder.isDue, isFalse);
       expect(reminder.itemRoute, '/homes/h1/rooms/room-1/nodes/n1');
+      expect(reminder.nodeRoomName, 'Kitchen');
+      expect(reminder.locationDetails, 'Kitchen · Cabinet');
     });
 
     test('fromJson maps a room target', () {

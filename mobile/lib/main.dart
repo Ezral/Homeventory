@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router.dart';
 import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/reminders/presentation/reminder_notification_actions.dart';
 import 'features/reminders/presentation/reminders_providers.dart';
 import 'shared/providers/supabase_provider.dart';
 
@@ -56,6 +57,7 @@ class HomeventoryApp extends ConsumerWidget {
     }
 
     ref.watch(reminderAlarmSyncProvider);
+    ref.watch(reminderNotificationActionBinderProvider);
     return MaterialApp.router(
       title: 'Homeventory',
       debugShowCheckedModeBanner: false,

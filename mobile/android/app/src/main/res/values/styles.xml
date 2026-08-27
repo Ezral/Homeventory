@@ -8,11 +8,28 @@
     </style>
     <!-- Theme applied to the Android Window as soon as the process has started.
          This theme determines the color of the Android Window while your
-         Flutter UI initializes, as well as behind your Flutter UI while its
+         Flutter UI initializes, as well as behind the Flutter UI while its
          running.
 
-         This Theme is only used starting with V2 of Flutter's Android embedding. -->
+         This Theme is only used starting with V2 of the Flutter Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+
+    <!-- Custom notification text. Colours come from the Compat notification
+         appearances so Samsung light/dark shade contrast is preserved; Poppins
+         is applied on the TextViews we own. The system header is untouched. -->
+    <style name="Homeventory.Notification.Time" parent="TextAppearance.Compat.Notification.Info">
+        <item name="android:fontFamily">@font/poppins_regular</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <style name="Homeventory.Notification.Title" parent="TextAppearance.Compat.Notification.Title">
+        <item name="android:fontFamily">@font/poppins_medium</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <style name="Homeventory.Notification.Body" parent="TextAppearance.Compat.Notification.Info">
+        <item name="android:fontFamily">@font/poppins_regular</item>
+        <item name="android:textStyle">normal</item>
     </style>
 </resources>

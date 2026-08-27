@@ -25,6 +25,7 @@ class Reminder {
     this.nodeRoomId,
     this.nodeIsContainer = false,
     this.roomName,
+    this.nodeRoomName,
   });
 
   final String id;
@@ -50,6 +51,7 @@ class Reminder {
   final String? nodeRoomId;
   final bool nodeIsContainer;
   final String? roomName;
+  final String? nodeRoomName;
 
   int get fireHour => fireMinute ~/ 60;
   int get fireMinuteOfHour => fireMinute % 60;
@@ -59,6 +61,26 @@ class Reminder {
   bool get isRepeating => repeat != ReminderRepeat.once;
 
   String? get targetName => nodeName ?? roomName;
+
+  /// Room + item line for notifications, e.g. "Bedroom · Air conditioner".
+  String get locationDetails {
+    final room = nodeRoomName ?? roomName;
+    final item = nodeName;
+    if (room != null &&
+        room.isNotEmpty &&
+        item != null &&
+        item.isNotEmpty &&
+        room != item) {
+      return '$room · $item';
+    }
+    return item ?? room ?? '';
+  }
+
+  /// Recurrence line for expanded notifications. Null for one-off reminders.
+  String? get recurrenceDescription {
+    if (!isRepeating) return null;
+    return 'Recurring ${repeatSummary.toLowerCase()}';
+  }
 
   /// Browse path for the linked item or room.
   String? get targetRoute {
@@ -135,6 +157,15 @@ class Reminder {
       nodeRoomId: nodeMap?['room_id'] as String?,
       nodeIsContainer: nodeMap?['is_container'] as bool? ?? false,
       roomName: roomMap?['name'] as String?,
+      nodeRoomName: _nestedRoomName(nodeMap),
     );
   }
+}
+
+String? _nestedRoomName(Map<String, dynamic>? nodeMap) {
+  final nested = nodeMap?['rooms'];
+  if (nested is Map) {
+    return nested['name'] as String?;
+  }
+  return null;
 }
