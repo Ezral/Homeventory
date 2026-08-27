@@ -11,7 +11,8 @@ import '../../../shared/widgets/app_widgets.dart';
 import '../../../shared/widgets/home_shell_bottom_nav.dart';
 import '../../../shared/widgets/user_menu_button.dart';
 import '../../homes/presentation/homes_providers.dart';
-import '../data/notification_scheduler.dart';
+import '../../rooms/presentation/rooms_providers.dart';
+import '../data/reminder_image_urls.dart';
 import 'edit_reminder_screen.dart';
 import 'reminders_providers.dart';
 
@@ -44,13 +45,13 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final desktop = isWebDesktopLayout(context);
 
     ref.listen(homeRemindersProvider(homeId), (prev, next) {
-      next.whenData((reminders) {
-        scheduler.sync(
-          reminders
-              .where((r) => r.enabled)
-              .map(ScheduledReminderAlert.fromReminder)
-              .toList(),
+      next.whenData((reminders) async {
+        final inventory = ref.read(inventoryRepositoryProvider);
+        final alerts = await scheduledAlertsWithImages(
+          reminders: reminders,
+          latestImageUrls: inventory.latestImageUrls,
         );
+        await scheduler.sync(alerts);
       });
     });
 

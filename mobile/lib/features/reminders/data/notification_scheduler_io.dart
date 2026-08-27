@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -7,18 +8,29 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../../shared/models/enums.dart';
 import 'notification_scheduler.dart';
 import 'notification_scheduler_stub.dart';
+import 'reminder_image_cache.dart';
 import 'timezone_name.dart';
+
+const reminderNotificationChannel =
+    'com.homeventory.homeventory/reminder_notifications';
 
 class AndroidReminderNotificationScheduler
     implements ReminderNotificationScheduler {
-  AndroidReminderNotificationScheduler()
-    : _plugin = FlutterLocalNotificationsPlugin();
+  AndroidReminderNotificationScheduler({
+    MethodChannel? channel,
+    ReminderImageCache? imageCache,
+    FlutterLocalNotificationsPlugin? plugin,
+  }) : _channel = channel ?? const MethodChannel(reminderNotificationChannel),
+       _imageCache = imageCache ?? ReminderImageCache(),
+       _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
+  final MethodChannel _channel;
+  final ReminderImageCache _imageCache;
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
   final Set<int> _shownDueIds = {};
 
-  static const _channel = AndroidNotificationDetails(
+  static const _channelDetails = AndroidNotificationDetails(
     'homeventory_reminders',
     'Reminders',
     channelDescription: 'Cleanup alarms and refill reminders',
@@ -82,11 +94,34 @@ class AndroidReminderNotificationScheduler
     }
     await _plugin.cancelAll();
     _shownDueIds.clear();
+
+    final withPhotos = <ScheduledReminderAlert>[];
     for (final alert in alerts) {
-      try {
-        await _schedule(alert);
-      } catch (e, st) {
-        debugPrint('Failed to schedule reminder ${alert.id}: $e\n$st');
+      final url = alert.imageUrl;
+      if (url == null || url.isEmpty) {
+        withPhotos.add(alert);
+        continue;
+      }
+      final path = await _imageCache.cacheUrl(reminderId: alert.id, url: url);
+      withPhotos.add(alert.copyWith(imagePath: path));
+    }
+
+    final now = DateTime.now();
+    final payloads = [
+      for (final alert in withPhotos) alert.toNativePayload(now: now),
+    ];
+    try {
+      await _channel.invokeMethod<void>('sync', payloads);
+    } catch (e, st) {
+      debugPrint(
+        'Native rich reminder notifications unavailable, using plugin: $e\n$st',
+      );
+      for (final alert in withPhotos) {
+        try {
+          await _scheduleWithPlugin(alert);
+        } catch (err, stack) {
+          debugPrint('Failed to schedule reminder ${alert.id}: $err\n$stack');
+        }
       }
     }
   }
@@ -94,16 +129,20 @@ class AndroidReminderNotificationScheduler
   @override
   Future<void> cancel(String reminderId) async {
     if (!_ready) return;
+    final id = notificationIdFor(reminderId);
     try {
-      await _plugin.cancel(notificationIdFor(reminderId));
+      await _channel.invokeMethod<void>('cancel', id);
+    } catch (_) {}
+    try {
+      await _plugin.cancel(id);
     } catch (e) {
       debugPrint('Failed to cancel reminder $reminderId: $e');
     }
   }
 
-  Future<void> _schedule(ScheduledReminderAlert alert) async {
+  Future<void> _scheduleWithPlugin(ScheduledReminderAlert alert) async {
     final id = notificationIdFor(alert.id);
-    final details = const NotificationDetails(android: _channel);
+    final details = NotificationDetails(android: _pluginDetails(alert));
     var when = _zonedFrom(alert.fireAt);
     final now = tz.TZDateTime.now(tz.local);
 
@@ -140,6 +179,29 @@ class AndroidReminderNotificationScheduler
       details,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: match,
+    );
+  }
+
+  AndroidNotificationDetails _pluginDetails(ScheduledReminderAlert alert) {
+    final path = alert.imagePath;
+    if (path == null || path.isEmpty) return _channelDetails;
+    final picture = FilePathAndroidBitmap(path);
+    return AndroidNotificationDetails(
+      _channelDetails.channelId,
+      _channelDetails.channelName,
+      channelDescription: _channelDetails.channelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      icon: '@drawable/ic_stat_notify',
+      largeIcon: picture,
+      styleInformation: BigPictureStyleInformation(
+        picture,
+        hideExpandedLargeIcon: true,
+        contentTitle: alert.title,
+        summaryText: alert.body,
+      ),
     );
   }
 

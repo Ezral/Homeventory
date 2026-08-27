@@ -32,7 +32,7 @@ Exactly one of `inventory_node_id` or `room_id` is set. Completing an enabled sc
 
 **Delivery**
 
-- **Android:** `flutter_local_notifications` schedules local alerts from `next_fire_at`. After sign-in the client syncs every enabled reminder onto the device (not only when Schedule is open). Daily / weekly / monthly use OS repeating components. Custom-interval and refill alerts are one-shots, then rescheduled when the app opens. Due rows fire immediately (`show`) so a past `next_fire_at` still notifies. POST_NOTIFICATIONS is requested when reminders are synced or first saved. Exact-alarm permission is not required; schedules use inexact-allow-while-idle so a few minutes of drift is acceptable. Timezone ids from the OS are mapped onto the `timezone` package (GMT offsets → `Etc/GMT±N`) so a missing IANA name cannot abort scheduling. The status-bar icon is `@drawable/ic_stat_notify`, kept through R8/resource shrinking.
+- **Android:** `flutter_local_notifications` requests `POST_NOTIFICATIONS` and owns the reminder channel. After sign-in the client syncs every enabled reminder, downloads the linked **item or room photo** into app cache, and arms `AlarmManager` with a custom layout: photo on the left third, title/body on the right, taller expanded shade. Daily / weekly use repeating alarms; monthly / custom-interval / refill are one-shots that re-arm on fire or the next app open. Due rows `show` immediately. Exact-alarm permission is not required (`setAndAllowWhileIdle` / inexact repeating). Timezone ids from the OS are mapped onto the `timezone` package (GMT offsets → `Etc/GMT±N`) so a missing IANA name cannot abort scheduling. The status-bar icon is `@drawable/ic_stat_notify`; custom layouts are `@layout/notification_reminder` and `notification_reminder_big`, kept through R8/resource shrinking. If the native MethodChannel is missing, the plugin falls back to BigPicture style.
 - **Web / all platforms:** the Schedule tab lists, creates, edits, and turns off the same rows. Item create/edit can set a notification schedule on the object. Browser tabs do not get reliable background alarms without FCM/service workers. Due items show in the list; if the tab is open and notification permission is granted, a browser notification may fire for currently due rows.
 - **FCM / Edge Functions / inbox table:** not in this change. Push while the Android app is uninstalled, or while a browser is fully closed, is out of scope.
 
@@ -61,13 +61,13 @@ Refill math lives in the Flutter client (`forecastRefill`) so it is unit-tested 
 ### Disadvantages
 
 - Android alerts after reboot rely on the plugin’s boot receiver plus the next app open to pick up server edits.
-- Release APKs must keep the notification drawable (`res/raw/keep.xml`) and `com.dexterous.**` ProGuard rules or alarms fail silently.
+- Release APKs must keep the notification drawable (`res/raw/keep.xml`), custom reminder layouts, `com.dexterous.**`, and `ReminderAlarmReceiver` ProGuard rules or alarms fail silently.
 - Web has no background alarm clock.
 - Refill dates move when stock or Use history changes; they are not a server job.
 
 ## Security Impact
 
-RLS: `can_view_home` select; `can_edit_inventory` write; insert `created_by_user_id = auth.uid()`. Cross-home UUID guessing is denied like other inventory tables. Notification payloads use the reminder title/body the household already stored.
+RLS: `can_view_home` select; `can_edit_inventory` write; insert `created_by_user_id = auth.uid()`. Cross-home UUID guessing is denied like other inventory tables. Notification payloads use the reminder title/body the household already stored. Photos are copied onto the device at sync time; signed storage URLs are not sent into the notification extras.
 
 ## Database Impact
 
@@ -87,5 +87,7 @@ Follow-up: `20260826000300_reminder_room_target.sql` (item **or** room target)
 - [`supabase/migrations/20260826000100_reminders.sql`](../../supabase/migrations/20260826000100_reminders.sql)
 - [`supabase/migrations/20260826000300_reminder_room_target.sql`](../../supabase/migrations/20260826000300_reminder_room_target.sql)
 - [`mobile/lib/features/reminders/`](../../mobile/lib/features/reminders/)
+- [`mobile/android/app/src/main/kotlin/com/homeventory/homeventory/ReminderNotifications.kt`](../../mobile/android/app/src/main/kotlin/com/homeventory/homeventory/ReminderNotifications.kt)
+- [`mobile/android/app/src/main/res/layout/notification_reminder_big.xml`](../../mobile/android/app/src/main/res/layout/notification_reminder_big.xml)
 - [`mobile/android/app/src/main/res/drawable/ic_stat_notify.xml`](../../mobile/android/app/src/main/res/drawable/ic_stat_notify.xml)
 - Related: [ADR-0008](0008-inventory-transactions.md), [ADR-0001](0001-flutter-supabase-platform.md) (FCM still not runtime)

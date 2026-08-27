@@ -10,7 +10,7 @@ import '../../../shared/models/room.dart';
 import '../../../shared/utils/reminder_schedule.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../rooms/presentation/rooms_providers.dart';
-import '../data/notification_scheduler.dart';
+import '../data/reminder_image_urls.dart';
 import 'reminders_providers.dart';
 
 class EditReminderScreen extends ConsumerStatefulWidget {
@@ -242,10 +242,12 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       }
       final list = await repo.listReminders(widget.homeId);
       await scheduler.sync(
-        list
-            .where((r) => r.enabled)
-            .map(ScheduledReminderAlert.fromReminder)
-            .toList(),
+        await scheduledAlertsWithImages(
+          reminders: list,
+          latestImageUrls: ref
+              .read(inventoryRepositoryProvider)
+              .latestImageUrls,
+        ),
       );
       if (!mounted) return;
       context.pop();

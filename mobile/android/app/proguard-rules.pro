@@ -19,3 +19,8 @@
 # Scheduled local notifications (flutter_local_notifications receivers + payload).
 -keep class com.dexterous.** { *; }
 -dontwarn com.dexterous.**
+
+# Custom reminder notification layouts (photo on the left third).
+-keep class com.homeventory.homeventory.ReminderNotifications { *; }
+-keep class com.homeventory.homeventory.ReminderAlarmReceiver { *; }
+-keep class com.homeventory.homeventory.ReminderBootReceiver { *; }

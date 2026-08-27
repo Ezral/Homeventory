@@ -5,10 +5,12 @@ import '../../../shared/models/reminder.dart';
 import '../../../shared/providers/supabase_provider.dart';
 import '../../auth/presentation/auth_providers.dart';
 import '../../homes/presentation/homes_providers.dart';
+import '../../rooms/presentation/rooms_providers.dart';
 import '../data/notification_scheduler.dart';
 import '../data/notification_scheduler_stub.dart'
     if (dart.library.io) '../data/notification_scheduler_io.dart'
     if (dart.library.js_interop) '../data/notification_scheduler_web.dart';
+import '../data/reminder_image_urls.dart';
 import '../data/reminders_repository.dart';
 
 final remindersRepositoryProvider = Provider<RemindersRepository>((ref) {
@@ -32,13 +34,15 @@ final reminderAlarmSyncProvider = FutureProvider<void>((ref) async {
   try {
     final homes = await ref.read(homesRepositoryProvider).listVisibleHomes();
     final repo = ref.read(remindersRepositoryProvider);
+    final inventory = ref.read(inventoryRepositoryProvider);
     final alerts = <ScheduledReminderAlert>[];
     for (final home in homes) {
       final reminders = await repo.listReminders(home.id);
       alerts.addAll(
-        reminders
-            .where((r) => r.enabled)
-            .map(ScheduledReminderAlert.fromReminder),
+        await scheduledAlertsWithImages(
+          reminders: reminders,
+          latestImageUrls: inventory.latestImageUrls,
+        ),
       );
     }
     await scheduler.sync(alerts);
