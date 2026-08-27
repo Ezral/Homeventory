@@ -9,7 +9,8 @@
     <application
         android:label="Homeventory"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round">
         <!-- google_sign_in 7.x / Credential Manager can throw [16] Account reauth failed -->
         <meta-data
             android:name="com.google.android.gms.credentials.API_ENABLED"
