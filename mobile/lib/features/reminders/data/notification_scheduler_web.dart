@@ -51,6 +51,18 @@ class WebReminderNotificationScheduler
 
   @override
   Future<void> cancel(String reminderId) async {}
+
+  @override
+  Future<void> previewSample() async {}
+
+  @override
+  Future<Map<String, dynamic>?> peekPendingAction() async => null;
+
+  @override
+  Future<void> consumePendingAction() async {}
+
+  @override
+  void setActionWakeHandler(void Function()? handler) {}
 }
 
 ReminderNotificationScheduler createReminderNotificationScheduler() {

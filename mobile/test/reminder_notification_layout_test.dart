@@ -16,6 +16,9 @@ Reminder _reminder({
   String? nodeRoomId,
   String? nodeName,
   String? roomName,
+  String? nodeRoomName,
+  ReminderRepeat repeat = ReminderRepeat.weekly,
+  int? intervalDays,
   bool enabled = true,
 }) {
   return Reminder(
@@ -25,7 +28,8 @@ Reminder _reminder({
     kind: ReminderKind.manual,
     title: 'Weekly Clean-up',
     body: 'Every week',
-    repeat: ReminderRepeat.weekly,
+    repeat: repeat,
+    intervalDays: intervalDays,
     fireMinute: 540,
     nextFireAt: DateTime(2026, 8, 30, 9),
     inventoryNodeId: nodeId,
@@ -34,6 +38,7 @@ Reminder _reminder({
     nodeName: nodeName,
     nodeRoomId: nodeRoomId,
     roomName: roomName,
+    nodeRoomName: nodeRoomName,
   );
 }
 
@@ -143,6 +148,10 @@ void main() {
       expect(payload['scheduleAtMillis'], isNull);
       expect(payload['repeat'], 'ONCE');
       expect(payload['title'], 'Weekly Clean-up');
+      expect(payload['reminderId'], 'due');
+      expect(payload['canSnooze'], isTrue);
+      expect(payload['canMarkDone'], isTrue);
+      expect(payload['displayAtMillis'], isNotNull);
     },
   );
 
@@ -191,6 +200,37 @@ void main() {
     expect(gets, 1);
     expect(File(first!).readAsBytesSync(), [1, 2, 3, 4]);
   });
+
+  test(
+    'payload includes item details, recurrence, route, and locale millis',
+    () {
+      final alert = ScheduledReminderAlert.fromReminder(
+        _reminder(
+          id: 'ac',
+          nodeId: 'n-ac',
+          nodeRoomId: 'room-bed',
+          nodeName: 'Air conditioner',
+          nodeRoomName: 'Bedroom',
+          repeat: ReminderRepeat.customDays,
+          intervalDays: 90,
+        ),
+      );
+      expect(alert.details, 'Bedroom · Air conditioner');
+      expect(alert.recurrence, 'Recurring every 90 days');
+      expect(alert.route, '/homes/h1/rooms/room-bed/nodes/n-ac/details');
+      final payload = alert.toNativePayload(now: DateTime(2026, 8, 27, 20));
+      expect(payload['details'], 'Bedroom · Air conditioner');
+      expect(payload['recurrence'], 'Recurring every 90 days');
+      expect(payload['route'], '/homes/h1/rooms/room-bed/nodes/n-ac/details');
+      expect(payload['itemOrRoomName'], 'Air conditioner');
+      expect(payload['itemOrRoomId'], 'n-ac');
+      expect(payload['reminderId'], 'ac');
+      expect(
+        payload['displayAtMillis'],
+        DateTime(2026, 8, 30, 9).millisecondsSinceEpoch,
+      );
+    },
+  );
 }
 
 extension on Reminder {

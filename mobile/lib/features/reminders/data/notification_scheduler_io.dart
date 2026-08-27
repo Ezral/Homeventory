@@ -29,10 +29,11 @@ class AndroidReminderNotificationScheduler
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
   final Set<int> _shownDueIds = {};
+  void Function()? _actionWakeHandler;
 
   static const _channelDetails = AndroidNotificationDetails(
     'homeventory_reminders',
-    'Reminders',
+    'Homeventory reminders',
     channelDescription: 'Cleanup alarms and refill reminders',
     importance: Importance.high,
     priority: Priority.high,
@@ -138,6 +139,48 @@ class AndroidReminderNotificationScheduler
     } catch (e) {
       debugPrint('Failed to cancel reminder $reminderId: $e');
     }
+  }
+
+  @override
+  Future<void> previewSample() async {
+    await initialize();
+    if (!_ready) return;
+    await requestPermission();
+    try {
+      await _channel.invokeMethod<void>('previewSample');
+    } catch (e, st) {
+      debugPrint('Failed to post reminder preview: $e\n$st');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> peekPendingAction() async {
+    try {
+      final raw = await _channel.invokeMethod<dynamic>('peekPendingAction');
+      if (raw is Map) {
+        return raw.map(
+          (key, value) => MapEntry('$key', value?.toString() ?? ''),
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  @override
+  Future<void> consumePendingAction() async {
+    try {
+      await _channel.invokeMethod<void>('consumePendingAction');
+    } catch (_) {}
+  }
+
+  @override
+  void setActionWakeHandler(void Function()? handler) {
+    _actionWakeHandler = handler;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'onReminderAction') {
+        _actionWakeHandler?.call();
+      }
+    });
   }
 
   Future<void> _scheduleWithPlugin(ScheduledReminderAlert alert) async {

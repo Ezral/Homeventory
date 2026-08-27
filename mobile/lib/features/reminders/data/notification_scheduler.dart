@@ -14,6 +14,14 @@ class ScheduledReminderAlert {
     this.targetLabel,
     this.imageUrl,
     this.imagePath,
+    this.details = '',
+    this.itemOrRoomName,
+    this.itemOrRoomId,
+    this.imageContentDescription,
+    this.recurrence,
+    this.route = '/',
+    this.canSnooze = true,
+    this.canMarkDone = true,
   });
 
   final String id;
@@ -26,11 +34,20 @@ class ScheduledReminderAlert {
   final String? targetLabel;
   final String? imageUrl;
   final String? imagePath;
+  final String details;
+  final String? itemOrRoomName;
+  final String? itemOrRoomId;
+  final String? imageContentDescription;
+  final String? recurrence;
+  final String route;
+  final bool canSnooze;
+  final bool canMarkDone;
 
   factory ScheduledReminderAlert.fromReminder(
     Reminder reminder, {
     String? imageUrl,
   }) {
+    final details = reminder.locationDetails;
     return ScheduledReminderAlert(
       id: reminder.id,
       title: reminder.title,
@@ -45,6 +62,12 @@ class ScheduledReminderAlert {
       intervalDays: reminder.intervalDays,
       targetLabel: reminder.targetName,
       imageUrl: imageUrl,
+      details: details.isNotEmpty ? details : (reminder.body?.trim() ?? ''),
+      itemOrRoomName: reminder.targetName,
+      itemOrRoomId: reminder.inventoryNodeId ?? reminder.roomId,
+      imageContentDescription: reminder.targetName,
+      recurrence: reminder.recurrenceDescription,
+      route: reminder.targetRoute ?? '/homes/${reminder.homeId}/schedule',
     );
   }
 
@@ -60,6 +83,14 @@ class ScheduledReminderAlert {
       targetLabel: targetLabel,
       imageUrl: imageUrl ?? this.imageUrl,
       imagePath: imagePath ?? this.imagePath,
+      details: details,
+      itemOrRoomName: itemOrRoomName,
+      itemOrRoomId: itemOrRoomId,
+      imageContentDescription: imageContentDescription,
+      recurrence: recurrence,
+      route: route,
+      canSnooze: canSnooze,
+      canMarkDone: canMarkDone,
     );
   }
 
@@ -82,14 +113,24 @@ class ScheduledReminderAlert {
     }
     return {
       'id': notificationIdFor(id),
+      'reminderId': id,
       'title': title,
       'body': body,
+      'details': details,
       'targetLabel': targetLabel,
+      'itemOrRoomName': itemOrRoomName,
+      'itemOrRoomId': itemOrRoomId,
       'imagePath': imagePath,
+      'imageContentDescription': imageContentDescription,
+      'recurrence': recurrence,
+      'route': route,
       'repeat': repeat.dbValue,
       'intervalDays': intervalDays ?? 1,
       'showNow': due,
       'scheduleAtMillis': scheduleAtMillis,
+      'displayAtMillis': fireAt.toLocal().millisecondsSinceEpoch,
+      'canSnooze': canSnooze,
+      'canMarkDone': canMarkDone,
     };
   }
 }
@@ -101,6 +142,15 @@ abstract class ReminderNotificationScheduler {
   Future<void> cancel(String reminderId);
   bool get supportsBackgroundAlerts;
   String get platformNote;
+
+  /// Debug-only sample notification. No-op on web/stub and in release.
+  Future<void> previewSample() async {}
+
+  Future<Map<String, dynamic>?> peekPendingAction() async => null;
+
+  Future<void> consumePendingAction() async {}
+
+  void setActionWakeHandler(void Function()? handler) {}
 }
 
 int notificationIdFor(String reminderId) => reminderId.hashCode & 0x7fffffff;

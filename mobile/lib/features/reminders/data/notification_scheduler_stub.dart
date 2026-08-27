@@ -15,6 +15,18 @@ class StubReminderNotificationScheduler
   Future<void> cancel(String reminderId) async {}
 
   @override
+  Future<void> previewSample() async {}
+
+  @override
+  Future<Map<String, dynamic>?> peekPendingAction() async => null;
+
+  @override
+  Future<void> consumePendingAction() async {}
+
+  @override
+  void setActionWakeHandler(void Function()? handler) {}
+
+  @override
   bool get supportsBackgroundAlerts => false;
 
   @override

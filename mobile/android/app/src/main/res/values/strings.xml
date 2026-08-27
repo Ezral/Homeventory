@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_action_snooze">Snooze</string>
+    <string name="notif_action_mark_done">Mark done</string>
+    <string name="notif_photo_fallback">Item or room photo</string>
+    <string name="notif_channel_name">Homeventory reminders</string>
+    <string name="notif_channel_description">Cleanup alarms and refill reminders</string>
+</resources>
