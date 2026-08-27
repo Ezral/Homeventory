@@ -8,7 +8,7 @@ import '../../../shared/models/reminder.dart';
 import '../../../shared/utils/reminder_schedule.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../rooms/presentation/rooms_providers.dart';
-import '../data/notification_scheduler.dart';
+import '../data/reminder_image_urls.dart';
 import 'reminders_providers.dart';
 
 /// Notification schedule block used on item create/edit and the Schedule tab.
@@ -201,10 +201,10 @@ class ItemSchedulePanelState extends ConsumerState<ItemSchedulePanel> {
     }
     final list = await repo.listReminders(widget.homeId);
     await scheduler.sync(
-      list
-          .where((r) => r.enabled)
-          .map(ScheduledReminderAlert.fromReminder)
-          .toList(),
+      await scheduledAlertsWithImages(
+        reminders: list,
+        latestImageUrls: ref.read(inventoryRepositoryProvider).latestImageUrls,
+      ),
     );
   }
 
