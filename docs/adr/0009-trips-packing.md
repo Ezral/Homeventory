@@ -95,7 +95,7 @@ Home → Trips; trip detail for containers and packed items.
 
 ## Architecture Notes
 
-- Luggage allowance (`luggage_allowance_kg`) + packed weight estimate (containers + PACKED items, normalized to kg)
+- Luggage allowance (`luggage_allowance_kg`) + weight estimate: containers + **PACKED** items + **PLANNED** (to-be packed) items, normalized to kg. Available = allowance − packed − to-be packed, so remaining capacity is visible before items are checked packed.
 - Soft-delete via `archived_at` (hidden in UI, row retained for audit)
 - Trip metadata/status editable regardless of COMPLETED
 - Container/item thumbnails on trip detail via `entityThumbnailsProvider`

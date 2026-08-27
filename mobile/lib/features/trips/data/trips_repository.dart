@@ -152,6 +152,7 @@ class TripWeightSummary {
   const TripWeightSummary({
     required this.allowanceKg,
     required this.packedKg,
+    required this.toBePackedKg,
     required this.containersKg,
     required this.itemsKg,
     required this.missingWeightCount,
@@ -159,15 +160,17 @@ class TripWeightSummary {
 
   final double? allowanceKg;
   final double packedKg;
+  final double toBePackedKg;
   final double containersKg;
   final double itemsKg;
   final int missingWeightCount;
 
-  double? get availableKg =>
-      allowanceKg == null ? null : allowanceKg! - packedKg;
+  double get committedKg => packedKg + toBePackedKg;
 
-  bool get isOverAllowance =>
-      allowanceKg != null && packedKg > allowanceKg!;
+  double? get availableKg =>
+      allowanceKg == null ? null : allowanceKg! - committedKg;
+
+  bool get isOverAllowance => allowanceKg != null && committedKg > allowanceKg!;
 }
 
 /// Convert a node weight to kilograms; null if weight is unset.
@@ -201,19 +204,23 @@ TripWeightSummary buildTripWeightSummary({
   }
 
   var itemsKg = 0.0;
+  var toBePackedKg = 0.0;
   for (final item in items) {
-    if (item.status != TripItemStatus.packed) continue;
+    if (item.status == TripItemStatus.unpacked) continue;
     final kg = inventoryWeightKg(item.node);
     if (kg == null) {
       missing += 1;
-    } else {
+    } else if (item.status == TripItemStatus.packed) {
       itemsKg += kg;
+    } else if (item.status == TripItemStatus.planned) {
+      toBePackedKg += kg;
     }
   }
 
   return TripWeightSummary(
     allowanceKg: trip.luggageAllowanceKg,
     packedKg: containersKg + itemsKg,
+    toBePackedKg: toBePackedKg,
     containersKg: containersKg,
     itemsKg: itemsKg,
     missingWeightCount: missing,
@@ -293,9 +300,7 @@ class TripsRepository {
   Future<void> archiveTrip(String tripId) async {
     await _client
         .from('trips')
-        .update({
-          'archived_at': DateTime.now().toUtc().toIso8601String(),
-        })
+        .update({'archived_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', tripId);
   }
 
