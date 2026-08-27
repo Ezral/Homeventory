@@ -114,14 +114,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               const SizedBox(height: 10),
               for (final reminder in reminders) ...[
                 SoftTile(
-                  leading: Icon(
-                    reminder.kind == ReminderKind.usageRefill
-                        ? Icons.water_drop_outlined
-                        : Icons.alarm,
-                    color: reminder.enabled
-                        ? AppColors.mossDeep
-                        : AppColors.inkMuted,
-                  ),
+                  leading: _leading(reminder, canEdit),
                   title: reminder.title,
                   subtitle: _subtitle(reminder, dateFormat),
                   dimmed: !reminder.enabled,
@@ -137,36 +130,56 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _trailing(Reminder reminder, bool canEdit) {
+  Widget _leading(Reminder reminder, bool canEdit) {
     final completing = _completingId == reminder.id;
+    final icon = Icon(
+      reminder.kind == ReminderKind.usageRefill
+          ? Icons.water_drop_outlined
+          : Icons.alarm,
+      color: reminder.enabled ? AppColors.mossDeep : AppColors.inkMuted,
+    );
+    if (!canEdit) return icon;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (canEdit && reminder.enabled)
-          IconButton(
-            tooltip: 'Complete',
-            onPressed: completing ? null : () => _complete(reminder),
-            icon: completing
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.checklist),
-          ),
-        if (canEdit)
-          Switch(
+        Tooltip(
+          message: reminder.enabled ? 'Active' : 'Inactive',
+          child: Switch(
             value: reminder.enabled,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             onChanged: completing ? null : (v) => _setEnabled(reminder, v),
           ),
-        if (reminder.targetRoute != null)
-          IconButton(
-            tooltip: reminder.roomId != null ? 'Open room' : 'Open item',
-            onPressed: () => context.push(reminder.targetRoute!),
-            icon: const Icon(Icons.open_in_new),
-          ),
+        ),
+        const SizedBox(width: 8),
+        icon,
       ],
     );
+  }
+
+  Widget? _trailing(Reminder reminder, bool canEdit) {
+    final completing = _completingId == reminder.id;
+    final actions = <Widget>[
+      if (canEdit && reminder.enabled)
+        IconButton(
+          tooltip: 'Complete',
+          onPressed: completing ? null : () => _complete(reminder),
+          icon: completing
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.checklist),
+        ),
+      if (reminder.targetRoute != null)
+        IconButton(
+          tooltip: reminder.roomId != null ? 'Open room' : 'Open item',
+          onPressed: () => context.push(reminder.targetRoute!),
+          icon: const Icon(Icons.open_in_new),
+        ),
+    ];
+    if (actions.isEmpty) return null;
+    return Row(mainAxisSize: MainAxisSize.min, children: actions);
   }
 
   String _subtitle(Reminder reminder, DateFormat dateFormat) {
